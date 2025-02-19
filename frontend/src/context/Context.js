@@ -9,6 +9,8 @@ const Context = React.createContext({
   setSelectedDay: (day) => {},
   showEventModal: false,
   setShowEventModal: () => {},
+  dispatchEvent: ({ type, payload }) => {},
+  savedEvents: [],
 });
 
 export default Context;

@@ -3,7 +3,7 @@ import Context from "../context/Context";
 import dayjs from "dayjs";
 
 const CalendarHeader = () => {
-  const { monthIndex, setMonthIndex } = useContext(Context);
+  const { monthIndex, setMonthIndex, setSelectedDay } = useContext(Context);
 
   const handlePrevMonth = () => {
     setMonthIndex(monthIndex - 1);
@@ -17,6 +17,7 @@ const CalendarHeader = () => {
         ? monthIndex + Math.random()
         : dayjs().month()
     );
+    setSelectedDay(dayjs());
   };
   return (
     <header className="px-4 py-2 flex items-center">

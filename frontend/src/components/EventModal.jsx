@@ -1,12 +1,26 @@
 import React, { useContext, useState } from "react";
 import Context from "../context/Context";
 
-const labelColors = ["blue", "red", "green"];
+const colors = ["blue", "red", "green", "purple"];
 
 export default function EventModal() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const { setShowEventModal, selectedDay } = useContext(Context);
+  const [color, setColor] = useState("blue");
+  const { setShowEventModal, selectedDay, dispatchEvent } = useContext(Context);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const event = {
+      title,
+      description,
+      label: color,
+      day: selectedDay.valueOf(),
+      id: Date.now(),
+    };
+    dispatchEvent({ type: "push", payload: event });
+    setShowEventModal(false);
+  };
 
   return (
     <div className="h-screen w-full fixed left-0 top-0 flex justify-center items-center">
@@ -46,15 +60,35 @@ export default function EventModal() {
             />
             <p>label color</p>
             <div className="flex gap-x-2">
-              {labelColors.map((color, index) => (
+              {colors.map((col, index) => (
                 <span
                   key={index}
-                  className={`bg-${color}-500 w-6 h-6 rounded-full flex items-center justify-center cursor-pointer`}
-                ></span>
+                  onClick={() => setColor(col)}
+                  className={`${
+                    col === "blue"
+                      ? "bg-blue-500"
+                      : col === "red"
+                      ? "bg-red-500"
+                      : col === "green"
+                      ? "bg-green-500"
+                      : "bg-purple-500"
+                  } w-6 h-6 rounded-full flex items-center justify-center cursor-pointer`}
+                >
+                  {col === color && <p>x</p>}
+                </span>
               ))}
             </div>
           </div>
         </div>
+        <footer className="flex justify-end  border-t p-3 mt-5">
+          <button
+            type="submit"
+            onClick={handleSubmit}
+            className="bg-blue-500 hover:bg-blue-600 px-6 py-2 rounded text-white"
+          >
+            Save
+          </button>
+        </footer>
       </form>
     </div>
   );
