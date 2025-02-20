@@ -1,0 +1,33 @@
+.calendar-day:hover .calendar-day-number {
+  background-color: #e5e7eb;
+}
+.time-grid {
+  position: relative;
+  height: 100%;
+}
+
+.time-slot {
+  position: absolute;
+  width: 100%;
+  border-bottom: 1px solid #ccc;
+}
+
+.event {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  padding: 5px;
+  color: white;
+  border-radius: 4px;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.event-title {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.event-time {
+  font-size: 12px;
+}

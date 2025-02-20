@@ -24,8 +24,17 @@ export default function ContextWrapper(props) {
   const [monthIndex, setMonthIndex] = useState(dayjs().month());
   const [smallCalendarMonth, setSmallCalendarMonth] = useState(null);
   const [selectedDay, setSelectedDay] = useState(dayjs());
-  const [showEventModal, setShowEventModal] = useState(true);
+  const [showEventModal, setShowEventModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [isMonthView, setIsMonthView] = useState(false);
+  const [isWeekView, setIsWeekView] = useState(true);
+  const [selectedWeek, setSelectedWeek] = useState(() => {
+    const d = dayjs(new Date());
+    const firstDayOfMonth = d.startOf("month");
+    const diffInDays = d.diff(firstDayOfMonth, "day");
+    const weekIndex = Math.floor(diffInDays / 7) + 1;
+    return weekIndex;
+  });
   const [savedEvents, dispatchEvent] = useReducer(
     savedEventsReducer,
     [],
@@ -63,6 +72,12 @@ export default function ContextWrapper(props) {
         savedEvents,
         selectedEvent,
         setSelectedEvent,
+        isMonthView,
+        setIsMonthView,
+        isWeekView,
+        setIsWeekView,
+        selectedWeek,
+        setSelectedWeek,
       }}
     >
       {props.children}

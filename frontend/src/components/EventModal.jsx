@@ -2,6 +2,8 @@ import React, { useContext, useEffect, useRef, useState } from "react";
 import Context from "../context/Context";
 import closeIcon from "../assets/close_icon.svg";
 import deleteIcon from "../assets/delete_icon.svg";
+import calendar from "../assets/calendar.svg";
+import SmallCalendar from "./SmallCalendar";
 
 const colors = ["blue", "green", "orange", "yellow", "red"];
 
@@ -12,6 +14,14 @@ export default function EventModal() {
   const [description, setDescription] = useState(
     selectedEvent ? selectedEvent.description : ""
   );
+  const [startTime, setStartTime] = useState(
+    selectedEvent ? selectedEvent.startTime : "08:00"
+  );
+  const [endTime, setEndTime] = useState(
+    selectedEvent ? selectedEvent.endTime : "09:00"
+  );
+
+  const [smallCalendar, setSmallCalendar] = useState(false);
   const [color, setColor] = useState(
     selectedEvent ? colors.find((col) => col === selectedEvent.label) : "blue"
   );
@@ -20,43 +30,44 @@ export default function EventModal() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!error) {
-      const event = {
-        title,
-        description,
-        label: color,
-        day: selectedDay.valueOf(),
-        id: selectedEvent ? selectedEvent.id : Date.now(),
-      };
-      if (selectedEvent) {
-        dispatchEvent({ type: "update", payload: event });
-      } else {
-        dispatchEvent({ type: "push", payload: event });
-      }
-      setShowEventModal(false);
-    } else {
-      inputRef.current?.focus();
-    }
-  };
-
-  useEffect(() => {
-    if (title.length > 0) {
-      setError(false);
-    } else {
+    if (!title.trim()) {
       setError(true);
+      inputRef.current?.focus();
+      return;
     }
-  }, [title]);
+
+    const event = {
+      title,
+      description,
+      label: color,
+      day: selectedDay.valueOf(),
+      startTime,
+      endTime,
+      id: selectedEvent ? selectedEvent.id : Date.now(),
+    };
+    if (selectedEvent) {
+      dispatchEvent({ type: "update", payload: event });
+    } else {
+      dispatchEvent({ type: "push", payload: event });
+    }
+    setShowEventModal(false);
+  };
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
+  useEffect(() => {
+    setSmallCalendar(false);
+  }, [selectedDay]);
+
   return (
-    <div className="h-screen w-full fixed left-0 top-0 flex justify-center items-center">
-      <form className=" bg-white shadow-2xl w-[500px]">
-        <header className="border-b-1 border-gray-100 px-6 py-4 flex justify-between items-center">
+    <div className="z-10 h-screen w-full fixed left-0 top-0 flex justify-center items-center">
+      {smallCalendar && <SmallCalendar />}
+      <form className=" bg-white shadow-2xl w-[500px] rounded-lg">
+        <header className="border-b-1 border-gray-200 px-6 py-4 flex justify-between items-center">
           <div className="flex flex-col">
-            <h1 className="font-bold text-xl">Create Event</h1>
+            <h1 className="font-medium text-xl">Create Event</h1>
             <p>Fill in the data below to add an event</p>
           </div>
           <div>
@@ -86,77 +97,103 @@ export default function EventModal() {
           </div>
         </header>
         <div className="px-6 py-4">
-          <div className="grid grid-cols-1/5 items-end gap-y-7">
-            <div className="flex flex-col">
-              <h1 className="text-lg font-semibold">Title</h1>
-              <input
-                ref={inputRef}
-                type="text"
-                className={`${
-                  error ? "focus:border-red-500" : ""
-                } pt-3 border-0 text-gray-600 text-xl pb-2 w-full border-b-2 focus:outline-none focus:border-blue-500 focus:ring-0 border-gray-200`}
-                name="title"
-                placeholder="Add title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-            </div>
-            <p>schedule icon</p>
-            <p>{selectedDay.format("dddd, MMMM DD")}</p>
-            <p>description icon</p>
+          <div className="grid grid-cols-1/5 items-end gap-y-2">
+            <h1 className="text-lg font-medium">Title</h1>
+            <input
+              ref={inputRef}
+              type="text"
+              className={`${
+                error
+                  ? "border-red-500 focus:border-red-500"
+                  : "border-gray-200"
+              } border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-lg`}
+              name="title"
+              placeholder="Add title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              autoComplete="off"
+            />
+            <h1 className="text-lg font-medium">Description</h1>
             <input
               type="text"
-              className="pt-3 border-0 text-gray-600 pb-2 w-full border-b-2 focus:outline-none focus:border-blue-500 focus:ring-0 border-gray-200"
+              className="border-gray-200 border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-lg"
               name="description"
               placeholder="Add description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              autoComplete="off"
             />
-            <p>label color</p>
-            <div className="flex gap-x-2">
-              {colors.map((col, index) => (
-                <span
-                  key={index}
-                  onClick={() => setColor(col)}
-                  className={`${
-                    col === "blue"
-                      ? "bg-blue-500"
-                      : col === "red"
-                      ? "bg-red-500"
-                      : col === "green"
-                      ? "bg-green-500"
-                      : col === "orange"
-                      ? "bg-orange-500"
-                      : col === "yellow"
-                      ? "bg-yellow-500"
-                      : "bg-red-500"
-                  } w-5 h-5 rounded-full flex items-center justify-center cursor-pointer`}
-                >
-                  {col === color && (
-                    <span className="bg-white w-3 h-3 rounded-full flex items-center justify-center"></span>
-                  )}
-                </span>
-              ))}
+            <h1 className="text-lg font-medium">Date and Time</h1>
+            <div
+              onClick={() => {
+                setSmallCalendar(true);
+              }}
+              className="cursor-pointer py-2 px-4 flex border-1 border-gray-200 rounded-lg"
+            >
+              <img src={calendar} className="w-6 mr-4" />
+              <p>{selectedDay.format("dddd, MMMM DD")}</p>
+            </div>
+            <div className="flex gap-2 items-center">
+              <input
+                type="time"
+                className="border-gray-200 border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-lg"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+              />
+              <p>{"-"}</p>
+              <input
+                type="time"
+                className="border-gray-200 border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-lg"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+              />
             </div>
           </div>
         </div>
-        <footer className="flex justify-end  border-t-1 border-gray-100 px-6 py-4 mt-5">
-          <button
-            onClick={() => {
-              setShowEventModal(false);
-            }}
-            className="mr-4 border-1 border-blue-500 px-6 py-2 text-blue-500"
-            type="button"
-          >
-            close
-          </button>
-          <button
-            type="submit"
-            onClick={handleSubmit}
-            className="bg-blue-500 px-6 py-2 text-white"
-          >
-            Save
-          </button>
+        <footer className="flex justify-between items-center border-t-1 border-gray-200 px-6 py-4">
+          <div className="flex gap-x-2">
+            {colors.map((col, index) => (
+              <span
+                key={index}
+                onClick={() => setColor(col)}
+                className={`${
+                  col === "blue"
+                    ? "bg-blue-500"
+                    : col === "red"
+                    ? "bg-red-500"
+                    : col === "green"
+                    ? "bg-green-500"
+                    : col === "orange"
+                    ? "bg-orange-500"
+                    : col === "yellow"
+                    ? "bg-yellow-500"
+                    : "bg-red-500"
+                } w-5 h-5 rounded-full flex items-center justify-center cursor-pointer`}
+              >
+                {col === color && (
+                  <span className="bg-white w-3 h-3 rounded-full flex items-center justify-center"></span>
+                )}
+              </span>
+            ))}
+          </div>
+          <div>
+            <button
+              onClick={() => {
+                setShowEventModal(false);
+              }}
+              className="hover:bg-gray-100 cursor-pointer border w-28 h-10 border-gray-200 rounded-lg mr-4"
+              type="button"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              onClick={handleSubmit}
+              className="hover:bg-gray-800 text-white bg-black cursor-pointer border w-28 h-10 border-gray-200 rounded-lg"
+            >
+              Save
+            </button>
+          </div>
         </footer>
       </form>
     </div>

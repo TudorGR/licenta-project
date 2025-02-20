@@ -2,6 +2,8 @@ import dayjs from "dayjs";
 import React, { useContext, useEffect, useState } from "react";
 import { getCalendarMonth } from "../util";
 import Context from "../context/Context";
+import left from "../assets/chevron-left.svg";
+import right from "../assets/chevron-right.svg";
 
 export default function SmallCalendar() {
   const [currentMonthIndex, setCurrentMonthIndex] = useState(dayjs().month());
@@ -30,25 +32,27 @@ export default function SmallCalendar() {
     if (nowDay === currentDay) return "bg-blue-500 rounded-full text-white";
     else if (sDay === currentDay)
       return "bg-blue-100 rounded-full text-blue-600";
-    else return "";
+    else return "hover:bg-gray-200";
   }
   function isSameMonth(day) {
     return day.month() === currentMonthIndex;
   }
   return (
-    <div className="mt-9">
+    <div className="bg-white rounded-lg absolute top-1/2 left-1/3 shadow-2xl p-4 w-60">
       <header className="flex justify-between">
         <p className="font-bold">
           {dayjs(new Date(dayjs().year(), currentMonthIndex)).format(
             "MMMM YYYY"
           )}
         </p>
-        <button className="cursor-pointer" onClick={handlePrevMonth}>
-          {"<left<"}
-        </button>
-        <button className="cursor-pointer" onClick={handleNextMonth}>
-          {">right>"}
-        </button>
+        <div>
+          <button className="cursor-pointer" onClick={handlePrevMonth}>
+            <img src={left} className="w-6" />
+          </button>
+          <button className="cursor-pointer" onClick={handleNextMonth}>
+            <img src={right} className="w-6" />
+          </button>
+        </div>
       </header>
       <div className="grid grid-cols-7 grid-rows-6">
         {currentMonth[0].map((day, index) => (
@@ -63,7 +67,9 @@ export default function SmallCalendar() {
                 key={index}
                 className={`${
                   isSameMonth(day) ? "" : "text-gray-300"
-                } cursor-pointer py-1 w-full text-sm ${getDay(day)}`}
+                } rounded-full cursor-pointer py-1 w-full text-sm ${getDay(
+                  day
+                )}`}
                 onClick={() => {
                   setSmallCalendarMonth(currentMonthIndex);
                   setSelectedDay(day);

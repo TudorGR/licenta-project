@@ -2,39 +2,78 @@ import React, { useContext } from "react";
 import Context from "../context/Context";
 import dayjs from "dayjs";
 import CreateEventButton from "./CreateEventButton";
+import left from "../assets/chevron-left.svg";
+import right from "../assets/chevron-right.svg";
 
 const CalendarHeader = () => {
-  const { monthIndex, setMonthIndex, setSelectedDay } = useContext(Context);
+  const {
+    monthIndex,
+    setMonthIndex,
+    setSelectedDay,
+    isMonthView,
+    setSelectedWeek,
+    selectedWeek,
+  } = useContext(Context);
+
+  const getCurrentWeekIndex = () => {
+    const d = dayjs(new Date());
+    const firstDayOfMonth = d.startOf("month");
+    const diffInDays = d.diff(firstDayOfMonth, "day");
+    const weekIndex = Math.floor(diffInDays / 7) + 1;
+    return weekIndex;
+  };
 
   const handlePrevMonth = () => {
-    setMonthIndex(monthIndex - 1);
+    if (isMonthView) {
+      setMonthIndex(monthIndex - 1);
+    } else {
+      setSelectedWeek(Math.max(0, selectedWeek - 1));
+    }
   };
   const handleNextMonth = () => {
-    setMonthIndex(monthIndex + 1);
+    if (isMonthView) {
+      setMonthIndex(monthIndex + 1);
+    } else {
+      setSelectedWeek(Math.min(4, selectedWeek + 1));
+    }
   };
   const handleToday = () => {
     setMonthIndex(dayjs().month());
+    setSelectedWeek(getCurrentWeekIndex());
     setSelectedDay(dayjs());
   };
   return (
-    <header className="px-4 py-2 flex items-center">
-      <p className="italic mr-2">'Insert Logo Here'</p>
-      <h1 className="mr-10 text-xl font-bold"> Calendar</h1>
-      <button
-        onClick={handleToday}
-        className="cursor-pointer border rounded py-2 px-4 mr-5"
-      >
-        Today
-      </button>
-      <button className="cursor-pointer" onClick={handlePrevMonth}>
-        {"<left<"}
-      </button>
-      <button className="cursor-pointer" onClick={handleNextMonth}>
-        {">right>"}
-      </button>
-      <h2 className="ml-4 text-xl">
-        {dayjs(new Date(dayjs().year(), monthIndex)).format("MMMM YYYY")}
-      </h2>
+    <header className="px-4 py-2 flex justify-between items-center">
+      <div className="flex">
+        <div className="flex items-center justify-between w-54">
+          <button
+            className="cursor-pointer hover:bg-gray-100 rounded-full border-gray-200 border-1 p-1.5"
+            onClick={handlePrevMonth}
+          >
+            <img src={left} className="w-6" />
+          </button>
+          <div className="flex items-center">
+            <h2 className="text-base">
+              {dayjs(new Date(dayjs().year(), monthIndex)).format("MMMM")}
+            </h2>
+            <h2 className="text-lg text-gray-400">
+              , {dayjs(new Date(dayjs().year(), monthIndex)).format("YYYY")}
+            </h2>
+          </div>
+          <button
+            className="cursor-pointer hover:bg-gray-100 rounded-full border-gray-200 border-1 p-1.5"
+            onClick={handleNextMonth}
+          >
+            <img src={right} className="w-6" />
+          </button>
+        </div>
+        <button
+          onClick={handleToday}
+          className="hover:bg-gray-100 cursor-pointer border w-28 h-10 border-gray-200 rounded-lg ml-4"
+        >
+          Today
+        </button>
+      </div>
       <CreateEventButton />
     </header>
   );

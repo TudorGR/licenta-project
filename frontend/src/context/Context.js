@@ -13,6 +13,12 @@ const Context = React.createContext({
   savedEvents: [],
   selectedEvent: null,
   setSelectedEvent: () => {},
+  isMonthView: false,
+  setIsMonthView: () => {},
+  isWeekView: false,
+  setIsMonthView: () => {},
+  selectedWeek: 0,
+  setSelectedWeek: (index) => {},
 });
 
 export default Context;

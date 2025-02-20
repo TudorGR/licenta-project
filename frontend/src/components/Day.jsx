@@ -18,14 +18,16 @@ const Day = ({ day, index }) => {
   }, [savedEvents, day]);
 
   return (
-    <div className="border border-gray-200 flex flex-col">
+    <div className="calendar-day border border-r-0 border-b-0 border-l-gray-200 border-t-gray-200 flex flex-col">
       <header className="flex flex-col items-center">
         {index === 0 && (
-          <p className="text-sm mt-1">{day.format("ddd").toUpperCase()}</p>
+          <p className=" text-sm mt-1">{day.format("ddd").toUpperCase()}</p>
         )}
         <p
-          className={`text-sm p-1 my-1 text-center ${
-            getCurrentDay() ? "bg-blue-600 text-white rounded-full w-7" : ""
+          className={` calendar-day-number text-sm p-1 my-1 text-center ${
+            getCurrentDay()
+              ? "bg-blue-600 text-white rounded-full w-7"
+              : "rounded-full w-7"
           }`}
         >
           {day.format("DD")}
@@ -38,7 +40,7 @@ const Day = ({ day, index }) => {
           setShowEventModal(true);
         }}
       >
-        {dayEvents.map((e, index) => (
+        {dayEvents.slice(0, index === 0 ? 3 : 4).map((e, index) => (
           <div
             key={index}
             onClick={() => {
@@ -46,19 +48,26 @@ const Day = ({ day, index }) => {
             }}
             className={`${
               e.label === "blue"
-                ? "bg-blue-500"
+                ? "border-blue-200 bg-blue-100 text-black border-2"
                 : e.label === "red"
-                ? "bg-red-500"
+                ? "border-red-200 bg-red-100 text-black border-2"
                 : e.label === "green"
-                ? "bg-green-500"
+                ? "border-green-200 bg-green-100 text-black border-2"
                 : e.label === "orange"
-                ? "bg-orange-500"
-                : "bg-yellow-500"
-            } p-1 mr-3 text-sm rounded mb-1 truncate`}
+                ? "border-orange-200 bg-orange-100 text-black border-2"
+                : "border-yellow-200 bg-yellow-100 text-black border-2"
+            } px-1 mr-3 text-sm rounded mb-1 truncate`}
           >
             {e.title}
           </div>
         ))}
+        {dayEvents.length > 4 && index !== 0 ? (
+          <p className="text-xs mt-1 ml-1">+{dayEvents.length - 4} more</p>
+        ) : dayEvents.length > 3 && index === 0 ? (
+          <p className="text-xs mt-1 ml-1">+{dayEvents.length - 3} more</p>
+        ) : (
+          ""
+        )}
       </div>
     </div>
   );

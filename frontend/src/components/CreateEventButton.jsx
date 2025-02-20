@@ -1,5 +1,6 @@
 import React, { useContext } from "react";
 import Context from "../context/Context";
+import plus from "../assets/plus.svg";
 
 export default function CreateEventButton() {
   const { setShowEventModal } = useContext(Context);
@@ -7,9 +8,12 @@ export default function CreateEventButton() {
   return (
     <button
       onClick={() => setShowEventModal(true)}
-      className="cursor-pointer border p-2 rounded-full flex items-center shadow-md hover:shadow-xl"
+      className="hover:bg-gray-800 cursor-pointer border w-28 h-10 text-white bg-black rounded-lg ml-4"
     >
-      NEW
+      <div className="flex items-center justify-center">
+        <img src={plus} className="w-6" />
+        <p>New</p>
+      </div>
     </button>
   );
 }
