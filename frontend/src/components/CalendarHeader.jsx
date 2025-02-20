@@ -1,6 +1,7 @@
 import React, { useContext } from "react";
 import Context from "../context/Context";
 import dayjs from "dayjs";
+import CreateEventButton from "./CreateEventButton";
 
 const CalendarHeader = () => {
   const { monthIndex, setMonthIndex, setSelectedDay } = useContext(Context);
@@ -12,11 +13,7 @@ const CalendarHeader = () => {
     setMonthIndex(monthIndex + 1);
   };
   const handleToday = () => {
-    setMonthIndex(
-      monthIndex === dayjs().month()
-        ? monthIndex + Math.random()
-        : dayjs().month()
-    );
+    setMonthIndex(dayjs().month());
     setSelectedDay(dayjs());
   };
   return (
@@ -38,6 +35,7 @@ const CalendarHeader = () => {
       <h2 className="ml-4 text-xl">
         {dayjs(new Date(dayjs().year(), monthIndex)).format("MMMM YYYY")}
       </h2>
+      <CreateEventButton />
     </header>
   );
 };

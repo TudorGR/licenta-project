@@ -32,6 +32,9 @@ export default function SmallCalendar() {
       return "bg-blue-100 rounded-full text-blue-600";
     else return "";
   }
+  function isSameMonth(day) {
+    return day.month() === currentMonthIndex;
+  }
   return (
     <div className="mt-9">
       <header className="flex justify-between">
@@ -58,7 +61,9 @@ export default function SmallCalendar() {
             {row.map((day, index) => (
               <button
                 key={index}
-                className={`cursor-pointer py-1 w-full text-sm ${getDay(day)}`}
+                className={`${
+                  isSameMonth(day) ? "" : "text-gray-300"
+                } cursor-pointer py-1 w-full text-sm ${getDay(day)}`}
                 onClick={() => {
                   setSmallCalendarMonth(currentMonthIndex);
                   setSelectedDay(day);

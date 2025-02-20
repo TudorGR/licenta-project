@@ -4,7 +4,7 @@ import Context from "../context/Context";
 
 const Day = ({ day, index }) => {
   const [dayEvents, setDayEvents] = useState([]);
-  const { setSelectedDay, setShowEventModal, savedEvents } =
+  const { setSelectedDay, setShowEventModal, savedEvents, setSelectedEvent } =
     useContext(Context);
 
   function getCurrentDay() {
@@ -40,12 +40,20 @@ const Day = ({ day, index }) => {
       >
         {dayEvents.map((e, index) => (
           <div
+            key={index}
+            onClick={() => {
+              setSelectedEvent(e);
+            }}
             className={`${
               e.label === "blue"
                 ? "bg-blue-500"
                 : e.label === "red"
                 ? "bg-red-500"
-                : "bg-green-500"
+                : e.label === "green"
+                ? "bg-green-500"
+                : e.label === "orange"
+                ? "bg-orange-500"
+                : "bg-yellow-500"
             } p-1 mr-3 text-sm rounded mb-1 truncate`}
           >
             {e.title}

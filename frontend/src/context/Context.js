@@ -11,6 +11,8 @@ const Context = React.createContext({
   setShowEventModal: () => {},
   dispatchEvent: ({ type, payload }) => {},
   savedEvents: [],
+  selectedEvent: null,
+  setSelectedEvent: () => {},
 });
 
 export default Context;

@@ -24,7 +24,8 @@ export default function ContextWrapper(props) {
   const [monthIndex, setMonthIndex] = useState(dayjs().month());
   const [smallCalendarMonth, setSmallCalendarMonth] = useState(null);
   const [selectedDay, setSelectedDay] = useState(dayjs());
-  const [showEventModal, setShowEventModal] = useState(false);
+  const [showEventModal, setShowEventModal] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState(null);
   const [savedEvents, dispatchEvent] = useReducer(
     savedEventsReducer,
     [],
@@ -41,6 +42,12 @@ export default function ContextWrapper(props) {
     }
   }, [smallCalendarMonth]);
 
+  useEffect(() => {
+    if (!showEventModal) {
+      setSelectedEvent(null);
+    }
+  }, [showEventModal]);
+
   return (
     <Context.Provider
       value={{
@@ -54,6 +61,8 @@ export default function ContextWrapper(props) {
         setShowEventModal,
         dispatchEvent,
         savedEvents,
+        selectedEvent,
+        setSelectedEvent,
       }}
     >
       {props.children}
