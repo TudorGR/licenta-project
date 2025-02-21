@@ -1,5 +1,5 @@
 .calendar-day:hover .calendar-day-number {
-  background-color: #e5e7eb;
+  color: gray;
 }
 .time-grid {
   position: relative;
@@ -21,4 +21,29 @@
   border-radius: 4px;
   box-sizing: border-box;
   cursor: pointer;
+}
+.blue-bg {
+  background-color: rgb(222, 244, 248);
+}
+.green-bg {
+  background-color: rgb(222, 245, 230);
+}
+.purple-bg {
+  background-color: rgb(218, 210, 255);
+}
+.yellow-bg {
+  background-color: rgb(254, 237, 216);
+}
+.gray-bg {
+  background-color: rgb(229, 229, 229);
+}
+.gray-border {
+  border-top: 1px dashed #edeef1;
+}
+.gray-border-axis {
+  border-top: 1px solid #edeef1;
+  border-left: 1px solid #edeef1;
+}
+.gray-border-bottom {
+  border-bottom: 1px solid #edeef1;
 }

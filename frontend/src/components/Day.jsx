@@ -48,14 +48,14 @@ const Day = ({ day, index }) => {
             }}
             className={`${
               e.label === "blue"
-                ? "border-blue-200 bg-blue-100 text-black border-2"
-                : e.label === "red"
-                ? "border-red-200 bg-red-100 text-black border-2"
+                ? " bg-sky-100 text-black"
+                : e.label === "gray"
+                ? "bg-gray-100 text-black"
                 : e.label === "green"
-                ? "border-green-200 bg-green-100 text-black border-2"
-                : e.label === "orange"
-                ? "border-orange-200 bg-orange-100 text-black border-2"
-                : "border-yellow-200 bg-yellow-100 text-black border-2"
+                ? " bg-emerald-100 text-black"
+                : e.label === "purple"
+                ? " bg-violet-100 text-black"
+                : " bg-amber-100 text-black"
             } px-1 mr-3 text-sm rounded mb-1 truncate`}
           >
             {e.title}

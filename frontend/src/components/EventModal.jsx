@@ -5,7 +5,7 @@ import deleteIcon from "../assets/delete_icon.svg";
 import calendar from "../assets/calendar.svg";
 import SmallCalendar from "./SmallCalendar";
 
-const colors = ["blue", "green", "orange", "yellow", "red"];
+const colors = ["gray", "blue", "green", "purple", "yellow"];
 
 export default function EventModal() {
   const {
@@ -28,7 +28,7 @@ export default function EventModal() {
 
   const [smallCalendar, setSmallCalendar] = useState(false);
   const [color, setColor] = useState(
-    selectedEvent ? colors.find((col) => col === selectedEvent.label) : "blue"
+    selectedEvent ? colors.find((col) => col === selectedEvent.label) : "gray"
   );
   const [error, setError] = useState(false);
   const inputRef = useRef(0);
@@ -76,7 +76,7 @@ export default function EventModal() {
   }, [endTime, setTimeEnd]);
 
   return (
-    <div className="z-10 h-screen w-full fixed left-0 top-0 flex justify-center items-center">
+    <div className="z-20 h-screen w-full fixed left-0 top-0 flex justify-center items-center">
       {smallCalendar && <SmallCalendar />}
       <form className=" bg-white shadow-2xl w-[500px] rounded-lg">
         <header className="border-b-1 border-gray-200 px-6 py-4 flex justify-between items-center">
@@ -90,7 +90,6 @@ export default function EventModal() {
                 onClick={() => {
                   setShowEventModal(false);
                   dispatchEvent({ type: "delete", payload: selectedEvent });
-                  setSelectedEvent(null);
                 }}
                 className="cursor-pointer"
                 type="button"
@@ -103,7 +102,6 @@ export default function EventModal() {
             <button
               onClick={() => {
                 setShowEventModal(false);
-                setSelectedEvent(null);
               }}
               className="cursor-pointer  ml-4 mr-2"
               type="button"
@@ -174,16 +172,14 @@ export default function EventModal() {
                 onClick={() => setColor(col)}
                 className={`${
                   col === "blue"
-                    ? "bg-blue-500"
-                    : col === "red"
-                    ? "bg-red-500"
+                    ? "bg-sky-200 border-2 border-sky-400"
+                    : col === "gray"
+                    ? "bg-gray-200 border-2 border-gray-400"
                     : col === "green"
-                    ? "bg-green-500"
-                    : col === "orange"
-                    ? "bg-orange-500"
-                    : col === "yellow"
-                    ? "bg-yellow-500"
-                    : "bg-red-500"
+                    ? "bg-emerald-200 border-2 border-emerald-400"
+                    : col === "purple"
+                    ? "bg-violet-200 border-2 border-violet-400"
+                    : "bg-amber-200  border-2 border-amber-400"
                 } w-5 h-5 rounded-full flex items-center justify-center cursor-pointer`}
               >
                 {col === color && (

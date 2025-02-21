@@ -1,8 +1,12 @@
 import dayjs from "dayjs";
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import Context from "../context/Context";
 
+const TIME_SLOT_HEIGHT = 50;
+const TOTAL_HEIGHT = TIME_SLOT_HEIGHT * 24;
+
 const DayWeek = ({ day, index }) => {
+  const timeGridRef = useRef(null);
   const [dayEvents, setDayEvents] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState(null);
@@ -15,21 +19,18 @@ const DayWeek = ({ day, index }) => {
     setSelectedEvent,
     setTimeStart,
     setTimeEnd,
+    selectedEvent,
   } = useContext(Context);
 
   const calculateTimePosition = () => {
     const now = dayjs();
     const minutes = now.hour() * 60 + now.minute();
-    const position = ((minutes - 480) / 720) * 100;
-    return Math.max(0, Math.min(100, position)); // Keep position between 0-100%
+    return (minutes / 60) * TIME_SLOT_HEIGHT;
   };
-
   const getTimeFromMousePosition = (mouseY, gridElement) => {
     const rect = gridElement.getBoundingClientRect();
     const relativeY = mouseY - rect.top;
-    const percentageY = (relativeY / rect.height) * 100;
-
-    const minutes = (percentageY / 100) * 720 + 480;
+    const minutes = (relativeY / TIME_SLOT_HEIGHT) * 60;
     const hours = Math.floor(minutes / 60);
     const mins = Math.round((minutes % 60) / 15) * 15;
 
@@ -61,19 +62,21 @@ const DayWeek = ({ day, index }) => {
     setDragEnd(currentTime);
   };
 
-  const handleMouseUp = () => {
-    if (isDragging) {
-      setIsDragging(false);
-      setSelectedDay(day);
-
-      const [startTime, endTime] = [dragStart, dragEnd].sort();
-
-      setTimeStart(startTime);
-      setTimeEnd(endTime);
-
-      setSelectedEvent(null);
-      setShowEventModal(true);
+  const handleMouseUp = (e) => {
+    if (e.target.closest(".event") || !isDragging) {
+      return;
     }
+
+    setIsDragging(false);
+    setSelectedDay(day);
+
+    const [startTime, endTime] = [dragStart, dragEnd].sort();
+
+    setTimeStart(startTime);
+    setTimeEnd(endTime);
+
+    setSelectedEvent(null);
+    setShowEventModal(true);
   };
 
   useEffect(() => {
@@ -107,10 +110,10 @@ const DayWeek = ({ day, index }) => {
     const startMinutes = getTimeSlot(startTime);
     const endMinutes = getTimeSlot(endTime);
 
-    const eventHeight = ((endMinutes - startMinutes) / 720) * 100;
-    const eventTop = ((startMinutes - 480) / 720) * 100;
+    const top = (startMinutes / 60) * TIME_SLOT_HEIGHT;
+    const height = ((endMinutes - startMinutes) / 60) * TIME_SLOT_HEIGHT;
 
-    return { top: `${eventTop}%`, height: `${eventHeight}%` };
+    return { top: `${top}px`, height: `${height}px` };
   };
 
   useEffect(() => {
@@ -120,113 +123,135 @@ const DayWeek = ({ day, index }) => {
     setDayEvents(events);
   }, [savedEvents, day]);
 
+  useEffect(() => {
+    if (timeGridRef.current) {
+      const middayPosition = 12 * TIME_SLOT_HEIGHT - 600 / 2;
+      timeGridRef.current.scrollTop = middayPosition;
+    }
+  }, []);
+
   return (
-    <div className="calendar-day border border-r-0 border-b-0 border-l-gray-200 border-t-gray-200 flex flex-col">
-      <header className="flex flex-col items-center">
+    <div className="calendar-day  flex flex-col">
+      <header className="sticky top-0 z-6">
         <p
-          className={`calendar-day-number text-sm p-1 my-1 text-center ${
-            getCurrentDay()
-              ? "bg-blue-600 text-white rounded-full w-7"
-              : "rounded-full w-7"
+          className={`text-nowrap p-3 w-full border-gray-200 border-l border-b mx-auto calendar-day-number text-sm  text-center ${
+            getCurrentDay() ? "text-blue-500" : ""
           }`}
         >
-          {day.format("DD")}
+          {day.format("ddd DD")}
         </p>
       </header>
       <div
-        className="time-grid relative"
+        className="time-grid relative "
+        style={{ height: "600px" }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={() => setIsDragging(false)}
       >
-        {Array.from({ length: 12 }, (_, i) => (
-          <div
-            key={i}
-            className="time-slot"
-            style={{
-              position: "absolute",
-              top: `${(i / 12) * 100}%`,
-              height: "8.33%",
-              width: "100%",
-              borderBottom: "1px solid #E5E7EB",
-              zIndex: 1,
-            }}
-          ></div>
-        ))}
-        {isDragging && dragStart && dragEnd && (
-          <div
-            className="border-2 border-blue-300 min-h-3 opacity-50 absolute left-0 w-full rounded-xl bg-blue-100"
-            style={{
-              ...positionEvent(dragStart, dragEnd),
-              pointerEvents: "none",
-            }}
-          />
-        )}
-        {
-          <div
-            className="absolute left-0 w-full"
-            style={{
-              top: `${currentTimePosition}%`,
-              height: "2px",
-              background: "blue",
-              zIndex: 2,
-            }}
-          ></div>
-        }
-        {dayEvents.map((event, index) => {
-          const { timeStart, timeEnd } = event;
-          const eventPosition = positionEvent(timeStart, timeEnd);
-          return (
+        <div
+          className="gray-border-axis"
+          style={{ height: `${TOTAL_HEIGHT}px`, position: "relative" }}
+        >
+          {Array.from({ length: 24 }, (_, i) => (
             <div
-              key={event.id}
+              key={i}
+              className=" time-slot gray-border-bottom"
               style={{
                 position: "absolute",
-                top: eventPosition.top,
-                height: eventPosition.height,
-                left: 0,
-                width: "95%",
-                padding: "5px",
-                boxSizing: "border-box",
-                cursor: "pointer",
-                borderRadius: "12px",
-                zIndex: 3,
-                color:
-                  event.label === "blue"
-                    ? "#3B82F6"
-                    : event.label === "red"
-                    ? "#EF4444"
-                    : event.label === "green"
-                    ? "#22C55E"
-                    : event.label === "orange"
-                    ? "#F97316"
-                    : "#EAB308",
+                top: `${i * TIME_SLOT_HEIGHT}px`,
+                height: `${TIME_SLOT_HEIGHT}px`,
+                width: "100%",
+                zIndex: 1,
               }}
-              className={`event ${event.label} ${
-                event.label === "blue"
-                  ? "border-blue-500 bg-white text-black border-1 shadow-[0_0_5px_rgba(59,130,246,0.2)]"
-                  : event.label === "red"
-                  ? "border-red-500 bg-white text-black border-1 shadow-[0_0_5px_rgba(239,68,68,0.2)]"
-                  : event.label === "green"
-                  ? "border-green-500 bg-white text-black border-1 shadow-[0_0_5px_rgba(34,197,94,0.2)]"
-                  : event.label === "orange"
-                  ? "border-orange-500 bg-white text-black border-1 shadow-[0_0_5px_rgba(249,115,22,0.2)]"
-                  : "border-yellow-500 bg-white text-black border-1 shadow-[0_0_5px_rgba(234,179,8,0.2)]"
-              }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                setTimeStart(event.timeStart);
-                setTimeEnd(event.timeEnd);
-                setSelectedDay(day);
-                setSelectedEvent(event);
-                setShowEventModal(true);
+            ></div>
+          ))}
+          {isDragging && dragStart && dragEnd && (
+            <div
+              className="z-2 border-1 border-gray-500 min-h-3 opacity-50 absolute left-0 w-full rounded-lg bg-gray-200"
+              style={{
+                ...positionEvent(dragStart, dragEnd),
+                pointerEvents: "none",
+              }}
+            />
+          )}
+          {getCurrentDay() ? (
+            <div
+              className="absolute left-0 w-full"
+              style={{
+                top: `${currentTimePosition}px`,
+                height: "2px",
+                background: "red",
+                zIndex: 12,
               }}
             >
-              <div className="ml-1 text-lg font-medium">{event.title}</div>
-              <div className="ml-1 text-md">{`${timeStart} - ${timeEnd}`}</div>
+              <div
+                className="absolute -left-1 -top-0.75 w-2 h-2 rounded-full"
+                style={{ background: "red" }}
+              />
             </div>
-          );
-        })}
+          ) : (
+            <div
+              className="absolute left-0 w-full gray-border"
+              style={{
+                top: `${currentTimePosition}px`,
+                height: "1px",
+                zIndex: 11,
+              }}
+            ></div>
+          )}
+          {dayEvents.map((event, index) => {
+            const { timeStart, timeEnd } = event;
+            const eventPosition = positionEvent(timeStart, timeEnd);
+            return (
+              <div
+                key={event.id}
+                className="event"
+                style={{
+                  position: "absolute",
+                  top: eventPosition.top,
+                  height: eventPosition.height,
+                  left: 0,
+                  width: "100%",
+                  padding: "2px",
+                  boxSizing: "border-box",
+                  cursor: "pointer",
+                  borderRadius: "8px",
+                  zIndex: 3,
+                  color: "black",
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setTimeStart(event.timeStart);
+                  setTimeEnd(event.timeEnd);
+                  setSelectedDay(day);
+                  setSelectedEvent(event);
+                  setShowEventModal(true);
+                }}
+              >
+                <div
+                  style={{ height: "100%" }}
+                  className={`rounded-lg p-1 ${
+                    event.label === "blue"
+                      ? " blue-bg"
+                      : event.label === "gray"
+                      ? "gray-bg "
+                      : event.label === "green"
+                      ? " green-bg "
+                      : event.label === "purple"
+                      ? " purple-bg "
+                      : " yellow-bg "
+                  }`}
+                >
+                  <div className="ml-1 text-md overflow-clip opacity-75">
+                    {event.title}
+                  </div>
+                  <div className="ml-1 text-xs text-nowrap overflow-clip opacity-75 text-gray-600">{`${timeStart} - ${timeEnd}`}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
