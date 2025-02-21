@@ -131,15 +131,24 @@ const DayWeek = ({ day, index }) => {
   }, []);
 
   return (
-    <div className="calendar-day  flex flex-col">
+    <div className="calendar-day flex flex-col">
       <header className="sticky top-0 z-6">
-        <p
-          className={`text-nowrap p-3 w-full border-gray-200 border-l border-b mx-auto calendar-day-number text-sm  text-center ${
-            getCurrentDay() ? "text-blue-500" : ""
+        <div
+          className={`flex justify-center items-center gap-1.5 text-nowrap h-11 w-full border-gray-200 border-l mx-auto calendar-day-number text-sm  text-center ${
+            getCurrentDay() ? "text-black" : "text-gray-500"
           }`}
         >
-          {day.format("ddd DD")}
-        </p>
+          <p>{day.format("ddd")}</p>
+          <div
+            className={`flex items-center justify-center ${
+              getCurrentDay()
+                ? "bg-black rounded-full w-6 h-6 shadow-md text-white"
+                : ""
+            }`}
+          >
+            <p>{day.format("DD")}</p>
+          </div>
+        </div>
       </header>
       <div
         className="time-grid relative "
@@ -177,18 +186,14 @@ const DayWeek = ({ day, index }) => {
           )}
           {getCurrentDay() ? (
             <div
-              className="absolute left-0 w-full"
+              className="absolute left-0 w-full bg-red-400"
               style={{
                 top: `${currentTimePosition}px`,
                 height: "2px",
-                background: "red",
                 zIndex: 12,
               }}
             >
-              <div
-                className="absolute -left-1 -top-0.75 w-2 h-2 rounded-full"
-                style={{ background: "red" }}
-              />
+              <div className="absolute -left-1 -top-0.75 w-2 h-2 rounded-full bg-red-400" />
             </div>
           ) : (
             <div
@@ -231,7 +236,7 @@ const DayWeek = ({ day, index }) => {
               >
                 <div
                   style={{ height: "100%" }}
-                  className={`rounded-lg p-1 ${
+                  className={`rounded-lg p-1 pr-0 ${
                     event.label === "blue"
                       ? " blue-bg"
                       : event.label === "gray"

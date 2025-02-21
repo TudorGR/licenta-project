@@ -1,7 +1,14 @@
 import React, { useEffect, useRef } from "react";
 import DayWeek from "./DayWeek";
+import dayjs from "dayjs";
 
 const TIME_SLOT_HEIGHT = 50;
+
+const calculateTimePosition = () => {
+  const now = dayjs();
+  const minutes = now.hour() * 60 + now.minute();
+  return (minutes / 60) * TIME_SLOT_HEIGHT;
+};
 
 const Week = ({ month, weekIndex }) => {
   if (!month || !month[weekIndex]) return null;
@@ -17,8 +24,43 @@ const Week = ({ month, weekIndex }) => {
 
   return (
     <div ref={timeGridRef} className="w-full overflow-y-auto">
-      <div className="bg-white h-11 fixed z-5 w-full"></div>
-      <div className="grid grid-cols-7 border-b w-full ">
+      <div className="bg-gray-100 h-11 fixed z-5 w-full border border-t-0 border-l-0 border-r-0 border-b-gray-200"></div>
+      <div
+        className="grid border-b w-full"
+        style={{ gridTemplateColumns: "60px repeat(7, 1fr)" }}
+      >
+        <div className="relative mt-12">
+          {Array.from({ length: 24 }, (_, i) => (
+            <div
+              key={i}
+              className="absolute text-sm text-gray-500"
+              style={{
+                top: `${i * TIME_SLOT_HEIGHT}px`,
+                transform: "translateY(-55%)",
+                right: "0",
+                background: "white",
+                width: "100%",
+                textAlign: "center",
+              }}
+            >
+              {`${i.toString().padStart(2, "0")}:00`}
+            </div>
+          ))}
+          <div
+            className="absolute text-sm rounded-xl bg-gray-200 text-gray-500"
+            style={{
+              top: `${calculateTimePosition()}px`,
+              transform: "translateY(-55%)",
+              right: "0",
+              width: "100%",
+              textAlign: "end",
+              zIndex: 12,
+              paddingRight: "10px",
+            }}
+          >
+            {dayjs().format("HH:mm")}
+          </div>
+        </div>
         {week.map((day, i) => (
           <DayWeek key={i} day={day} index={weekIndex} />
         ))}
