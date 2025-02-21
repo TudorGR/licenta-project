@@ -28,6 +28,8 @@ export default function ContextWrapper(props) {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isMonthView, setIsMonthView] = useState(false);
   const [isWeekView, setIsWeekView] = useState(true);
+  const [timeStart, setTimeStart] = useState("08:00");
+  const [timeEnd, setTimeEnd] = useState("09:00");
   const [selectedWeek, setSelectedWeek] = useState(() => {
     const d = dayjs(new Date());
     const firstDayOfMonth = d.startOf("month");
@@ -78,6 +80,10 @@ export default function ContextWrapper(props) {
         setIsWeekView,
         selectedWeek,
         setSelectedWeek,
+        timeStart,
+        timeEnd,
+        setTimeStart,
+        setTimeEnd,
       }}
     >
       {props.children}

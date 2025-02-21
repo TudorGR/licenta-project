@@ -8,18 +8,23 @@ import SmallCalendar from "./SmallCalendar";
 const colors = ["blue", "green", "orange", "yellow", "red"];
 
 export default function EventModal() {
-  const { setShowEventModal, selectedDay, dispatchEvent, selectedEvent } =
-    useContext(Context);
+  const {
+    setShowEventModal,
+    selectedDay,
+    dispatchEvent,
+    selectedEvent,
+    setSelectedEvent,
+    timeStart,
+    timeEnd,
+    setTimeStart,
+    setTimeEnd,
+  } = useContext(Context);
   const [title, setTitle] = useState(selectedEvent ? selectedEvent.title : "");
   const [description, setDescription] = useState(
     selectedEvent ? selectedEvent.description : ""
   );
-  const [startTime, setStartTime] = useState(
-    selectedEvent ? selectedEvent.startTime : "08:00"
-  );
-  const [endTime, setEndTime] = useState(
-    selectedEvent ? selectedEvent.endTime : "09:00"
-  );
+  const [startTime, setStartTime] = useState(timeStart ? timeStart : "08:00");
+  const [endTime, setEndTime] = useState(timeEnd ? timeEnd : "09:00");
 
   const [smallCalendar, setSmallCalendar] = useState(false);
   const [color, setColor] = useState(
@@ -41,8 +46,8 @@ export default function EventModal() {
       description,
       label: color,
       day: selectedDay.valueOf(),
-      startTime,
-      endTime,
+      timeStart,
+      timeEnd,
       id: selectedEvent ? selectedEvent.id : Date.now(),
     };
     if (selectedEvent) {
@@ -50,6 +55,7 @@ export default function EventModal() {
     } else {
       dispatchEvent({ type: "push", payload: event });
     }
+    setSelectedEvent(null);
     setShowEventModal(false);
   };
 
@@ -60,6 +66,14 @@ export default function EventModal() {
   useEffect(() => {
     setSmallCalendar(false);
   }, [selectedDay]);
+
+  useEffect(() => {
+    setTimeStart(startTime);
+  }, [startTime, setTimeStart]);
+
+  useEffect(() => {
+    setTimeEnd(endTime);
+  }, [endTime, setTimeEnd]);
 
   return (
     <div className="z-10 h-screen w-full fixed left-0 top-0 flex justify-center items-center">
@@ -76,6 +90,7 @@ export default function EventModal() {
                 onClick={() => {
                   setShowEventModal(false);
                   dispatchEvent({ type: "delete", payload: selectedEvent });
+                  setSelectedEvent(null);
                 }}
                 className="cursor-pointer"
                 type="button"
@@ -88,6 +103,7 @@ export default function EventModal() {
             <button
               onClick={() => {
                 setShowEventModal(false);
+                setSelectedEvent(null);
               }}
               className="cursor-pointer  ml-4 mr-2"
               type="button"
