@@ -50,6 +50,16 @@ export default function ContextWrapper(props) {
     "Study",
     "Personal",
     "Work",
+    "Social",
+    "Family",
+    "Health",
+    "Hobby",
+    "Chores",
+    "Travel",
+    "Finance",
+    "Learning",
+    "Self-care",
+    "Events",
   ]);
   const [selectedCategory, setSelectedCategory] = useState("");
 

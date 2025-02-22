@@ -5,7 +5,7 @@ import CreateEventButton from "./CreateEventButton";
 import left from "../assets/chevron-left.svg";
 import right from "../assets/chevron-right.svg";
 
-const CalendarHeader = () => {
+const CalendarHeader = ({ onOpenAIModal }) => {
   const {
     monthIndex,
     setMonthIndex,
@@ -104,7 +104,18 @@ const CalendarHeader = () => {
           Today
         </button>
       </div>
-      <CreateEventButton />
+      <div className="flex">
+        <button
+          onClick={onOpenAIModal}
+          className="px-2 transition-all hover:bg-gray-700 cursor-pointer border h-10 text-white bg-black rounded-md ml-4 flex items-center justify-center gap-2"
+        >
+          <span className="text-nowrap">Quick Add</span>
+          <kbd className="text-xs bg-gray-700 px-2 py-0.5 rounded">
+            Ctrl+Space
+          </kbd>
+        </button>
+        <CreateEventButton />
+      </div>
     </header>
   );
 };

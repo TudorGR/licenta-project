@@ -228,7 +228,7 @@ export default function EventModal() {
                   <select
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="border-gray-200 border-1 py-2 pl-9 pr-4 outline-0 w-full rounded-md "
+                    className=" border-gray-200 border-1 py-2 pl-9 pr-4 outline-0 w-full rounded-md"
                   >
                     <option value="" disabled hidden>
                       Select a category
