@@ -28,14 +28,15 @@ export default function ContextWrapper(props) {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isMonthView, setIsMonthView] = useState(false);
   const [isWeekView, setIsWeekView] = useState(true);
+  const [isDayView, setIsDayView] = useState(false);
   const [timeStart, setTimeStart] = useState("08:00");
   const [timeEnd, setTimeEnd] = useState("09:00");
   const [selectedWeek, setSelectedWeek] = useState(() => {
-    const d = dayjs(new Date());
-    const firstDayOfMonth = d.startOf("month");
-    const diffInDays = d.diff(firstDayOfMonth, "day");
-    const weekIndex = Math.floor(diffInDays / 7) + 1;
-    return weekIndex;
+    const today = dayjs();
+    const firstDayOfMonth = today.startOf("month");
+    const firstDayOfFirstWeek = firstDayOfMonth.startOf("week");
+    const diff = today.diff(firstDayOfFirstWeek, "day");
+    return Math.floor(diff / 7);
   });
   const [savedEvents, dispatchEvent] = useReducer(
     savedEventsReducer,
@@ -84,6 +85,8 @@ export default function ContextWrapper(props) {
         timeEnd,
         setTimeStart,
         setTimeEnd,
+        isDayView,
+        setIsDayView,
       }}
     >
       {props.children}

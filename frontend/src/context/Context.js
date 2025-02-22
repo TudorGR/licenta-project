@@ -16,7 +16,7 @@ const Context = React.createContext({
   isMonthView: false,
   setIsMonthView: () => {},
   isWeekView: false,
-  setIsMonthView: () => {},
+  setIsWeekView: () => {},
   selectedWeek: 0,
   setSelectedWeek: (index) => {},
   timeStart: "08:00",

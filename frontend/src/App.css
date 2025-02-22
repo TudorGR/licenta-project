@@ -1,5 +1,7 @@
 .calendar-day:hover .calendar-day-number {
-  color: rgb(50, 50, 50);
+  color: black;
+  background-color: rgb(240, 240, 240);
+  transition: 0.1s all;
 }
 .time-grid {
   position: relative;
@@ -38,7 +40,7 @@
   background-color: rgb(229, 229, 229);
 }
 .gray-border {
-  border-top: 1px dashed #edeef1;
+  border-top: 1px dashed whitesmoke;
 }
 .gray-border-axis {
   border-top: 1px solid #edeef1;

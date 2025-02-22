@@ -78,7 +78,7 @@ export default function EventModal() {
   return (
     <div className="z-20 h-screen w-full fixed left-0 top-0 flex justify-center items-center">
       {smallCalendar && <SmallCalendar />}
-      <form className=" bg-white shadow-2xl w-[500px] rounded-lg">
+      <form className=" bg-white shadow-2xl w-[500px] rounded-md">
         <header className="border-b-1 border-gray-200 px-6 py-4 flex justify-between items-center">
           <div className="flex flex-col">
             <h1 className="font-medium text-xl">Create Event</h1>
@@ -120,7 +120,7 @@ export default function EventModal() {
                 error
                   ? "border-red-500 focus:border-red-500"
                   : "border-gray-200"
-              } border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-lg`}
+              } border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-md`}
               name="title"
               placeholder="Add title"
               value={title}
@@ -130,7 +130,7 @@ export default function EventModal() {
             <h1 className="text-lg font-medium">Description</h1>
             <input
               type="text"
-              className="border-gray-200 border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-lg"
+              className="border-gray-200 border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-md"
               name="description"
               placeholder="Add description"
               value={description}
@@ -142,7 +142,7 @@ export default function EventModal() {
               onClick={() => {
                 setSmallCalendar(true);
               }}
-              className="cursor-pointer py-2 px-4 flex border-1 border-gray-200 rounded-lg"
+              className="cursor-pointer py-2 px-4 flex border-1 border-gray-200 rounded-md"
             >
               <img src={calendar} className="w-6 mr-4" />
               <p>{selectedDay.format("dddd, MMMM DD")}</p>
@@ -150,14 +150,14 @@ export default function EventModal() {
             <div className="flex gap-2 items-center">
               <input
                 type="time"
-                className="border-gray-200 border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-lg"
+                className="border-gray-200 border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-md"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
               />
               <p>{"-"}</p>
               <input
                 type="time"
-                className="border-gray-200 border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-lg"
+                className="border-gray-200 border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-md"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
               />
@@ -193,7 +193,7 @@ export default function EventModal() {
               onClick={() => {
                 setShowEventModal(false);
               }}
-              className="hover:bg-gray-100 cursor-pointer border w-28 h-10 border-gray-200 rounded-lg mr-4"
+              className="hover:bg-gray-100 cursor-pointer border w-28 h-10 border-gray-200 rounded-md mr-4"
               type="button"
             >
               Cancel
@@ -201,7 +201,7 @@ export default function EventModal() {
             <button
               type="submit"
               onClick={handleSubmit}
-              className="hover:bg-gray-800 text-white bg-black cursor-pointer border w-28 h-10 border-gray-200 rounded-lg"
+              className="hover:bg-gray-800 text-white bg-black cursor-pointer border w-28 h-10 border-gray-200 rounded-md"
             >
               Save
             </button>

@@ -53,9 +53,8 @@ const Week = ({ month, weekIndex }) => {
               transform: "translateY(-55%)",
               right: "0",
               width: "100%",
-              textAlign: "end",
+              textAlign: "center",
               zIndex: 12,
-              paddingRight: "10px",
             }}
           >
             {dayjs().format("HH:mm")}

@@ -177,7 +177,7 @@ const DayWeek = ({ day, index }) => {
           ))}
           {isDragging && dragStart && dragEnd && (
             <div
-              className="z-2 border-1 border-gray-500 min-h-3 opacity-50 absolute left-0 w-full rounded-lg bg-gray-200"
+              className="z-2 border-1 border-gray-500 min-h-3 opacity-50 absolute left-0 w-full rounded-md bg-gray-200"
               style={{
                 ...positionEvent(dragStart, dragEnd),
                 pointerEvents: "none",
@@ -190,7 +190,7 @@ const DayWeek = ({ day, index }) => {
               style={{
                 top: `${currentTimePosition}px`,
                 height: "2px",
-                zIndex: 12,
+                zIndex: 13,
               }}
             >
               <div className="absolute -left-1 -top-0.75 w-2 h-2 rounded-full bg-red-400" />
@@ -218,10 +218,10 @@ const DayWeek = ({ day, index }) => {
                   height: eventPosition.height,
                   left: 0,
                   width: "100%",
-                  padding: "2px",
+                  padding: "1px",
                   boxSizing: "border-box",
                   cursor: "pointer",
-                  borderRadius: "8px",
+                  borderRadius: "6px",
                   zIndex: 3,
                   color: "black",
                 }}
@@ -236,7 +236,7 @@ const DayWeek = ({ day, index }) => {
               >
                 <div
                   style={{ height: "100%" }}
-                  className={`rounded-lg p-1 pr-0 ${
+                  className={`rounded-md p-1 pr-0 ${
                     event.label === "blue"
                       ? " blue-bg"
                       : event.label === "gray"

@@ -38,7 +38,7 @@ export default function SmallCalendar() {
     return day.month() === currentMonthIndex;
   }
   return (
-    <div className="bg-white rounded-lg absolute top-1/2 left-1/3 shadow-2xl p-4 w-60">
+    <div className="bg-white rounded-md absolute top-1/2 left-1/3 shadow-2xl p-4 w-60">
       <header className="flex justify-between">
         <p className="font-bold">
           {dayjs(new Date(dayjs().year(), currentMonthIndex)).format(

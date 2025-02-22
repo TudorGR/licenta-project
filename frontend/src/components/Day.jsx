@@ -4,8 +4,14 @@ import Context from "../context/Context";
 
 const Day = ({ day, index }) => {
   const [dayEvents, setDayEvents] = useState([]);
-  const { setSelectedDay, setShowEventModal, savedEvents, setSelectedEvent } =
-    useContext(Context);
+  const {
+    setSelectedDay,
+    setShowEventModal,
+    savedEvents,
+    setSelectedEvent,
+    setTimeStart,
+    setTimeEnd,
+  } = useContext(Context);
 
   function getCurrentDay() {
     return day.format("DD-MM-YY") === dayjs().format("DD-MM-YY");
@@ -37,6 +43,8 @@ const Day = ({ day, index }) => {
         className="flex-1 cursor-pointer"
         onClick={() => {
           setSelectedDay(day);
+          setTimeStart("08:00");
+          setTimeEnd("09:00");
           setShowEventModal(true);
         }}
       >

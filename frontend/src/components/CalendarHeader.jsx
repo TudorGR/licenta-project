@@ -16,11 +16,11 @@ const CalendarHeader = () => {
   } = useContext(Context);
 
   const getCurrentWeekIndex = () => {
-    const d = dayjs(new Date());
-    const firstDayOfMonth = d.startOf("month");
-    const diffInDays = d.diff(firstDayOfMonth, "day");
-    const weekIndex = Math.floor(diffInDays / 7) + 1;
-    return weekIndex;
+    const today = dayjs();
+    const firstDayOfMonth = today.startOf("month");
+    const firstDayOfFirstWeek = firstDayOfMonth.startOf("week");
+    const diff = today.diff(firstDayOfFirstWeek, "day");
+    return Math.floor(diff / 7);
   };
 
   const handlePrevMonth = () => {
@@ -69,7 +69,7 @@ const CalendarHeader = () => {
         </div>
         <button
           onClick={handleToday}
-          className="hover:bg-gray-100 cursor-pointer border w-28 h-10 border-gray-200 rounded-lg ml-4"
+          className="hover:bg-gray-100 cursor-pointer border w-28 h-10 border-gray-200 rounded-md ml-4"
         >
           Today
         </button>

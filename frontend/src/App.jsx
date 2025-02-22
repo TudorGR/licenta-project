@@ -7,11 +7,18 @@ import Month from "./components/Month";
 import Context from "./context/Context";
 import EventModal from "./components/EventModal";
 import Week from "./components/Week";
+import DayView from "./components/DayView";
 
 function App() {
   const [calendarMonth, setCalendarMonth] = useState(getCalendarMonth());
-  const { monthIndex, showEventModal, isMonthView, isWeekView, selectedWeek } =
-    useContext(Context);
+  const {
+    monthIndex,
+    showEventModal,
+    isMonthView,
+    isWeekView,
+    selectedWeek,
+    isDayView,
+  } = useContext(Context);
 
   useEffect(() => {
     setCalendarMonth(getCalendarMonth(monthIndex));
@@ -29,6 +36,7 @@ function App() {
             {isWeekView && (
               <Week month={calendarMonth} weekIndex={selectedWeek} />
             )}
+            {isDayView && <DayView />}
           </div>
         </div>
       </div>
