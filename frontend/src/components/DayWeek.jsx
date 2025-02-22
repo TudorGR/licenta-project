@@ -1,6 +1,11 @@
 import dayjs from "dayjs";
 import React, { useContext, useEffect, useRef, useState } from "react";
 import Context from "../context/Context";
+import workoutIcon from "../assets/workout.svg";
+import meetingIcon from "../assets/meeting.svg";
+import studyIcon from "../assets/study.svg";
+import personalIcon from "../assets/personal.svg";
+import workIcon from "../assets/work.svg";
 
 const TIME_SLOT_HEIGHT = 50;
 const TOTAL_HEIGHT = TIME_SLOT_HEIGHT * 24;
@@ -12,6 +17,13 @@ const DayWeek = ({ day, index }) => {
   const [dragStart, setDragStart] = useState(null);
   const [dragEnd, setDragEnd] = useState(null);
   const [currentTimePosition, setCurrentTimePosition] = useState(0);
+  const [selectedWeek, setSelectedWeek] = useState(() => {
+    const today = dayjs();
+    const firstDayOfMonth = today.startOf("month");
+    const firstDayOfWeek = firstDayOfMonth.startOf("week");
+    const weekIndex = Math.floor(today.diff(firstDayOfWeek, "days") / 7);
+    return weekIndex;
+  });
   const {
     setSelectedDay,
     setShowEventModal,
@@ -63,7 +75,7 @@ const DayWeek = ({ day, index }) => {
   };
 
   const handleMouseUp = (e) => {
-    if (e.target.closest(".event") || !isDragging) {
+    if (!isDragging) {
       return;
     }
 
@@ -206,8 +218,10 @@ const DayWeek = ({ day, index }) => {
             ></div>
           )}
           {dayEvents.map((event, index) => {
-            const { timeStart, timeEnd } = event;
+            const { timeStart, timeEnd, category } = event;
             const eventPosition = positionEvent(timeStart, timeEnd);
+            const isSmallEvent = parseInt(eventPosition.height) < 50; // Define small event threshold
+
             return (
               <div
                 key={event.id}
@@ -235,8 +249,10 @@ const DayWeek = ({ day, index }) => {
                 }}
               >
                 <div
-                  style={{ height: "100%" }}
-                  className={`rounded-md p-1 pr-0 ${
+                  style={{
+                    height: "100%",
+                  }}
+                  className={`relative rounded-md pr-0.5 py-0.5 ${
                     event.label === "blue"
                       ? " blue-bg"
                       : event.label === "gray"
@@ -248,10 +264,58 @@ const DayWeek = ({ day, index }) => {
                       : " yellow-bg "
                   }`}
                 >
-                  <div className="ml-1 text-md overflow-clip opacity-75">
-                    {event.title}
-                  </div>
-                  <div className="ml-1 text-xs text-nowrap overflow-clip opacity-75 text-gray-600">{`${timeStart} - ${timeEnd}`}</div>
+                  {isSmallEvent ? (
+                    <div className="text-sm ml-1 overflow-hidden whitespace-nowrap flex items-center gap-1">
+                      <span>{event.title}</span>
+                      <span className="text-xs text-gray-600">
+                        • {timeStart} - {timeEnd}
+                      </span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-sm ml-1 overflow-clip">
+                        {event.title}
+                      </div>
+                      <div className="ml-1 text-xs text-nowrap overflow-clip text-gray-600">
+                        {`${timeStart} - ${timeEnd}`}
+                      </div>
+                    </>
+                  )}
+                  {category === "Workout" && (
+                    <img
+                      src={workoutIcon}
+                      alt={category}
+                      className="absolute bottom-0 right-0 backIcon"
+                    />
+                  )}
+                  {category === "Meeting" && (
+                    <img
+                      src={meetingIcon}
+                      alt={category}
+                      className="absolute bottom-0 right-0 backIcon"
+                    />
+                  )}
+                  {category === "Study" && (
+                    <img
+                      src={studyIcon}
+                      alt={category}
+                      className="absolute bottom-0 right-0 backIcon"
+                    />
+                  )}
+                  {category === "Personal" && (
+                    <img
+                      src={personalIcon}
+                      alt={category}
+                      className="absolute bottom-0 right-0 backIcon"
+                    />
+                  )}
+                  {category === "Work" && (
+                    <img
+                      src={workIcon}
+                      alt={category}
+                      className="absolute bottom-0 right-0 backIcon"
+                    />
+                  )}
                 </div>
               </div>
             );

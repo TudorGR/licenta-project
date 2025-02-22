@@ -4,8 +4,13 @@ import closeIcon from "../assets/close_icon.svg";
 import deleteIcon from "../assets/delete_icon.svg";
 import calendar from "../assets/calendar.svg";
 import SmallCalendar from "./SmallCalendar";
+import dayjs from "dayjs";
+import saveIcon from "../assets/save.svg";
+import recurringIcon from "../assets/recurring.svg";
+import categoryIcon from "../assets/category.svg";
 
 const colors = ["gray", "blue", "green", "purple", "yellow"];
+const recurringOptions = ["None", "Daily", "Weekly", "Monthly"];
 
 export default function EventModal() {
   const {
@@ -18,6 +23,9 @@ export default function EventModal() {
     timeEnd,
     setTimeStart,
     setTimeEnd,
+    categories,
+    selectedCategory,
+    setSelectedCategory,
   } = useContext(Context);
   const [title, setTitle] = useState(selectedEvent ? selectedEvent.title : "");
   const [description, setDescription] = useState(
@@ -25,6 +33,7 @@ export default function EventModal() {
   );
   const [startTime, setStartTime] = useState(timeStart ? timeStart : "08:00");
   const [endTime, setEndTime] = useState(timeEnd ? timeEnd : "09:00");
+  const [recurring, setRecurring] = useState("");
 
   const [smallCalendar, setSmallCalendar] = useState(false);
   const [color, setColor] = useState(
@@ -41,20 +50,58 @@ export default function EventModal() {
       return;
     }
 
-    const event = {
+    const baseEvent = {
       title,
       description,
       label: color,
-      day: selectedDay.valueOf(),
       timeStart,
       timeEnd,
-      id: selectedEvent ? selectedEvent.id : Date.now(),
+      category: selectedCategory ? selectedCategory : "None",
     };
-    if (selectedEvent) {
-      dispatchEvent({ type: "update", payload: event });
+
+    if (recurring === "None" || recurring === "") {
+      // Single event
+      const event = {
+        ...baseEvent,
+        day: selectedDay.valueOf(),
+        id: selectedEvent ? selectedEvent.id : Date.now(),
+      };
+      if (selectedEvent) {
+        dispatchEvent({ type: "update", payload: event });
+      } else {
+        dispatchEvent({ type: "push", payload: event });
+      }
     } else {
-      dispatchEvent({ type: "push", payload: event });
+      // Recurring events
+      const events = [];
+      for (let i = 0; i < 10; i++) {
+        let eventDate;
+        switch (recurring) {
+          case "Daily":
+            eventDate = dayjs(selectedDay).add(i, "day");
+            break;
+          case "Weekly":
+            eventDate = dayjs(selectedDay).add(i, "week");
+            break;
+          case "Monthly":
+            eventDate = dayjs(selectedDay).add(i, "month");
+            break;
+          default:
+            eventDate = selectedDay;
+        }
+
+        events.push({
+          ...baseEvent,
+          day: eventDate.valueOf(),
+          id: Date.now() + i,
+        });
+      }
+
+      events.forEach((event) => {
+        dispatchEvent({ type: "push", payload: event });
+      });
     }
+
     setSelectedEvent(null);
     setShowEventModal(false);
   };
@@ -75,30 +122,50 @@ export default function EventModal() {
     setTimeEnd(endTime);
   }, [endTime, setTimeEnd]);
 
+  useEffect(() => {
+    if (selectedEvent) {
+      setSelectedCategory(selectedEvent.category);
+    } else {
+      setSelectedCategory("");
+    }
+
+    const handleKeyDown = (e) => {
+      if (e.key === "Delete" && selectedEvent) {
+        dispatchEvent({ type: "delete", payload: selectedEvent });
+        setShowEventModal(false);
+        setSelectedEvent(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [
+    selectedEvent,
+    dispatchEvent,
+    setShowEventModal,
+    setSelectedEvent,
+    setSelectedCategory,
+  ]);
+
   return (
     <div className="z-20 h-screen w-full fixed left-0 top-0 flex justify-center items-center">
       {smallCalendar && <SmallCalendar />}
       <form className=" bg-white shadow-2xl w-[500px] rounded-md">
-        <header className="border-b-1 border-gray-200 px-6 py-4 flex justify-between items-center">
+        <header className="border-b-1 border-gray-200 px-4 py-4 flex justify-between items-center">
           <div className="flex flex-col">
-            <h1 className="font-medium text-xl">Create Event</h1>
-            <p>Fill in the data below to add an event</p>
+            <h1 className="font-medium text-xl">
+              {selectedEvent ? "Update Event" : "Add Event"}
+            </h1>
+            <p>
+              {selectedEvent
+                ? "Fill in the data below to update the event"
+                : "Fill in the data below to add an event"}
+            </p>
           </div>
           <div>
-            {selectedEvent ? (
-              <button
-                onClick={() => {
-                  setShowEventModal(false);
-                  dispatchEvent({ type: "delete", payload: selectedEvent });
-                }}
-                className="cursor-pointer"
-                type="button"
-              >
-                <img src={deleteIcon} className="w-6" />
-              </button>
-            ) : (
-              ""
-            )}
             <button
               onClick={() => {
                 setShowEventModal(false);
@@ -110,9 +177,8 @@ export default function EventModal() {
             </button>
           </div>
         </header>
-        <div className="px-6 py-4">
+        <div className="px-4 py-4">
           <div className="grid grid-cols-1/5 items-end gap-y-2">
-            <h1 className="text-lg font-medium">Title</h1>
             <input
               ref={inputRef}
               type="text"
@@ -122,22 +188,11 @@ export default function EventModal() {
                   : "border-gray-200"
               } border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-md`}
               name="title"
-              placeholder="Add title"
+              placeholder="Add Title..."
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               autoComplete="off"
             />
-            <h1 className="text-lg font-medium">Description</h1>
-            <input
-              type="text"
-              className="border-gray-200 border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-md"
-              name="description"
-              placeholder="Add description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              autoComplete="off"
-            />
-            <h1 className="text-lg font-medium">Date and Time</h1>
             <div
               onClick={() => {
                 setSmallCalendar(true);
@@ -162,9 +217,66 @@ export default function EventModal() {
                 onChange={(e) => setEndTime(e.target.value)}
               />
             </div>
+            <div className="flex gap-2 w-full">
+              <div className="flex-1">
+                <div className="relative">
+                  <img
+                    src={categoryIcon}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5"
+                    alt="category"
+                  />
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="border-gray-200 border-1 py-2 pl-9 pr-4 outline-0 w-full rounded-md "
+                  >
+                    <option value="" disabled hidden>
+                      Select a category
+                    </option>
+                    {categories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="flex-1">
+                <div className="relative">
+                  <img
+                    src={recurringIcon}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5"
+                    alt="recurring"
+                  />
+                  <select
+                    value={recurring}
+                    onChange={(e) => setRecurring(e.target.value)}
+                    className="border-gray-200 border-1 py-2 pl-9 pr-4 outline-0 w-full rounded-md "
+                  >
+                    <option value="" disabled hidden>
+                      Add recurring
+                    </option>
+                    {recurringOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+            <input
+              type="text"
+              className="border-gray-200 border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-md"
+              name="description"
+              placeholder="Add Description..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              autoComplete="off"
+            />
           </div>
         </div>
-        <footer className="flex justify-between items-center border-t-1 border-gray-200 px-6 py-4">
+        <footer className="flex justify-between items-center border-t-1 border-gray-200 px-4 py-4">
           <div className="flex gap-x-2">
             {colors.map((col, index) => (
               <span
@@ -172,14 +284,14 @@ export default function EventModal() {
                 onClick={() => setColor(col)}
                 className={`${
                   col === "blue"
-                    ? "bg-sky-200 border-2 border-sky-400"
+                    ? "blue-bg border-2 border-blue-500"
                     : col === "gray"
-                    ? "bg-gray-200 border-2 border-gray-400"
+                    ? "gray-bg border-2 border-gray-500"
                     : col === "green"
-                    ? "bg-emerald-200 border-2 border-emerald-400"
+                    ? "green-bg border-2 border-green-500"
                     : col === "purple"
-                    ? "bg-violet-200 border-2 border-violet-400"
-                    : "bg-amber-200  border-2 border-amber-400"
+                    ? "purple-bg border-2 border-purple-500"
+                    : "yellow-bg  border-2 border-yellow-500"
                 } w-5 h-5 rounded-full flex items-center justify-center cursor-pointer`}
               >
                 {col === color && (
@@ -188,12 +300,26 @@ export default function EventModal() {
               </span>
             ))}
           </div>
-          <div>
+          <div className="flex">
+            {selectedEvent ? (
+              <button
+                onClick={() => {
+                  setShowEventModal(false);
+                  dispatchEvent({ type: "delete", payload: selectedEvent });
+                }}
+                className="transition-all border-gray-200 rounded-md mr-4 hover:bg-gray-100 border w-10 h-10 cursor-pointer"
+                type="button"
+              >
+                <img src={deleteIcon} className="w-6 mx-auto" />
+              </button>
+            ) : (
+              ""
+            )}
             <button
               onClick={() => {
                 setShowEventModal(false);
               }}
-              className="hover:bg-gray-100 cursor-pointer border w-28 h-10 border-gray-200 rounded-md mr-4"
+              className="transition-all  hover:bg-gray-100 cursor-pointer border w-28 h-10 border-gray-200 rounded-md mr-4"
               type="button"
             >
               Cancel
@@ -201,9 +327,10 @@ export default function EventModal() {
             <button
               type="submit"
               onClick={handleSubmit}
-              className="hover:bg-gray-800 text-white bg-black cursor-pointer border w-28 h-10 border-gray-200 rounded-md"
+              className="transition-all  flex items-center justify-center hover:bg-gray-700 text-white bg-black cursor-pointer border w-28 h-10 border-gray-200 rounded-md"
             >
-              Save
+              <img src={saveIcon} className="w-5 mr-2" />
+              <p>Save</p>
             </button>
           </div>
         </footer>

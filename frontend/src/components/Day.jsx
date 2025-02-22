@@ -30,10 +30,10 @@ const Day = ({ day, index }) => {
           <p className=" text-sm mt-1">{day.format("ddd").toUpperCase()}</p>
         )}
         <p
-          className={` calendar-day-number text-sm p-1 my-1 text-center ${
+          className={`calendar-day-number text-sm p-1 my-1 text-center ${
             getCurrentDay()
-              ? "bg-blue-600 text-white rounded-full w-7"
-              : "rounded-full w-7"
+              ? "bg-black text-white rounded-full w-7"
+              : " rounded-full w-7"
           }`}
         >
           {day.format("DD")}
@@ -56,14 +56,14 @@ const Day = ({ day, index }) => {
             }}
             className={`${
               e.label === "blue"
-                ? " bg-sky-100 text-black"
+                ? "blue-bg text-black"
                 : e.label === "gray"
-                ? "bg-gray-100 text-black"
+                ? "gray-bg text-black"
                 : e.label === "green"
-                ? " bg-emerald-100 text-black"
+                ? " green-bg text-black"
                 : e.label === "purple"
-                ? " bg-violet-100 text-black"
-                : " bg-amber-100 text-black"
+                ? " purple-bg text-black"
+                : " yellow-bg text-black"
             } px-1 mr-3 text-sm rounded mb-1 truncate`}
           >
             {e.title}

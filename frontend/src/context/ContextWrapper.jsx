@@ -43,6 +43,15 @@ export default function ContextWrapper(props) {
     [],
     initEvents
   );
+  const [categories] = useState([
+    "None",
+    "Meeting",
+    "Workout",
+    "Study",
+    "Personal",
+    "Work",
+  ]);
+  const [selectedCategory, setSelectedCategory] = useState("");
 
   useEffect(() => {
     localStorage.setItem("events", JSON.stringify(savedEvents));
@@ -87,6 +96,9 @@ export default function ContextWrapper(props) {
         setTimeEnd,
         isDayView,
         setIsDayView,
+        categories,
+        selectedCategory,
+        setSelectedCategory,
       }}
     >
       {props.children}

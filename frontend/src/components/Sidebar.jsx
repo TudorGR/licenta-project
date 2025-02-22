@@ -1,7 +1,9 @@
-import React, { useContext } from "react";
+import React, { useContext, useState } from "react";
 import Context from "../context/Context";
 
 const Sidebar = () => {
+  const [input, setInput] = useState("");
+
   const {
     setIsMonthView,
     setIsWeekView,
@@ -11,8 +13,13 @@ const Sidebar = () => {
     isDayView,
   } = useContext(Context);
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    console.log(input);
+  };
+
   return (
-    <aside className="w-50 border-gray-200 border-r flex flex-col items-center gap-2">
+    <aside className=" w-50 border-gray-200 border-r flex flex-col items-center gap-2">
       <h1 className="text-center my-3 font-bold text-2xl">CalendarApp</h1>
       <button
         onClick={() => {
@@ -20,8 +27,8 @@ const Sidebar = () => {
           setIsWeekView(false);
           setIsDayView(false);
         }}
-        className={`cursor-pointer border w-[90%] h-10 border-gray-200 rounded-md ${
-          isMonthView ? "bg-gray-100" : "bg-white hover:bg-gray-100"
+        className={`transition-all cursor-pointer border w-[90%] h-10 border-gray-200 rounded-md ${
+          isMonthView ? "bg-black text-white" : "bg-white hover:bg-gray-100"
         }`}
       >
         Month
@@ -32,8 +39,8 @@ const Sidebar = () => {
           setIsWeekView(true);
           setIsDayView(false);
         }}
-        className={`cursor-pointer border w-[90%] h-10 border-gray-200 rounded-md ${
-          isWeekView ? "bg-gray-100" : "bg-white hover:bg-gray-100"
+        className={`transition-all cursor-pointer border w-[90%] h-10 border-gray-200 rounded-md ${
+          isWeekView ? "bg-black text-white" : "bg-white hover:bg-gray-100"
         }`}
       >
         Week
@@ -44,12 +51,25 @@ const Sidebar = () => {
           setIsWeekView(false);
           setIsDayView(true);
         }}
-        className={`cursor-pointer border w-[90%] h-10 border-gray-200 rounded-md ${
-          isDayView ? "bg-gray-100" : "bg-white hover:bg-gray-100"
+        className={`transition-all cursor-pointer border w-[90%] h-10 border-gray-200 rounded-md ${
+          isDayView ? "bg-black text-white" : "bg-white hover:bg-gray-100"
         }`}
       >
         Day
       </button>
+      <div className="w-[90%] py-2 my-2 border-gray-200 border-t flex flex-col items-center">
+        <h1>AI event creator</h1>
+        <form onSubmit={handleSubmit}>
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            type="text"
+            placeholder="  Work tomorrow at 16:30..."
+            className="text-sm border-gray-200 border-1 py-2 rounded-md"
+          />
+          <button type="submit">Submit</button>
+        </form>
+      </div>
     </aside>
   );
 };

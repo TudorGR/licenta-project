@@ -1,7 +1,8 @@
 .calendar-day:hover .calendar-day-number {
   color: black;
   background-color: rgb(240, 240, 240);
-  transition: 0.1s all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition: 0.15s all;
 }
 .time-grid {
   position: relative;
@@ -25,22 +26,22 @@
   cursor: pointer;
 }
 .blue-bg {
-  background-color: rgb(222, 244, 248);
+  background-color: #a7c7e7;
 }
 .green-bg {
-  background-color: rgb(222, 245, 230);
+  background-color: #b2d8b2;
 }
 .purple-bg {
-  background-color: rgb(218, 210, 255);
+  background-color: #c3b1e1;
 }
 .yellow-bg {
-  background-color: rgb(254, 237, 216);
+  background-color: #f5e6cc;
 }
 .gray-bg {
-  background-color: rgb(229, 229, 229);
+  background-color: #d3d3d3;
 }
 .gray-border {
-  border-top: 1px dashed whitesmoke;
+  border-top: 1px dashed gray;
 }
 .gray-border-axis {
   border-top: 1px solid #edeef1;
@@ -48,4 +49,9 @@
 }
 .gray-border-bottom {
   border-bottom: 1px solid #edeef1;
+}
+.backIcon {
+  max-height: 100%;
+  max-width: 100%;
+  opacity: 8%;
 }

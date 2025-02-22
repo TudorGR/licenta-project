@@ -3,6 +3,11 @@ import Context from "../context/Context";
 import dayjs from "dayjs";
 import left from "../assets/chevron-left.svg";
 import right from "../assets/chevron-right.svg";
+import workoutIcon from "../assets/workout.svg";
+import meetingIcon from "../assets/meeting.svg";
+import studyIcon from "../assets/study.svg";
+import personalIcon from "../assets/personal.svg";
+import workIcon from "../assets/work.svg";
 
 const TIME_SLOT_HEIGHT = 50;
 const TOTAL_HEIGHT = TIME_SLOT_HEIGHT * 24;
@@ -17,6 +22,10 @@ const DayView = () => {
     setSelectedEvent,
     setTimeStart,
     setTimeEnd,
+    categories,
+    setCategories,
+    selectedCategory,
+    setSelectedCategory,
   } = useContext(Context);
 
   const calculateTimePosition = () => {
@@ -127,26 +136,6 @@ const DayView = () => {
 
   return (
     <div className="flex-1 flex flex-col">
-      <header className="px-4 py-2 flex items-center justify-between border-b border-gray-200">
-        <div className="flex items-center gap-4">
-          <button
-            className="cursor-pointer hover:bg-gray-100 rounded-full p-1.5"
-            onClick={handlePrevDay}
-          >
-            <img src={left} className="w-6" />
-          </button>
-          <h2 className="text-xl">
-            {selectedDay.format("dddd, MMMM D, YYYY")}
-          </h2>
-          <button
-            className="cursor-pointer hover:bg-gray-100 rounded-full p-1.5"
-            onClick={handleNextDay}
-          >
-            <img src={right} className="w-6" />
-          </button>
-        </div>
-      </header>
-
       <div ref={timeGridRef} className="flex-1 overflow-y-auto">
         <div
           className="relative h-full"
@@ -168,7 +157,7 @@ const DayView = () => {
                   height: `${TIME_SLOT_HEIGHT}px`,
                 }}
               >
-                <div className="pl-1.5 absolute -left-14 text-sm text-gray-500">
+                <div className="pl-1.5 absolute -left-14 -top-2.5 text-sm text-gray-500">
                   {`${i.toString().padStart(2, "0")}:00`}
                 </div>
               </div>
@@ -196,7 +185,7 @@ const DayView = () => {
                 style={positionEvent(event.timeStart, event.timeEnd)}
               >
                 <div
-                  className={`h-full rounded-md p-2 ${
+                  className={`h-full rounded-md px-1 relative ${
                     event.label === "blue"
                       ? "blue-bg"
                       : event.label === "gray"
@@ -208,10 +197,45 @@ const DayView = () => {
                       : "yellow-bg"
                   }`}
                 >
-                  <div className="text-sm font-medium">{event.title}</div>
+                  <div className="text-sm">{event.title}</div>
                   <div className="text-xs text-gray-600">
                     {`${event.timeStart} - ${event.timeEnd}`}
                   </div>
+                  {event.category === "Workout" && (
+                    <img
+                      src={workoutIcon}
+                      alt={event.category}
+                      className="absolute bottom-0 right-0 backIcon"
+                    />
+                  )}
+                  {event.category === "Meeting" && (
+                    <img
+                      src={meetingIcon}
+                      alt={event.category}
+                      className="absolute bottom-0 right-0 backIcon"
+                    />
+                  )}
+                  {event.category === "Study" && (
+                    <img
+                      src={studyIcon}
+                      alt={event.category}
+                      className="absolute bottom-0 right-0 backIcon"
+                    />
+                  )}
+                  {event.category === "Personal" && (
+                    <img
+                      src={personalIcon}
+                      alt={event.category}
+                      className="absolute bottom-0 right-0 backIcon"
+                    />
+                  )}
+                  {event.category === "Work" && (
+                    <img
+                      src={workIcon}
+                      alt={event.category}
+                      className="absolute bottom-0 right-0 backIcon"
+                    />
+                  )}
                 </div>
               </div>
             ))}

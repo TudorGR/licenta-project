@@ -29,7 +29,7 @@ export default function SmallCalendar() {
     const nowDay = dayjs().format("DD-MM-YY");
     const currentDay = day.format("DD-MM-YY");
     const sDay = selectedDay && selectedDay.format("DD-MM-YY");
-    if (nowDay === currentDay) return "bg-blue-500 rounded-full text-white";
+    if (nowDay === currentDay) return "bg-black rounded-full text-white";
     else if (sDay === currentDay)
       return "bg-blue-100 rounded-full text-blue-600";
     else return "hover:bg-gray-200";
@@ -38,7 +38,7 @@ export default function SmallCalendar() {
     return day.month() === currentMonthIndex;
   }
   return (
-    <div className="bg-white rounded-md absolute top-1/2 left-1/3 shadow-2xl p-4 w-60">
+    <div className="z-20 bg-white rounded-md absolute top-1/2 left-1/3 shadow-2xl p-4 w-60">
       <header className="flex justify-between">
         <p className="font-bold">
           {dayjs(new Date(dayjs().year(), currentMonthIndex)).format(
