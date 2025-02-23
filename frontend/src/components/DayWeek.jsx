@@ -6,6 +6,16 @@ import meetingIcon from "../assets/meeting.svg";
 import studyIcon from "../assets/study.svg";
 import personalIcon from "../assets/personal.svg";
 import workIcon from "../assets/work.svg";
+import socialIcon from "../assets/social.svg";
+import familyIcon from "../assets/family.svg";
+import healthIcon from "../assets/health.svg";
+import hobbyIcon from "../assets/hobby.svg";
+import choresIcon from "../assets/chores.svg";
+import travelIcon from "../assets/travel.svg";
+import financeIcon from "../assets/finance.svg";
+import learningIcon from "../assets/learning.svg";
+import selfCareIcon from "../assets/self-care.svg";
+import eventsIcon from "../assets/event.svg";
 
 const TIME_SLOT_HEIGHT = 50;
 const TOTAL_HEIGHT = TIME_SLOT_HEIGHT * 24;
@@ -312,6 +322,76 @@ const DayWeek = ({ day, index }) => {
                   {category === "Work" && (
                     <img
                       src={workIcon}
+                      alt={category}
+                      className="absolute bottom-0 right-0 backIcon"
+                    />
+                  )}
+                  {category === "Social" && (
+                    <img
+                      src={socialIcon}
+                      alt={category}
+                      className="absolute bottom-0 right-0 backIcon"
+                    />
+                  )}
+                  {category === "Family" && (
+                    <img
+                      src={familyIcon}
+                      alt={category}
+                      className="absolute bottom-0 right-0 backIcon"
+                    />
+                  )}
+                  {category === "Health" && (
+                    <img
+                      src={healthIcon}
+                      alt={category}
+                      className="absolute bottom-0 right-0 backIcon"
+                    />
+                  )}
+                  {category === "Hobby" && (
+                    <img
+                      src={hobbyIcon}
+                      alt={category}
+                      className="absolute bottom-0 right-0 backIcon"
+                    />
+                  )}
+                  {category === "Chores" && (
+                    <img
+                      src={choresIcon}
+                      alt={category}
+                      className="absolute bottom-0 right-0 backIcon"
+                    />
+                  )}
+                  {category === "Travel" && (
+                    <img
+                      src={travelIcon}
+                      alt={category}
+                      className="absolute bottom-0 right-0 backIcon"
+                    />
+                  )}
+                  {category === "Finance" && (
+                    <img
+                      src={financeIcon}
+                      alt={category}
+                      className="absolute bottom-0 right-0 backIcon"
+                    />
+                  )}
+                  {category === "Learning" && (
+                    <img
+                      src={learningIcon}
+                      alt={category}
+                      className="absolute bottom-0 right-0 backIcon"
+                    />
+                  )}
+                  {category === "Self-care" && (
+                    <img
+                      src={selfCareIcon}
+                      alt={category}
+                      className="absolute bottom-0 right-0 backIcon"
+                    />
+                  )}
+                  {category === "Events" && (
+                    <img
+                      src={eventsIcon}
                       alt={category}
                       className="absolute bottom-0 right-0 backIcon"
                     />

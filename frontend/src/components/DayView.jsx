@@ -1,13 +1,21 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
 import Context from "../context/Context";
 import dayjs from "dayjs";
-import left from "../assets/chevron-left.svg";
-import right from "../assets/chevron-right.svg";
 import workoutIcon from "../assets/workout.svg";
 import meetingIcon from "../assets/meeting.svg";
 import studyIcon from "../assets/study.svg";
 import personalIcon from "../assets/personal.svg";
 import workIcon from "../assets/work.svg";
+import socialIcon from "../assets/social.svg";
+import familyIcon from "../assets/family.svg";
+import healthIcon from "../assets/health.svg";
+import hobbyIcon from "../assets/hobby.svg";
+import choresIcon from "../assets/chores.svg";
+import travelIcon from "../assets/travel.svg";
+import financeIcon from "../assets/finance.svg";
+import learningIcon from "../assets/learning.svg";
+import selfCareIcon from "../assets/self-care.svg";
+import eventsIcon from "../assets/event.svg";
 
 const TIME_SLOT_HEIGHT = 50;
 const TOTAL_HEIGHT = TIME_SLOT_HEIGHT * 24;
@@ -81,7 +89,12 @@ const DayView = () => {
     const hours = Math.floor(minutes / 60);
     const mins = Math.round((minutes % 60) / 15) * 15;
 
-    return `${hours.toString().padStart(2, "0")}:${mins
+    if (mins === 60) {
+      return `${(hours + 1).toString().padStart(2, "0")}:00`;
+    }
+
+    const adjustedHours = Math.min(Math.max(hours, 0), 23);
+    return `${adjustedHours.toString().padStart(2, "0")}:${mins
       .toString()
       .padStart(2, "0")}`;
   };
@@ -232,6 +245,76 @@ const DayView = () => {
                   {event.category === "Work" && (
                     <img
                       src={workIcon}
+                      alt={event.category}
+                      className="absolute bottom-0 right-0 backIcon"
+                    />
+                  )}
+                  {event.category === "Social" && (
+                    <img
+                      src={socialIcon}
+                      alt={event.category}
+                      className="absolute bottom-0 right-0 backIcon"
+                    />
+                  )}
+                  {event.category === "Family" && (
+                    <img
+                      src={familyIcon}
+                      alt={event.category}
+                      className="absolute bottom-0 right-0 backIcon"
+                    />
+                  )}
+                  {event.category === "Health" && (
+                    <img
+                      src={healthIcon}
+                      alt={event.category}
+                      className="absolute bottom-0 right-0 backIcon"
+                    />
+                  )}
+                  {event.category === "Hobby" && (
+                    <img
+                      src={hobbyIcon}
+                      alt={event.category}
+                      className="absolute bottom-0 right-0 backIcon"
+                    />
+                  )}
+                  {event.category === "Chores" && (
+                    <img
+                      src={choresIcon}
+                      alt={event.category}
+                      className="absolute bottom-0 right-0 backIcon"
+                    />
+                  )}
+                  {event.category === "Travel" && (
+                    <img
+                      src={travelIcon}
+                      alt={event.category}
+                      className="absolute bottom-0 right-0 backIcon"
+                    />
+                  )}
+                  {event.category === "Finance" && (
+                    <img
+                      src={financeIcon}
+                      alt={event.category}
+                      className="absolute bottom-0 right-0 backIcon"
+                    />
+                  )}
+                  {event.category === "Learning" && (
+                    <img
+                      src={learningIcon}
+                      alt={event.category}
+                      className="absolute bottom-0 right-0 backIcon"
+                    />
+                  )}
+                  {event.category === "Self-care" && (
+                    <img
+                      src={selfCareIcon}
+                      alt={event.category}
+                      className="absolute bottom-0 right-0 backIcon"
+                    />
+                  )}
+                  {event.category === "Events" && (
+                    <img
+                      src={eventsIcon}
                       alt={event.category}
                       className="absolute bottom-0 right-0 backIcon"
                     />

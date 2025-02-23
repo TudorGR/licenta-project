@@ -34,9 +34,11 @@ export default function ContextWrapper(props) {
   const [selectedWeek, setSelectedWeek] = useState(() => {
     const today = dayjs();
     const firstDayOfMonth = today.startOf("month");
-    const firstDayOfFirstWeek = firstDayOfMonth.startOf("week");
-    const diff = today.diff(firstDayOfFirstWeek, "day");
-    return Math.floor(diff / 7);
+
+    const firstDayOfWeek = firstDayOfMonth.startOf("week").add(1, "day");
+
+    const weekIndex = Math.floor(today.diff(firstDayOfWeek, "day") / 7);
+    return Math.max(0, weekIndex);
   });
   const [savedEvents, dispatchEvent] = useReducer(
     savedEventsReducer,

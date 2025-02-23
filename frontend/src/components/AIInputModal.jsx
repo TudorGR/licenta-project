@@ -33,7 +33,7 @@ function AIInputModal({ isOpen, onClose }) {
         timeStart: dayjs(eventData.timeStart).format("HH:mm"),
         timeEnd: dayjs(eventData.timeEnd).format("HH:mm"),
         day: dayjs(eventData.day).valueOf(),
-        label: "blue",
+        label: "gray",
         category: eventData.category || "None",
         id: Date.now(),
       };
