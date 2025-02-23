@@ -42,7 +42,7 @@ export default function EventModal() {
   const [error, setError] = useState(false);
   const inputRef = useRef(0);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim()) {
       setError(true);
@@ -50,60 +50,62 @@ export default function EventModal() {
       return;
     }
 
-    const baseEvent = {
-      title,
-      description,
-      label: color,
-      timeStart,
-      timeEnd,
-      category: selectedCategory ? selectedCategory : "None",
-    };
-
-    if (recurring === "None" || recurring === "") {
-      // Single event
-      const event = {
-        ...baseEvent,
-        day: selectedDay.valueOf(),
-        id: selectedEvent ? selectedEvent.id : Date.now(),
+    try {
+      const baseEvent = {
+        title,
+        description,
+        label: color,
+        timeStart,
+        timeEnd,
+        category: selectedCategory || "None",
       };
-      if (selectedEvent) {
-        dispatchEvent({ type: "update", payload: event });
-      } else {
-        dispatchEvent({ type: "push", payload: event });
-      }
-    } else {
-      // Recurring events
-      const events = [];
-      for (let i = 0; i < 10; i++) {
-        let eventDate;
-        switch (recurring) {
-          case "Daily":
-            eventDate = dayjs(selectedDay).add(i, "day");
-            break;
-          case "Weekly":
-            eventDate = dayjs(selectedDay).add(i, "week");
-            break;
-          case "Monthly":
-            eventDate = dayjs(selectedDay).add(i, "month");
-            break;
-          default:
-            eventDate = selectedDay;
-        }
 
-        events.push({
+      if (recurring === "None" || recurring === "") {
+        // Single event
+        const event = {
           ...baseEvent,
-          day: eventDate.valueOf(),
-          id: Date.now() + i,
-        });
+          day: selectedDay.valueOf(),
+          id: selectedEvent ? selectedEvent.id : undefined,
+        };
+
+        if (selectedEvent) {
+          await dispatchEvent({ type: "update", payload: event });
+        } else {
+          await dispatchEvent({ type: "push", payload: event });
+        }
+      } else {
+        // Recurring events
+        const events = [];
+        for (let i = 0; i < 10; i++) {
+          let eventDate;
+          switch (recurring) {
+            case "Daily":
+              eventDate = dayjs(selectedDay).add(i, "day");
+              break;
+            case "Weekly":
+              eventDate = dayjs(selectedDay).add(i, "week");
+              break;
+            case "Monthly":
+              eventDate = dayjs(selectedDay).add(i, "month");
+              break;
+            default:
+              eventDate = selectedDay;
+          }
+
+          const event = {
+            ...baseEvent,
+            day: eventDate.valueOf(),
+          };
+          await dispatchEvent({ type: "push", payload: event });
+        }
       }
 
-      events.forEach((event) => {
-        dispatchEvent({ type: "push", payload: event });
-      });
+      setSelectedEvent(null);
+      setShowEventModal(false);
+    } catch (error) {
+      console.error("Failed to save event:", error);
+      alert("Failed to save event. Please try again.");
     }
-
-    setSelectedEvent(null);
-    setShowEventModal(false);
   };
 
   useEffect(() => {
@@ -153,7 +155,10 @@ export default function EventModal() {
   return (
     <div className="z-20 h-screen w-full fixed left-0 top-0 flex justify-center items-center">
       {smallCalendar && <SmallCalendar />}
-      <form className=" bg-white shadow-2xl w-[500px] rounded-md">
+      <form
+        name="eventModal"
+        className=" bg-white shadow-2xl w-[500px] rounded-md"
+      >
         <header className="border-b-1 border-gray-200 px-4 py-4 flex justify-between items-center">
           <div className="flex flex-col">
             <h1 className="font-medium text-xl">
@@ -182,12 +187,12 @@ export default function EventModal() {
             <input
               ref={inputRef}
               type="text"
+              name="eventTitle"
               className={`${
                 error
                   ? "border-red-500 focus:border-red-500"
                   : "border-gray-200"
               } border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-md`}
-              name="title"
               placeholder="Add Title..."
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -205,6 +210,7 @@ export default function EventModal() {
             <div className="flex gap-2 items-center">
               <input
                 type="time"
+                name="startTime"
                 className="border-gray-200 border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-md"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
@@ -212,6 +218,7 @@ export default function EventModal() {
               <p>{"-"}</p>
               <input
                 type="time"
+                name="endTime"
                 className="border-gray-200 border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-md"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
@@ -226,6 +233,7 @@ export default function EventModal() {
                     alt="category"
                   />
                   <select
+                    name="category"
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
                     className=" border-gray-200 border-1 py-2 pl-9 pr-4 outline-0 w-full rounded-md"
@@ -249,6 +257,7 @@ export default function EventModal() {
                     alt="recurring"
                   />
                   <select
+                    name="recurring"
                     value={recurring}
                     onChange={(e) => setRecurring(e.target.value)}
                     className="border-gray-200 border-1 py-2 pl-9 pr-4 outline-0 w-full rounded-md "
@@ -267,8 +276,8 @@ export default function EventModal() {
             </div>
             <input
               type="text"
-              className="border-gray-200 border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-md"
               name="description"
+              className="border-gray-200 border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-md"
               placeholder="Add Description..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}

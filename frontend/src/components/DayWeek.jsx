@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import React, { useContext, useEffect, useRef, useState } from "react";
+import React, { useContext, useEffect, useRef, useState, useMemo } from "react";
 import Context from "../context/Context";
 import workoutIcon from "../assets/workout.svg";
 import meetingIcon from "../assets/meeting.svg";
@@ -22,7 +22,6 @@ const TOTAL_HEIGHT = TIME_SLOT_HEIGHT * 24;
 
 const DayWeek = ({ day, index }) => {
   const timeGridRef = useRef(null);
-  const [dayEvents, setDayEvents] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState(null);
   const [dragEnd, setDragEnd] = useState(null);
@@ -37,12 +36,12 @@ const DayWeek = ({ day, index }) => {
   const {
     setSelectedDay,
     setShowEventModal,
-    savedEvents,
     setSelectedEvent,
     setTimeStart,
     setTimeEnd,
     selectedEvent,
   } = useContext(Context);
+  const { savedEvents, loading } = useContext(Context);
 
   const calculateTimePosition = () => {
     const now = dayjs();
@@ -138,11 +137,11 @@ const DayWeek = ({ day, index }) => {
     return { top: `${top}px`, height: `${height}px` };
   };
 
-  useEffect(() => {
-    const events = savedEvents.filter(
-      (e) => dayjs(e.day).format("DD-MM-YY") === day.format("DD-MM-YY")
+  const dayEvents = useMemo(() => {
+    if (!Array.isArray(savedEvents)) return [];
+    return savedEvents.filter(
+      (evt) => dayjs(evt.day).format("DD-MM-YY") === day.format("DD-MM-YY")
     );
-    setDayEvents(events);
   }, [savedEvents, day]);
 
   useEffect(() => {
@@ -151,6 +150,10 @@ const DayWeek = ({ day, index }) => {
       timeGridRef.current.scrollTop = middayPosition;
     }
   }, []);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="calendar-day flex flex-col">
@@ -186,7 +189,7 @@ const DayWeek = ({ day, index }) => {
         >
           {Array.from({ length: 24 }, (_, i) => (
             <div
-              key={i}
+              key={`timeslot-${i}`}
               className=" time-slot gray-border-bottom"
               style={{
                 position: "absolute",
@@ -227,14 +230,16 @@ const DayWeek = ({ day, index }) => {
               }}
             ></div>
           )}
-          {dayEvents.map((event, index) => {
-            const { timeStart, timeEnd, category } = event;
+          {dayEvents.map((event) => {
+            const { timeStart, timeEnd, category, id } = event; // Extract id
             const eventPosition = positionEvent(timeStart, timeEnd);
-            const isSmallEvent = parseInt(eventPosition.height) < 50; // Define small event threshold
+            const isSmallEvent = parseInt(eventPosition.height) < 50;
 
             return (
               <div
-                key={event.id}
+                key={`event-${
+                  id || `${day.format("YYYY-MM-DD")}-${timeStart}-${timeEnd}`
+                }`}
                 className="event"
                 style={{
                   position: "absolute",

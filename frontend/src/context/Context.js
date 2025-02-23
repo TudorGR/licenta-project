@@ -23,6 +23,7 @@ const Context = React.createContext({
   setTimeStart: (time) => {},
   timeEnd: "09:00",
   setTimeEnd: (time) => {},
+  isLoading: true,
 });
 
 export default Context;

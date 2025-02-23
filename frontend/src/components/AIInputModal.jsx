@@ -63,6 +63,7 @@ function AIInputModal({ isOpen, onClose }) {
         </div>
         <div className="p-4">
           <input
+            name="AIInput"
             autoFocus
             type="text"
             className="w-full border border-gray-200 p-3 rounded-md outline-0"
