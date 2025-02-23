@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useContext } from "react";
 import DayWeek from "./DayWeek";
 import dayjs from "dayjs";
+import Context from "../context/Context.js";
 
 const TIME_SLOT_HEIGHT = 50;
 
@@ -11,6 +12,7 @@ const calculateTimePosition = () => {
 };
 
 const Week = ({ month, weekIndex }) => {
+  const { showHeatmap } = useContext(Context);
   if (!month || !month[weekIndex]) return null;
   const week = month[weekIndex];
   const timeGridRef = useRef(null);

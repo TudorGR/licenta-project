@@ -1,5 +1,25 @@
 import React, { useContext, useState } from "react";
 import Context from "../context/Context";
+import checkIcon from "../assets/check.svg";
+
+const categoryColors = {
+  Workout: "rgba(255, 87, 51, 0.7)",
+  Meeting: "rgba(52, 152, 219, 0.7)",
+  Study: "rgba(155, 89, 182, 0.7)",
+  Personal: "rgba(241, 196, 15, 0.7)",
+  Work: "rgba(46, 204, 113, 0.7)",
+  Social: "rgba(231, 76, 60, 0.7)",
+  Family: "rgba(230, 126, 34, 0.7)",
+  Health: "rgba(52, 231, 228, 0.7)",
+  Hobby: "rgba(155, 89, 182, 0.7)",
+  Chores: "rgba(149, 165, 166, 0.7)",
+  Travel: "rgba(41, 128, 185, 0.7)",
+  Finance: "rgba(39, 174, 96, 0.7)",
+  Learning: "rgba(142, 68, 173, 0.7)",
+  "Self-care": "rgba(211, 84, 0, 0.7)",
+  Events: "rgba(192, 57, 43, 0.7)",
+  None: "rgba(189, 195, 199, 0.7)",
+};
 
 const Sidebar = () => {
   const {
@@ -9,7 +29,24 @@ const Sidebar = () => {
     isMonthView,
     isWeekView,
     isDayView,
+    showHeatmap,
+    setShowHeatmap,
+    categories,
+    selectedHeatmapCategories,
+    setSelectedHeatmapCategories,
   } = useContext(Context);
+  const [dropdown, setDropdown] = useState(true);
+  const handleCategoryToggle = (category) => {
+    setSelectedHeatmapCategories((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(category)) {
+        newSet.delete(category);
+      } else {
+        newSet.add(category);
+      }
+      return newSet;
+    });
+  };
 
   return (
     <aside className=" w-50 border-gray-200 border-r flex flex-col items-center gap-2">
@@ -50,6 +87,83 @@ const Sidebar = () => {
       >
         Day
       </button>
+
+      {isWeekView && (
+        <>
+          <button
+            onClick={() => setShowHeatmap(!showHeatmap)}
+            className={`transition-all cursor-pointer border w-[90%] h-10 border-gray-200 rounded-md ${
+              showHeatmap ? "bg-black text-white" : "bg-white hover:bg-gray-100"
+            }`}
+          >
+            Heatmap
+          </button>
+
+          {showHeatmap && (
+            <div className="w-[90%] border border-gray-200 rounded-md overflow-hidden">
+              <button
+                onClick={() => setDropdown(!dropdown)}
+                className="outline-0 text-sm font-medium h-10 w-full text-center cursor-pointer hover:bg-gray-100 transition-all flex items-center justify-center gap-2"
+              >
+                <span>Filter Categories</span>
+                <svg
+                  className={`w-4 h-4 transition-transform ${
+                    dropdown ? "rotate-180" : ""
+                  }`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
+              <div
+                className={`${
+                  dropdown ? "max-h-[300px] py-2" : "max-h-0"
+                } flex flex-col gap-1 overflow-y-auto transition-all duration-300 ease-in-out`}
+              >
+                {categories.map((category) => (
+                  <label
+                    key={category}
+                    className="flex items-center gap-3 text-sm px-2 py-1 hover:bg-gray-50 rounded-md cursor-pointer"
+                  >
+                    <div className="relative flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedHeatmapCategories.has(category)}
+                        onChange={() => handleCategoryToggle(category)}
+                        className="sr-only"
+                      />
+                      <div
+                        className={`w-4 h-4 border rounded transition-all ${
+                          selectedHeatmapCategories.has(category)
+                            ? "bg-black border-black"
+                            : "border-gray-300"
+                        }`}
+                      >
+                        {selectedHeatmapCategories.has(category) && (
+                          <img src={checkIcon} className="w-4 h-4" />
+                        )}
+                      </div>
+                    </div>
+                    <span
+                      style={{ color: categoryColors[category] }}
+                      className="font-medium"
+                    >
+                      {category}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </aside>
   );
 };

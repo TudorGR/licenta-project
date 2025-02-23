@@ -183,145 +183,179 @@ const DayView = () => {
               />
             )}
 
-            {dayEvents.map((event) => (
-              <div
-                key={event.id}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setTimeStart(event.timeStart);
-                  setTimeEnd(event.timeEnd);
-                  setSelectedEvent(event);
-                  setShowEventModal(true);
-                }}
-                className="pb-0.5 px-0.5 eventt absolute left-0 w-full cursor-pointer"
-                style={positionEvent(event.timeStart, event.timeEnd)}
-              >
+            {dayEvents.map((event) => {
+              const { top, height } = positionEvent(
+                event.timeStart,
+                event.timeEnd
+              );
+              const isSmallEvent = parseInt(height) < 50;
+
+              return (
                 <div
-                  className={`h-full rounded-md px-1 relative ${
-                    event.label === "blue"
-                      ? "blue-bg"
-                      : event.label === "gray"
-                      ? "gray-bg"
-                      : event.label === "green"
-                      ? "green-bg"
-                      : event.label === "purple"
-                      ? "purple-bg"
-                      : "yellow-bg"
-                  }`}
+                  key={event.id}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setTimeStart(event.timeStart);
+                    setTimeEnd(event.timeEnd);
+                    setSelectedEvent(event);
+                    setShowEventModal(true);
+                  }}
+                  className="py-0.5 px-0.5 eventt absolute left-0 w-full cursor-pointer"
+                  style={{ top, height }}
                 >
-                  <div className="text-sm">{event.title}</div>
-                  <div className="text-xs text-gray-600">
-                    {`${event.timeStart} - ${event.timeEnd}`}
+                  <div
+                    className={`h-full rounded-md py-0.5 relative ${
+                      event.label === "blue"
+                        ? "blue-bg"
+                        : event.label === "gray"
+                        ? "gray-bg"
+                        : event.label === "green"
+                        ? "green-bg"
+                        : event.label === "purple"
+                        ? "purple-bg"
+                        : "yellow-bg"
+                    }`}
+                  >
+                    {isSmallEvent ? (
+                      <div className="ml-2 text-sm overflow-hidden whitespace-nowrap flex items-center gap-1">
+                        <span>{event.title}</span>
+                        <span className="text-xs text-gray-600">
+                          • {event.timeStart} - {event.timeEnd}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <div
+                          className={`border-l-2 absolute h-7 top-1.25 ${
+                            event.label === "blue"
+                              ? " border-blue-500"
+                              : event.label === "gray"
+                              ? "border-gray-500 "
+                              : event.label === "green"
+                              ? " border-green-500 "
+                              : event.label === "purple"
+                              ? " border-purple-500 "
+                              : " border-yellow-500 "
+                          }`}
+                        ></div>
+                        <div className="text-sm ml-2 overflow-clip">
+                          {event.title}
+                        </div>
+                        <div className="ml-2 text-xs text-nowrap overflow-clip text-gray-600">
+                          {`${event.timeStart} - ${event.timeEnd}`}
+                        </div>
+                      </div>
+                    )}
+                    {event.category === "Workout" && (
+                      <img
+                        src={workoutIcon}
+                        alt={event.category}
+                        className="absolute bottom-0 right-0 backIcon"
+                      />
+                    )}
+                    {event.category === "Meeting" && (
+                      <img
+                        src={meetingIcon}
+                        alt={event.category}
+                        className="absolute bottom-0 right-0 backIcon"
+                      />
+                    )}
+                    {event.category === "Study" && (
+                      <img
+                        src={studyIcon}
+                        alt={event.category}
+                        className="absolute bottom-0 right-0 backIcon"
+                      />
+                    )}
+                    {event.category === "Personal" && (
+                      <img
+                        src={personalIcon}
+                        alt={event.category}
+                        className="absolute bottom-0 right-0 backIcon"
+                      />
+                    )}
+                    {event.category === "Work" && (
+                      <img
+                        src={workIcon}
+                        alt={event.category}
+                        className="absolute bottom-0 right-0 backIcon"
+                      />
+                    )}
+                    {event.category === "Social" && (
+                      <img
+                        src={socialIcon}
+                        alt={event.category}
+                        className="absolute bottom-0 right-0 backIcon"
+                      />
+                    )}
+                    {event.category === "Family" && (
+                      <img
+                        src={familyIcon}
+                        alt={event.category}
+                        className="absolute bottom-0 right-0 backIcon"
+                      />
+                    )}
+                    {event.category === "Health" && (
+                      <img
+                        src={healthIcon}
+                        alt={event.category}
+                        className="absolute bottom-0 right-0 backIcon"
+                      />
+                    )}
+                    {event.category === "Hobby" && (
+                      <img
+                        src={hobbyIcon}
+                        alt={event.category}
+                        className="absolute bottom-0 right-0 backIcon"
+                      />
+                    )}
+                    {event.category === "Chores" && (
+                      <img
+                        src={choresIcon}
+                        alt={event.category}
+                        className="absolute bottom-0 right-0 backIcon"
+                      />
+                    )}
+                    {event.category === "Travel" && (
+                      <img
+                        src={travelIcon}
+                        alt={event.category}
+                        className="absolute bottom-0 right-0 backIcon"
+                      />
+                    )}
+                    {event.category === "Finance" && (
+                      <img
+                        src={financeIcon}
+                        alt={event.category}
+                        className="absolute bottom-0 right-0 backIcon"
+                      />
+                    )}
+                    {event.category === "Learning" && (
+                      <img
+                        src={learningIcon}
+                        alt={event.category}
+                        className="absolute bottom-0 right-0 backIcon"
+                      />
+                    )}
+                    {event.category === "Self-care" && (
+                      <img
+                        src={selfCareIcon}
+                        alt={event.category}
+                        className="absolute bottom-0 right-0 backIcon"
+                      />
+                    )}
+                    {event.category === "Events" && (
+                      <img
+                        src={eventsIcon}
+                        alt={event.category}
+                        className="absolute bottom-0 right-0 backIcon"
+                      />
+                    )}
                   </div>
-                  {event.category === "Workout" && (
-                    <img
-                      src={workoutIcon}
-                      alt={event.category}
-                      className="absolute bottom-0 right-0 backIcon"
-                    />
-                  )}
-                  {event.category === "Meeting" && (
-                    <img
-                      src={meetingIcon}
-                      alt={event.category}
-                      className="absolute bottom-0 right-0 backIcon"
-                    />
-                  )}
-                  {event.category === "Study" && (
-                    <img
-                      src={studyIcon}
-                      alt={event.category}
-                      className="absolute bottom-0 right-0 backIcon"
-                    />
-                  )}
-                  {event.category === "Personal" && (
-                    <img
-                      src={personalIcon}
-                      alt={event.category}
-                      className="absolute bottom-0 right-0 backIcon"
-                    />
-                  )}
-                  {event.category === "Work" && (
-                    <img
-                      src={workIcon}
-                      alt={event.category}
-                      className="absolute bottom-0 right-0 backIcon"
-                    />
-                  )}
-                  {event.category === "Social" && (
-                    <img
-                      src={socialIcon}
-                      alt={event.category}
-                      className="absolute bottom-0 right-0 backIcon"
-                    />
-                  )}
-                  {event.category === "Family" && (
-                    <img
-                      src={familyIcon}
-                      alt={event.category}
-                      className="absolute bottom-0 right-0 backIcon"
-                    />
-                  )}
-                  {event.category === "Health" && (
-                    <img
-                      src={healthIcon}
-                      alt={event.category}
-                      className="absolute bottom-0 right-0 backIcon"
-                    />
-                  )}
-                  {event.category === "Hobby" && (
-                    <img
-                      src={hobbyIcon}
-                      alt={event.category}
-                      className="absolute bottom-0 right-0 backIcon"
-                    />
-                  )}
-                  {event.category === "Chores" && (
-                    <img
-                      src={choresIcon}
-                      alt={event.category}
-                      className="absolute bottom-0 right-0 backIcon"
-                    />
-                  )}
-                  {event.category === "Travel" && (
-                    <img
-                      src={travelIcon}
-                      alt={event.category}
-                      className="absolute bottom-0 right-0 backIcon"
-                    />
-                  )}
-                  {event.category === "Finance" && (
-                    <img
-                      src={financeIcon}
-                      alt={event.category}
-                      className="absolute bottom-0 right-0 backIcon"
-                    />
-                  )}
-                  {event.category === "Learning" && (
-                    <img
-                      src={learningIcon}
-                      alt={event.category}
-                      className="absolute bottom-0 right-0 backIcon"
-                    />
-                  )}
-                  {event.category === "Self-care" && (
-                    <img
-                      src={selfCareIcon}
-                      alt={event.category}
-                      className="absolute bottom-0 right-0 backIcon"
-                    />
-                  )}
-                  {event.category === "Events" && (
-                    <img
-                      src={eventsIcon}
-                      alt={event.category}
-                      className="absolute bottom-0 right-0 backIcon"
-                    />
-                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {selectedDay.format("DD-MM-YY") === dayjs().format("DD-MM-YY") && (
               <div

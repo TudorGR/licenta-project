@@ -13,7 +13,7 @@ const Event = sequelize.define("Event", {
   },
   description: DataTypes.STRING,
   day: {
-    type: DataTypes.BIGINT, // Change to BIGINT to store timestamp
+    type: DataTypes.BIGINT,
     allowNull: false,
   },
   timeStart: {
@@ -31,6 +31,10 @@ const Event = sequelize.define("Event", {
   category: {
     type: DataTypes.STRING,
     defaultValue: "None",
+  },
+  location: {
+    type: DataTypes.STRING,
+    allowNull: true,
   },
 });
 

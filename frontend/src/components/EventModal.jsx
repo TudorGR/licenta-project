@@ -8,6 +8,7 @@ import dayjs from "dayjs";
 import saveIcon from "../assets/save.svg";
 import recurringIcon from "../assets/recurring.svg";
 import categoryIcon from "../assets/category.svg";
+import locationIcon from "../assets/location.svg";
 
 const colors = ["gray", "blue", "green", "purple", "yellow"];
 const recurringOptions = ["None", "Daily", "Weekly", "Monthly"];
@@ -35,6 +36,9 @@ export default function EventModal() {
   const [startTime, setStartTime] = useState(timeStart ? timeStart : "08:00");
   const [endTime, setEndTime] = useState(timeEnd ? timeEnd : "09:00");
   const [recurring, setRecurring] = useState("");
+  const [location, setLocation] = useState(
+    selectedEvent ? selectedEvent.location : ""
+  );
 
   const [smallCalendar, setSmallCalendar] = useState(false);
   const [color, setColor] = useState(
@@ -42,6 +46,9 @@ export default function EventModal() {
   );
   const [error, setError] = useState(false);
   const inputRef = useRef(0);
+
+  const [suggestions, setSuggestions] = useState([]);
+  const [currentSuggestionIndex, setCurrentSuggestionIndex] = useState(0);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -59,6 +66,7 @@ export default function EventModal() {
         timeStart,
         timeEnd,
         category: selectedCategory || "None",
+        location, // Add this
       };
 
       if (recurring === "None" || recurring === "") {
@@ -77,7 +85,7 @@ export default function EventModal() {
       } else {
         // Recurring events
         const events = [];
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 5; i++) {
           let eventDate;
           switch (recurring) {
             case "Daily":
@@ -154,6 +162,48 @@ export default function EventModal() {
   ]);
 
   useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Handle Escape key
+      if (e.key === "Escape") {
+        setShowEventModal(false);
+        return;
+      }
+
+      if (!suggestions.length) return;
+
+      switch (e.key) {
+        case "ArrowUp":
+          e.preventDefault();
+          setCurrentSuggestionIndex((prev) => (prev > 0 ? prev - 1 : prev));
+          break;
+        case "ArrowDown":
+          e.preventDefault();
+          setCurrentSuggestionIndex((prev) =>
+            prev < suggestions.length - 1 ? prev + 1 : prev
+          );
+          break;
+        case "Tab":
+          e.preventDefault();
+          if (suggestions[currentSuggestionIndex]) {
+            setTitle(suggestions[currentSuggestionIndex].suggestedTitle);
+            setSelectedCategory(suggestions[currentSuggestionIndex].category);
+            setLocation(suggestions[currentSuggestionIndex].suggestedLocation);
+          }
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    suggestions,
+    currentSuggestionIndex,
+    setTitle,
+    setSelectedCategory,
+    setShowEventModal,
+  ]);
+
+  useEffect(() => {
     const getPastEvents = () => {
       if (!savedEvents || !selectedDay || !timeStart || !timeEnd) return;
 
@@ -167,10 +217,14 @@ export default function EventModal() {
 
       const weekDay = selectedDay.day();
       const currentDate = selectedDay.format("YYYY-MM-DD");
+      const oneMonthAgo = dayjs(currentDate)
+        .subtract(1, "month")
+        .format("YYYY-MM-DD");
 
       const pastEvents = savedEvents.filter((event) => {
         const eventDate = dayjs(event.day);
         const isBeforeToday = eventDate.isBefore(currentDate, "day");
+        const isAfterOneMonthAgo = eventDate.isAfter(oneMonthAgo, "day");
         const isSameWeekDay = eventDate.day() === weekDay;
 
         const eventStartMinutes = getMinutes(event.timeStart);
@@ -181,10 +235,11 @@ export default function EventModal() {
           (selectedStartMinutes < eventEndMinutes &&
             selectedEndMinutes > eventStartMinutes);
 
-        return isBeforeToday && isSameWeekDay && hasTimeOverlap;
+        return (
+          isBeforeToday && isAfterOneMonthAgo && isSameWeekDay && hasTimeOverlap
+        );
       });
 
-      // Group events by category
       const eventsByCategory = pastEvents.reduce((acc, event) => {
         const category = event.category || "None";
         if (!acc[category]) {
@@ -194,46 +249,55 @@ export default function EventModal() {
         return acc;
       }, {});
 
-      // Calculate frequency and sort categories
       const categoryFrequency = Object.entries(eventsByCategory)
-        .map(([category, events]) => ({
-          category,
-          count: events.length,
-          events: events.sort(
-            (a, b) => dayjs(b.day).valueOf() - dayjs(a.day).valueOf()
-          ),
-        }))
-        .sort((a, b) => b.count - a.count); // Sort by frequency
+        .map(([category, events]) => {
+          // Find the most common title pattern
+          const titleCounts = events.reduce((acc, event) => {
+            acc[event.title] = (acc[event.title] || 0) + 1;
+            return acc;
+          }, {});
 
-      console.log(
-        `Past events on ${selectedDay.format(
-          "dddd"
-        )}s between ${timeStart}-${timeEnd}:`
-      );
+          // Find the most common location pattern
+          const locationCounts = events.reduce((acc, event) => {
+            if (event.location) {
+              acc[event.location] = (acc[event.location] || 0) + 1;
+            }
+            return acc;
+          }, {});
 
-      categoryFrequency.forEach(({ category, count, events }) => {
-        console.log(
-          `\n[${category}] - ${count} occurrence${count > 1 ? "s" : ""}:`
-        );
-        events.forEach((event) => {
-          console.log(
-            `- ${event.title} (${event.timeStart}-${event.timeEnd}) [${dayjs(
-              event.day
-            ).format("MMM D, YYYY")}]`
-          );
-        });
-      });
+          // Get the most frequent title and location
+          const mostCommonTitle = Object.entries(titleCounts).sort(
+            (a, b) => b[1] - a[1]
+          )[0]?.[0];
+          const mostCommonLocation = Object.entries(locationCounts).sort(
+            (a, b) => b[1] - a[1]
+          )[0]?.[0];
+
+          return {
+            category,
+            count: events.length,
+            suggestedTitle: mostCommonTitle || category,
+            suggestedLocation: mostCommonLocation || "",
+            events: events.sort(
+              (a, b) => dayjs(b.day).valueOf() - dayjs(a.day).valueOf()
+            ),
+          };
+        })
+        .sort((a, b) => b.count - a.count);
+
+      setSuggestions(categoryFrequency);
+      setCurrentSuggestionIndex(0);
     };
 
     getPastEvents();
   }, [savedEvents, selectedDay, timeStart, timeEnd]);
 
   return (
-    <div className="z-20 h-screen w-full fixed left-0 top-0 flex justify-center items-center">
+    <div className="fixed inset-0 bg-black/40 bg-opacity-50 flex justify-center items-center z-20">
       {smallCalendar && <SmallCalendar />}
       <form
         name="eventModal"
-        className=" bg-white shadow-2xl w-[500px] rounded-md"
+        className="bg-white shadow-2xl w-[500px] rounded-md"
       >
         <header className="border-b-1 border-gray-200 px-4 py-4 flex justify-between items-center">
           <div className="flex flex-col">
@@ -260,20 +324,38 @@ export default function EventModal() {
         </header>
         <div className="px-4 py-4">
           <div className="grid grid-cols-1/5 items-end gap-y-2">
-            <input
-              ref={inputRef}
-              type="text"
-              name="eventTitle"
-              className={`${
-                error
-                  ? "border-red-500 focus:border-red-500"
-                  : "border-gray-200"
-              } border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-md`}
-              placeholder="Add Title..."
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              autoComplete="off"
-            />
+            <div className="relative">
+              <input
+                ref={inputRef}
+                type="text"
+                name="eventTitle"
+                className={`${
+                  error
+                    ? "border-red-500 focus:border-red-500"
+                    : "border-gray-200"
+                } border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-md`}
+                placeholder={
+                  suggestions.length > 0
+                    ? `Suggestion: ${suggestions[currentSuggestionIndex].suggestedTitle}`
+                    : "Add Title..."
+                }
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                autoComplete="off"
+              />
+              {suggestions.length > 0 && (
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2 text-gray-400 select-none">
+                  <kbd className="px-2 py-1 bg-gray-100 rounded-md text-sm border border-gray-300">
+                    ↑↓
+                  </kbd>
+                  <span className="text-sm">navigate</span>
+                  <kbd className="px-2 py-1 bg-gray-100 rounded-md text-sm border border-gray-300">
+                    Tab
+                  </kbd>
+                  <span className="text-sm">select</span>
+                </div>
+              )}
+            </div>
             <div
               onClick={() => {
                 setSmallCalendar(true);
@@ -305,7 +387,7 @@ export default function EventModal() {
                 <div className="relative">
                   <img
                     src={categoryIcon}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-6 h-6"
                     alt="category"
                   />
                   <select
@@ -329,7 +411,7 @@ export default function EventModal() {
                 <div className="relative">
                   <img
                     src={recurringIcon}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-6 h-6"
                     alt="recurring"
                   />
                   <select
@@ -349,6 +431,23 @@ export default function EventModal() {
                   </select>
                 </div>
               </div>
+            </div>
+            <div className="flex border-gray-200 border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-md">
+              <img src={locationIcon} className="w-6 mr-4" />
+              <input
+                type="text"
+                name="location"
+                className="outline-0 w-full"
+                placeholder={
+                  suggestions.length > 0 &&
+                  suggestions[currentSuggestionIndex].suggestedLocation
+                    ? `Suggestion: ${suggestions[currentSuggestionIndex].suggestedLocation}`
+                    : "Add Location..."
+                }
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                autoComplete="off"
+              />
             </div>
             <input
               type="text"

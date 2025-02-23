@@ -26,19 +26,19 @@
   cursor: pointer;
 }
 .blue-bg {
-  background-color: #a7c7e7;
+  background-color: rgb(222, 240, 255);
 }
 .green-bg {
-  background-color: #b2d8b2;
+  background-color: rgb(221, 255, 230);
 }
 .purple-bg {
-  background-color: #c3b1e1;
+  background-color: rgb(240, 225, 255);
 }
 .yellow-bg {
-  background-color: #f5e6cc;
+  background-color: rgb(255, 242, 204);
 }
 .gray-bg {
-  background-color: #d3d3d3;
+  background-color: rgb(230, 230, 230);
 }
 .gray-border {
   border-top: 1px dashed gray;
@@ -53,5 +53,5 @@
 .backIcon {
   max-height: 100%;
   max-width: 100%;
-  opacity: 6%;
+  opacity: 3%;
 }

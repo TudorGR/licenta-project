@@ -20,6 +20,25 @@ import eventsIcon from "../assets/event.svg";
 const TIME_SLOT_HEIGHT = 50;
 const TOTAL_HEIGHT = TIME_SLOT_HEIGHT * 24;
 
+const categoryColors = {
+  Workout: "rgba(255, 87, 51, 0.7)",
+  Meeting: "rgba(52, 152, 219, 0.7)",
+  Study: "rgba(155, 89, 182, 0.7)",
+  Personal: "rgba(241, 196, 15, 0.7)",
+  Work: "rgba(46, 204, 113, 0.7)",
+  Social: "rgba(231, 76, 60, 0.7)",
+  Family: "rgba(230, 126, 34, 0.7)",
+  Health: "rgba(52, 231, 228, 0.7)",
+  Hobby: "rgba(155, 89, 182, 0.7)",
+  Chores: "rgba(149, 165, 166, 0.7)",
+  Travel: "rgba(41, 128, 185, 0.7)",
+  Finance: "rgba(39, 174, 96, 0.7)",
+  Learning: "rgba(142, 68, 173, 0.7)",
+  "Self-care": "rgba(211, 84, 0, 0.7)",
+  Events: "rgba(192, 57, 43, 0.7)",
+  None: "rgba(189, 195, 199, 0.7)",
+};
+
 const DayWeek = ({ day, index }) => {
   const timeGridRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -40,8 +59,9 @@ const DayWeek = ({ day, index }) => {
     setTimeStart,
     setTimeEnd,
     selectedEvent,
+    selectedHeatmapCategories,
   } = useContext(Context);
-  const { savedEvents, loading } = useContext(Context);
+  const { savedEvents, loading, showHeatmap } = useContext(Context);
 
   const calculateTimePosition = () => {
     const now = dayjs();
@@ -151,6 +171,71 @@ const DayWeek = ({ day, index }) => {
     }
   }, []);
 
+  const getHeatmapData = () => {
+    if (!savedEvents) return null;
+
+    const currentDate = day.format("YYYY-MM-DD");
+    const oneMonthAgo = day.subtract(1, "month").format("YYYY-MM-DD");
+    const currentWeekStart = dayjs().startOf("week").add(1, "day"); // Monday of current week
+
+    const timeSlotsByCategory = {};
+
+    savedEvents
+      .filter((event) => {
+        const eventDate = dayjs(event.day);
+        const isSameWeekDay = eventDate.day() === day.day();
+
+        const isBeforeToday = eventDate.isBefore(currentDate);
+        const isAfterOneMonthAgo = eventDate.isAfter(oneMonthAgo);
+        const isPastMonthEvent = isBeforeToday && isAfterOneMonthAgo;
+
+        const isCurrentWeek = eventDate.isSame(day, "week");
+
+        return isSameWeekDay && (isPastMonthEvent || isCurrentWeek);
+      })
+      .forEach((event) => {
+        if (!selectedHeatmapCategories.has(event.category)) return;
+
+        const category = event.category || "None";
+        if (!timeSlotsByCategory[category]) {
+          timeSlotsByCategory[category] = {};
+        }
+
+        const startMinutes = getTimeSlot(event.timeStart);
+        const endMinutes = getTimeSlot(event.timeEnd);
+
+        for (let min = startMinutes; min < endMinutes; min += 15) {
+          timeSlotsByCategory[category][min] =
+            (timeSlotsByCategory[category][min] || 0) + 1;
+        }
+      });
+
+    return timeSlotsByCategory;
+  };
+
+  const renderHeatmap = () => {
+    const heatmapData = getHeatmapData();
+    if (!heatmapData) return null;
+
+    return Object.entries(heatmapData).map(([category, timeSlots]) =>
+      Object.entries(timeSlots).map(([minutes, count]) => {
+        const opacity = Math.min(count * 0.2, 0.8);
+        return (
+          <div
+            key={`${category}-${minutes}`}
+            className="absolute left-0 w-full"
+            style={{
+              top: `${(parseInt(minutes) / 60) * TIME_SLOT_HEIGHT}px`,
+              height: `${TIME_SLOT_HEIGHT / 4}px`,
+              backgroundColor: categoryColors[category],
+              opacity,
+            }}
+          />
+        );
+      })
+    );
+  };
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -230,181 +315,201 @@ const DayWeek = ({ day, index }) => {
               }}
             ></div>
           )}
-          {dayEvents.map((event) => {
-            const { timeStart, timeEnd, category, id } = event; // Extract id
-            const eventPosition = positionEvent(timeStart, timeEnd);
-            const isSmallEvent = parseInt(eventPosition.height) < 50;
+          {showHeatmap ? (
+            renderHeatmap()
+          ) : (
+            <>
+              {dayEvents.map((event) => {
+                const { timeStart, timeEnd, category, id } = event; // Extract id
+                const eventPosition = positionEvent(timeStart, timeEnd);
+                const isSmallEvent = parseInt(eventPosition.height) < 50;
 
-            return (
-              <div
-                key={`event-${
-                  id || `${day.format("YYYY-MM-DD")}-${timeStart}-${timeEnd}`
-                }`}
-                className="event"
-                style={{
-                  position: "absolute",
-                  top: eventPosition.top,
-                  height: eventPosition.height,
-                  left: 0,
-                  width: "100%",
-                  padding: "1px",
-                  boxSizing: "border-box",
-                  cursor: "pointer",
-                  borderRadius: "6px",
-                  zIndex: 3,
-                  color: "black",
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setTimeStart(event.timeStart);
-                  setTimeEnd(event.timeEnd);
-                  setSelectedDay(day);
-                  setSelectedEvent(event);
-                  setShowEventModal(true);
-                }}
-              >
-                <div
-                  style={{
-                    height: "100%",
-                  }}
-                  className={`relative rounded-md pr-0.5 py-0.5 ${
-                    event.label === "blue"
-                      ? " blue-bg"
-                      : event.label === "gray"
-                      ? "gray-bg "
-                      : event.label === "green"
-                      ? " green-bg "
-                      : event.label === "purple"
-                      ? " purple-bg "
-                      : " yellow-bg "
-                  }`}
-                >
-                  {isSmallEvent ? (
-                    <div className="text-sm ml-1 overflow-hidden whitespace-nowrap flex items-center gap-1">
-                      <span>{event.title}</span>
-                      <span className="text-xs text-gray-600">
-                        • {timeStart} - {timeEnd}
-                      </span>
+                return (
+                  <div
+                    key={`event-${
+                      id ||
+                      `${day.format("YYYY-MM-DD")}-${timeStart}-${timeEnd}`
+                    }`}
+                    className="event"
+                    style={{
+                      position: "absolute",
+                      top: eventPosition.top,
+                      height: eventPosition.height,
+                      left: 0,
+                      width: "100%",
+                      padding: "1px",
+                      boxSizing: "border-box",
+                      cursor: "pointer",
+                      borderRadius: "6px",
+                      zIndex: 3,
+                      color: "black",
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setTimeStart(event.timeStart);
+                      setTimeEnd(event.timeEnd);
+                      setSelectedDay(day);
+                      setSelectedEvent(event);
+                      setShowEventModal(true);
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: "100%",
+                      }}
+                      className={`relative rounded-md pr-0.5 py-0.5 ${
+                        event.label === "blue"
+                          ? " blue-bg"
+                          : event.label === "gray"
+                          ? "gray-bg "
+                          : event.label === "green"
+                          ? " green-bg "
+                          : event.label === "purple"
+                          ? " purple-bg "
+                          : " yellow-bg "
+                      }`}
+                    >
+                      {isSmallEvent ? (
+                        <div className="text-sm ml-1 overflow-hidden whitespace-nowrap flex items-center gap-1">
+                          <span>{event.title}</span>
+                          <span className="text-xs text-gray-600">
+                            • {timeStart} - {timeEnd}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="relative">
+                          <div
+                            className={`border-l-2 absolute h-7 top-1.25 ${
+                              event.label === "blue"
+                                ? " border-blue-500"
+                                : event.label === "gray"
+                                ? "border-gray-500 "
+                                : event.label === "green"
+                                ? " border-green-500 "
+                                : event.label === "purple"
+                                ? " border-purple-500 "
+                                : " border-yellow-500 "
+                            }`}
+                          ></div>
+                          <div className=" text-sm ml-2 overflow-clip">
+                            {event.title}
+                          </div>
+                          <div className="ml-2 text-xs text-nowrap overflow-clip text-gray-600">
+                            {`${timeStart} - ${timeEnd}`}
+                          </div>
+                        </div>
+                      )}
+                      {category === "Workout" && (
+                        <img
+                          src={workoutIcon}
+                          alt={category}
+                          className="absolute bottom-0 right-0 backIcon"
+                        />
+                      )}
+                      {category === "Meeting" && (
+                        <img
+                          src={meetingIcon}
+                          alt={category}
+                          className="absolute bottom-0 right-0 backIcon"
+                        />
+                      )}
+                      {category === "Study" && (
+                        <img
+                          src={studyIcon}
+                          alt={category}
+                          className="absolute bottom-0 right-0 backIcon"
+                        />
+                      )}
+                      {category === "Personal" && (
+                        <img
+                          src={personalIcon}
+                          alt={category}
+                          className="absolute bottom-0 right-0 backIcon"
+                        />
+                      )}
+                      {category === "Work" && (
+                        <img
+                          src={workIcon}
+                          alt={category}
+                          className="absolute bottom-0 right-0 backIcon"
+                        />
+                      )}
+                      {category === "Social" && (
+                        <img
+                          src={socialIcon}
+                          alt={category}
+                          className="absolute bottom-0 right-0 backIcon"
+                        />
+                      )}
+                      {category === "Family" && (
+                        <img
+                          src={familyIcon}
+                          alt={category}
+                          className="absolute bottom-0 right-0 backIcon"
+                        />
+                      )}
+                      {category === "Health" && (
+                        <img
+                          src={healthIcon}
+                          alt={category}
+                          className="absolute bottom-0 right-0 backIcon"
+                        />
+                      )}
+                      {category === "Hobby" && (
+                        <img
+                          src={hobbyIcon}
+                          alt={category}
+                          className="absolute bottom-0 right-0 backIcon"
+                        />
+                      )}
+                      {category === "Chores" && (
+                        <img
+                          src={choresIcon}
+                          alt={category}
+                          className="absolute bottom-0 right-0 backIcon"
+                        />
+                      )}
+                      {category === "Travel" && (
+                        <img
+                          src={travelIcon}
+                          alt={category}
+                          className="absolute bottom-0 right-0 backIcon"
+                        />
+                      )}
+                      {category === "Finance" && (
+                        <img
+                          src={financeIcon}
+                          alt={category}
+                          className="absolute bottom-0 right-0 backIcon"
+                        />
+                      )}
+                      {category === "Learning" && (
+                        <img
+                          src={learningIcon}
+                          alt={category}
+                          className="absolute bottom-0 right-0 backIcon"
+                        />
+                      )}
+                      {category === "Self-care" && (
+                        <img
+                          src={selfCareIcon}
+                          alt={category}
+                          className="absolute bottom-0 right-0 backIcon"
+                        />
+                      )}
+                      {category === "Events" && (
+                        <img
+                          src={eventsIcon}
+                          alt={category}
+                          className="absolute bottom-0 right-0 backIcon"
+                        />
+                      )}
                     </div>
-                  ) : (
-                    <>
-                      <div className="text-sm ml-1 overflow-clip">
-                        {event.title}
-                      </div>
-                      <div className="ml-1 text-xs text-nowrap overflow-clip text-gray-600">
-                        {`${timeStart} - ${timeEnd}`}
-                      </div>
-                    </>
-                  )}
-                  {category === "Workout" && (
-                    <img
-                      src={workoutIcon}
-                      alt={category}
-                      className="absolute bottom-0 right-0 backIcon"
-                    />
-                  )}
-                  {category === "Meeting" && (
-                    <img
-                      src={meetingIcon}
-                      alt={category}
-                      className="absolute bottom-0 right-0 backIcon"
-                    />
-                  )}
-                  {category === "Study" && (
-                    <img
-                      src={studyIcon}
-                      alt={category}
-                      className="absolute bottom-0 right-0 backIcon"
-                    />
-                  )}
-                  {category === "Personal" && (
-                    <img
-                      src={personalIcon}
-                      alt={category}
-                      className="absolute bottom-0 right-0 backIcon"
-                    />
-                  )}
-                  {category === "Work" && (
-                    <img
-                      src={workIcon}
-                      alt={category}
-                      className="absolute bottom-0 right-0 backIcon"
-                    />
-                  )}
-                  {category === "Social" && (
-                    <img
-                      src={socialIcon}
-                      alt={category}
-                      className="absolute bottom-0 right-0 backIcon"
-                    />
-                  )}
-                  {category === "Family" && (
-                    <img
-                      src={familyIcon}
-                      alt={category}
-                      className="absolute bottom-0 right-0 backIcon"
-                    />
-                  )}
-                  {category === "Health" && (
-                    <img
-                      src={healthIcon}
-                      alt={category}
-                      className="absolute bottom-0 right-0 backIcon"
-                    />
-                  )}
-                  {category === "Hobby" && (
-                    <img
-                      src={hobbyIcon}
-                      alt={category}
-                      className="absolute bottom-0 right-0 backIcon"
-                    />
-                  )}
-                  {category === "Chores" && (
-                    <img
-                      src={choresIcon}
-                      alt={category}
-                      className="absolute bottom-0 right-0 backIcon"
-                    />
-                  )}
-                  {category === "Travel" && (
-                    <img
-                      src={travelIcon}
-                      alt={category}
-                      className="absolute bottom-0 right-0 backIcon"
-                    />
-                  )}
-                  {category === "Finance" && (
-                    <img
-                      src={financeIcon}
-                      alt={category}
-                      className="absolute bottom-0 right-0 backIcon"
-                    />
-                  )}
-                  {category === "Learning" && (
-                    <img
-                      src={learningIcon}
-                      alt={category}
-                      className="absolute bottom-0 right-0 backIcon"
-                    />
-                  )}
-                  {category === "Self-care" && (
-                    <img
-                      src={selfCareIcon}
-                      alt={category}
-                      className="absolute bottom-0 right-0 backIcon"
-                    />
-                  )}
-                  {category === "Events" && (
-                    <img
-                      src={eventsIcon}
-                      alt={category}
-                      className="absolute bottom-0 right-0 backIcon"
-                    />
-                  )}
-                </div>
-              </div>
-            );
-          })}
+                  </div>
+                );
+              })}
+            </>
+          )}
         </div>
       </div>
     </div>

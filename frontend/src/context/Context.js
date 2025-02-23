@@ -24,6 +24,11 @@ const Context = React.createContext({
   timeEnd: "09:00",
   setTimeEnd: (time) => {},
   isLoading: true,
+  showHeatmap: false,
+  setShowHeatmap: () => {},
+  selectedHeatmapCategories: new Set(),
+  setSelectedHeatmapCategories: () => {},
+  categories: [],
 });
 
 export default Context;

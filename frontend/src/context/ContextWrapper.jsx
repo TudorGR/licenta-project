@@ -92,7 +92,11 @@ export default function ContextWrapper(props) {
     "Self-care",
     "Events",
   ]);
+  const [selectedHeatmapCategories, setSelectedHeatmapCategories] = useState(
+    () => new Set(categories) // Initialize with all categories selected
+  );
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [showHeatmap, setShowHeatmap] = useState(false);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -150,9 +154,13 @@ export default function ContextWrapper(props) {
         isDayView,
         setIsDayView,
         categories,
+        selectedHeatmapCategories,
+        setSelectedHeatmapCategories,
         selectedCategory,
         setSelectedCategory,
         isLoading: loading,
+        showHeatmap,
+        setShowHeatmap,
       }}
     >
       {props.children}

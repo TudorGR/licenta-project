@@ -57,7 +57,7 @@ function AIInputModal({ isOpen, onClose }) {
       <div className="bg-white rounded-lg w-[500px] shadow-xl">
         <div className="flex justify-between items-center p-4 border-b border-gray-200">
           <h2 className="text-lg font-medium">Quick Add Event</h2>
-          <button onClick={onClose}>
+          <button className="cursor-pointer " onClick={onClose}>
             <img src={closeIcon} className="w-6" />
           </button>
         </div>
@@ -83,14 +83,14 @@ function AIInputModal({ isOpen, onClose }) {
         <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="transition-all px-4 py-2 border border-gray-200 rounded-md hover:bg-gray-100"
+            className="cursor-pointer transition-all px-4 py-2 border border-gray-200 rounded-md hover:bg-gray-100"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className={`transition-all px-4 py-2 rounded-md ${
+            className={`cursor-pointer  transition-all px-4 py-2 rounded-md ${
               loading ? "bg-gray-400" : "bg-black text-white hover:bg-gray-700"
             }`}
           >
