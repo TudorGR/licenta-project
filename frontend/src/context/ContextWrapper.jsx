@@ -7,39 +7,21 @@ const asyncDispatchEvent = (dispatch, getState) => async (action) => {
   try {
     switch (action.type) {
       case "push":
-        const createdEvent = await api.createEvent(action.payload);
-        const currentState = getState();
-        dispatch({ type: "set", payload: [...currentState, createdEvent] });
+        await api.createEvent(action.payload);
+        const eventsAfterCreate = await api.getEvents();
+        dispatch({ type: "set", payload: eventsAfterCreate });
         break;
 
       case "update":
-        // Get current state before update
-        const currentStateBeforeUpdate = getState();
-        // Remove the event being updated
-        const stateWithoutUpdated = currentStateBeforeUpdate.filter(
-          (evt) => evt.id !== action.payload.id
-        );
-        // Update the event in the API
-        const updatedEvent = await api.updateEvent(
-          action.payload.id,
-          action.payload
-        );
-        // Add the updated event back to state
-        dispatch({
-          type: "set",
-          payload: [...stateWithoutUpdated, updatedEvent],
-        });
+        await api.updateEvent(action.payload.id, action.payload);
+        const eventsAfterUpdate = await api.getEvents();
+        dispatch({ type: "set", payload: eventsAfterUpdate });
         break;
 
       case "delete":
         await api.deleteEvent(action.payload.id);
-        const stateAfterDelete = getState();
-        dispatch({
-          type: "set",
-          payload: stateAfterDelete.filter(
-            (evt) => evt.id !== action.payload.id
-          ),
-        });
+        const eventsAfterDelete = await api.getEvents();
+        dispatch({ type: "set", payload: eventsAfterDelete });
         break;
 
       case "set":
@@ -55,11 +37,10 @@ const asyncDispatchEvent = (dispatch, getState) => async (action) => {
   }
 };
 
-// Update the reducer function
 const savedEventsReducer = (state, { type, payload }) => {
   switch (type) {
     case "set":
-      return payload || []; // Ensure we always return an array
+      return payload || [];
     default:
       return state;
   }
@@ -85,11 +66,11 @@ export default function ContextWrapper(props) {
   });
 
   const [savedEvents, dispatch] = useReducer(savedEventsReducer, []);
-  const getState = useMemo(() => () => savedEvents, [savedEvents]); // Memoize getState
+  const getState = useMemo(() => () => savedEvents, [savedEvents]);
 
   const dispatchEvent = useMemo(
     () => asyncDispatchEvent(dispatch, getState),
-    [dispatch, getState] // Add getState to dependencies
+    [dispatch, getState]
   );
 
   const [loading, setLoading] = useState(true);
@@ -127,7 +108,7 @@ export default function ContextWrapper(props) {
       }
     };
     fetchEvents();
-  }, [dispatchEvent]);
+  }, []);
 
   useEffect(() => {
     if (smallCalendarMonth !== null) {
@@ -153,7 +134,7 @@ export default function ContextWrapper(props) {
         showEventModal,
         setShowEventModal,
         dispatchEvent,
-        savedEvents: savedEvents || [], // Ensure we always have an array
+        savedEvents: savedEvents || [],
         selectedEvent,
         setSelectedEvent,
         isMonthView,

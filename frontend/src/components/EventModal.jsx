@@ -14,6 +14,7 @@ const recurringOptions = ["None", "Daily", "Weekly", "Monthly"];
 
 export default function EventModal() {
   const {
+    savedEvents,
     setShowEventModal,
     selectedDay,
     dispatchEvent,
@@ -151,6 +152,81 @@ export default function EventModal() {
     setSelectedEvent,
     setSelectedCategory,
   ]);
+
+  useEffect(() => {
+    const getPastEvents = () => {
+      if (!savedEvents || !selectedDay || !timeStart || !timeEnd) return;
+
+      const getMinutes = (timeStr) => {
+        const [hours, minutes] = timeStr.split(":").map(Number);
+        return hours * 60 + minutes;
+      };
+
+      const selectedStartMinutes = getMinutes(timeStart);
+      const selectedEndMinutes = getMinutes(timeEnd);
+
+      const weekDay = selectedDay.day();
+      const currentDate = selectedDay.format("YYYY-MM-DD");
+
+      const pastEvents = savedEvents.filter((event) => {
+        const eventDate = dayjs(event.day);
+        const isBeforeToday = eventDate.isBefore(currentDate, "day");
+        const isSameWeekDay = eventDate.day() === weekDay;
+
+        const eventStartMinutes = getMinutes(event.timeStart);
+        const eventEndMinutes = getMinutes(event.timeEnd);
+        const hasTimeOverlap =
+          (eventStartMinutes < selectedEndMinutes &&
+            eventEndMinutes > selectedStartMinutes) ||
+          (selectedStartMinutes < eventEndMinutes &&
+            selectedEndMinutes > eventStartMinutes);
+
+        return isBeforeToday && isSameWeekDay && hasTimeOverlap;
+      });
+
+      // Group events by category
+      const eventsByCategory = pastEvents.reduce((acc, event) => {
+        const category = event.category || "None";
+        if (!acc[category]) {
+          acc[category] = [];
+        }
+        acc[category].push(event);
+        return acc;
+      }, {});
+
+      // Calculate frequency and sort categories
+      const categoryFrequency = Object.entries(eventsByCategory)
+        .map(([category, events]) => ({
+          category,
+          count: events.length,
+          events: events.sort(
+            (a, b) => dayjs(b.day).valueOf() - dayjs(a.day).valueOf()
+          ),
+        }))
+        .sort((a, b) => b.count - a.count); // Sort by frequency
+
+      console.log(
+        `Past events on ${selectedDay.format(
+          "dddd"
+        )}s between ${timeStart}-${timeEnd}:`
+      );
+
+      categoryFrequency.forEach(({ category, count, events }) => {
+        console.log(
+          `\n[${category}] - ${count} occurrence${count > 1 ? "s" : ""}:`
+        );
+        events.forEach((event) => {
+          console.log(
+            `- ${event.title} (${event.timeStart}-${event.timeEnd}) [${dayjs(
+              event.day
+            ).format("MMM D, YYYY")}]`
+          );
+        });
+      });
+    };
+
+    getPastEvents();
+  }, [savedEvents, selectedDay, timeStart, timeEnd]);
 
   return (
     <div className="z-20 h-screen w-full fixed left-0 top-0 flex justify-center items-center">

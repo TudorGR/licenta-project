@@ -66,6 +66,7 @@ function AIInputModal({ isOpen, onClose }) {
             name="AIInput"
             autoFocus
             type="text"
+            autoComplete="off"
             className="w-full border border-gray-200 p-3 rounded-md outline-0"
             placeholder="Type your event (e.g. Meeting tomorrow at 3pm)"
             value={inputText}
