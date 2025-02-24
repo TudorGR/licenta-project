@@ -1,6 +1,7 @@
 import React, { useContext, useState } from "react";
 import Context from "../context/Context";
 import checkIcon from "../assets/check.svg";
+import CategoryStats from "./CategoryStats";
 
 const categoryColors = {
   Workout: "rgba(255, 87, 51, 0.7)",
@@ -34,6 +35,10 @@ const Sidebar = () => {
     categories,
     selectedHeatmapCategories,
     setSelectedHeatmapCategories,
+    workingHoursStart,
+    workingHoursEnd,
+    setWorkingHoursStart,
+    setWorkingHoursEnd,
   } = useContext(Context);
   const [dropdown, setDropdown] = useState(true);
   const handleCategoryToggle = (category) => {
@@ -49,7 +54,7 @@ const Sidebar = () => {
   };
 
   return (
-    <aside className=" w-50 border-gray-200 border-r flex flex-col items-center gap-2">
+    <aside className=" w-62 border-gray-200 border-r flex flex-col items-center gap-2">
       <h1 className="text-center my-3 font-bold text-2xl">CalendarApp</h1>
       <button
         onClick={() => {
@@ -162,6 +167,34 @@ const Sidebar = () => {
               </div>
             </div>
           )}
+        </>
+      )}
+      {(isWeekView || isMonthView || isDayView) && (
+        <>
+          <div className="w-[90%] border border-gray-200 rounded-md">
+            <CategoryStats
+              view={isWeekView ? "week" : isMonthView ? "month" : "day"}
+            />
+          </div>
+
+          <div className="w-[90%] border border-gray-200 rounded-md p-2 overflow-clip">
+            <h3 className="font-medium mb-2">Working Hours</h3>
+            <div className="flex gap-2 items-center">
+              <input
+                type="time"
+                value={workingHoursStart}
+                onChange={(e) => setWorkingHoursStart(e.target.value)}
+                className="border-gray-200 border-1 outline-0 w-full rounded-md p-1 workingHours"
+              />
+              <span>-</span>
+              <input
+                type="time"
+                value={workingHoursEnd}
+                onChange={(e) => setWorkingHoursEnd(e.target.value)}
+                className="border-gray-200 border-1 outline-0 w-full rounded-md p-1 workingHours"
+              />
+            </div>
+          </div>
         </>
       )}
     </aside>

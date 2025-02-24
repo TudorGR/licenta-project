@@ -64,6 +64,8 @@ export default function ContextWrapper(props) {
     const weekIndex = Math.floor(today.diff(firstDayOfWeek, "day") / 7);
     return Math.max(0, weekIndex);
   });
+  const [workingHoursStart, setWorkingHoursStart] = useState("07:00");
+  const [workingHoursEnd, setWorkingHoursEnd] = useState("19:00");
 
   const [savedEvents, dispatch] = useReducer(savedEventsReducer, []);
   const getState = useMemo(() => () => savedEvents, [savedEvents]);
@@ -93,7 +95,7 @@ export default function ContextWrapper(props) {
     "Events",
   ]);
   const [selectedHeatmapCategories, setSelectedHeatmapCategories] = useState(
-    () => new Set(categories) // Initialize with all categories selected
+    () => new Set(categories)
   );
   const [selectedCategory, setSelectedCategory] = useState("");
   const [showHeatmap, setShowHeatmap] = useState(false);
@@ -161,6 +163,10 @@ export default function ContextWrapper(props) {
         isLoading: loading,
         showHeatmap,
         setShowHeatmap,
+        workingHoursStart,
+        workingHoursEnd,
+        setWorkingHoursStart,
+        setWorkingHoursEnd,
       }}
     >
       {props.children}

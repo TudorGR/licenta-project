@@ -369,7 +369,7 @@ export default function EventModal() {
               <input
                 type="time"
                 name="startTime"
-                className="border-gray-200 border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-md"
+                className="modalTime border-gray-200 border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-md"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
               />
@@ -377,7 +377,7 @@ export default function EventModal() {
               <input
                 type="time"
                 name="endTime"
-                className="border-gray-200 border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-md"
+                className="modalTime border-gray-200 border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-md"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
               />

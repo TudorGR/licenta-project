@@ -16,12 +16,16 @@ body {
   user-select: none;
 }
 
-input[type="time"]::-webkit-calendar-picker-indicator {
+.modalTime::-webkit-calendar-picker-indicator {
   width: 25px;
   height: 25px;
   margin: 0;
 }
 
-input[type="time"] {
+.modalTime {
   padding: 5px 15px;
+}
+
+.workingHours::-webkit-calendar-picker-indicator {
+  display: none;
 }

@@ -29,6 +29,10 @@ const Context = React.createContext({
   selectedHeatmapCategories: new Set(),
   setSelectedHeatmapCategories: () => {},
   categories: [],
+  workingHoursStart: "09:00",
+  workingHoursEnd: "17:00",
+  setWorkingHoursStart: (time) => {},
+  setWorkingHoursEnd: (time) => {},
 });
 
 export default Context;
