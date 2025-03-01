@@ -16,6 +16,8 @@ import financeIcon from "../assets/finance.svg";
 import learningIcon from "../assets/learning.svg";
 import selfCareIcon from "../assets/self-care.svg";
 import eventsIcon from "../assets/event.svg";
+import pinIcon from "../assets/lock.svg";
+import deleteIcon from "../assets/delete_icon.svg";
 
 const TIME_SLOT_HEIGHT = 50;
 const TOTAL_HEIGHT = TIME_SLOT_HEIGHT * 24;
@@ -39,6 +41,30 @@ const categoryColors = {
   None: "rgba(189, 195, 199, 0.7)",
 };
 
+const ContextMenu = ({ x, y, onLock, onDelete }) => {
+  return (
+    <div
+      className="fixed bg-white shadow-lg rounded-md py-2 z-50 min-w-32 border border-gray-200 context-menu"
+      style={{ left: x, top: y }}
+    >
+      <button
+        className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
+        onClick={onLock}
+      >
+        <img src={pinIcon} className="w-5" />
+        Lock
+      </button>
+      <button
+        className="w-full px-4 py-2 text-left hover:bg-gray-100 text-red-600 flex items-center gap-2"
+        onClick={onDelete}
+      >
+        <img src={deleteIcon} className="w-5" />
+        Delete
+      </button>
+    </div>
+  );
+};
+
 const DayWeek = ({ day, index }) => {
   const timeGridRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -52,6 +78,12 @@ const DayWeek = ({ day, index }) => {
     const weekIndex = Math.floor(today.diff(firstDayOfWeek, "days") / 7);
     return weekIndex;
   });
+  const [contextMenu, setContextMenu] = useState({
+    isOpen: false,
+    x: 0,
+    y: 0,
+    eventId: null,
+  });
   const {
     setSelectedDay,
     setShowEventModal,
@@ -60,6 +92,7 @@ const DayWeek = ({ day, index }) => {
     setTimeEnd,
     selectedEvent,
     selectedHeatmapCategories,
+    dispatchEvent,
   } = useContext(Context);
   const { savedEvents, loading, showHeatmap } = useContext(Context);
 
@@ -120,6 +153,22 @@ const DayWeek = ({ day, index }) => {
     setShowEventModal(true);
   };
 
+  const handleContextMenu = (e, event) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    setContextMenu({ isOpen: false, x: 0, y: 0, eventId: null });
+
+    setTimeout(() => {
+      setContextMenu({
+        isOpen: true,
+        x: e.clientX,
+        y: e.clientY,
+        eventId: event.id,
+      });
+    }, 0);
+  };
+
   useEffect(() => {
     return () => {
       setIsDragging(false);
@@ -138,6 +187,17 @@ const DayWeek = ({ day, index }) => {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    const handleGlobalClick = (e) => {
+      if (!e.target.closest(".context-menu")) {
+        setContextMenu({ isOpen: false, x: 0, y: 0, eventId: null });
+      }
+    };
+
+    window.addEventListener("mousedown", handleGlobalClick);
+    return () => window.removeEventListener("mousedown", handleGlobalClick);
+  }, []);
+
   function getCurrentDay() {
     return day.format("DD-MM-YY") === dayjs().format("DD-MM-YY");
   }
@@ -151,9 +211,16 @@ const DayWeek = ({ day, index }) => {
     const startMinutes = getTimeSlot(startTime);
     const endMinutes = getTimeSlot(endTime);
 
-    const top = (startMinutes / 60) * TIME_SLOT_HEIGHT;
-    const height = ((endMinutes - startMinutes) / 60) * TIME_SLOT_HEIGHT;
+    let top;
+    let height;
 
+    if (endMinutes < startMinutes) {
+      top = (endMinutes / 60) * TIME_SLOT_HEIGHT;
+      height = ((startMinutes - endMinutes) / 60) * TIME_SLOT_HEIGHT;
+    } else {
+      top = (startMinutes / 60) * TIME_SLOT_HEIGHT;
+      height = ((endMinutes - startMinutes) / 60) * TIME_SLOT_HEIGHT;
+    }
     return { top: `${top}px`, height: `${height}px` };
   };
 
@@ -352,6 +419,7 @@ const DayWeek = ({ day, index }) => {
                       setSelectedEvent(event);
                       setShowEventModal(true);
                     }}
+                    onContextMenu={(e) => handleContextMenu(e, event)}
                   >
                     <div
                       style={{
@@ -381,14 +449,14 @@ const DayWeek = ({ day, index }) => {
                           <div
                             className={`border-l-2 absolute h-7 top-1.25 ${
                               event.label === "blue"
-                                ? " border-blue-500"
+                                ? " border-blue-300"
                                 : event.label === "gray"
-                                ? "border-gray-500 "
+                                ? "border-gray-300 "
                                 : event.label === "green"
-                                ? " border-green-500 "
+                                ? " border-green-300 "
                                 : event.label === "purple"
-                                ? " border-purple-500 "
-                                : " border-yellow-500 "
+                                ? " border-purple-300 "
+                                : " border-yellow-300 "
                             }`}
                           ></div>
                           <div className=" text-sm ml-2 overflow-clip">
@@ -512,6 +580,25 @@ const DayWeek = ({ day, index }) => {
           )}
         </div>
       </div>
+      {contextMenu.isOpen && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onLock={() => {
+            console.log("Pin event:", contextMenu.eventId);
+            setContextMenu({ isOpen: false, x: 0, y: 0, eventId: null });
+          }}
+          onDelete={() => {
+            const eventToDelete = savedEvents.find(
+              (e) => e.id === contextMenu.eventId
+            );
+            if (eventToDelete) {
+              dispatchEvent({ type: "delete", payload: eventToDelete });
+            }
+            setContextMenu({ isOpen: false, x: 0, y: 0, eventId: null });
+          }}
+        />
+      )}
     </div>
   );
 };

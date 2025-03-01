@@ -15,6 +15,7 @@ const CalendarHeader = ({ onOpenAIModal }) => {
     selectedWeek,
     isDayView,
     selectedDay,
+    isWeekView,
   } = useContext(Context);
 
   const getCurrentWeekIndex = () => {
@@ -33,9 +34,17 @@ const CalendarHeader = ({ onOpenAIModal }) => {
     } else if (isDayView) {
       setSelectedDay(selectedDay.subtract(1, "day"));
     } else {
+      const firstDayOfMonth = dayjs(new Date(dayjs().year(), monthIndex, 1));
+      const weekStart = firstDayOfMonth
+        .startOf("week")
+        .add(1, "day")
+        .add(selectedWeek, "week");
+
       if (selectedWeek === 0) {
+        const prevMonth = firstDayOfMonth.subtract(1, "month");
+        const weeksInPrevMonth = Math.ceil(prevMonth.daysInMonth() / 7);
         setMonthIndex(monthIndex - 1);
-        setSelectedWeek(4);
+        setSelectedWeek(weeksInPrevMonth - 1);
       } else {
         setSelectedWeek(selectedWeek - 1);
       }
@@ -48,7 +57,11 @@ const CalendarHeader = ({ onOpenAIModal }) => {
     } else if (isDayView) {
       setSelectedDay(selectedDay.add(1, "day"));
     } else {
-      if (selectedWeek === 4) {
+      const firstDayOfMonth = dayjs(new Date(dayjs().year(), monthIndex, 1));
+      const lastDayOfMonth = firstDayOfMonth.endOf("month");
+      const weeksInMonth = Math.ceil(lastDayOfMonth.date() / 7);
+
+      if (selectedWeek >= weeksInMonth - 1) {
         setMonthIndex(monthIndex + 1);
         setSelectedWeek(0);
       } else {
@@ -63,35 +76,88 @@ const CalendarHeader = ({ onOpenAIModal }) => {
     setSelectedDay(dayjs());
   };
 
+  const getHeaderText = () => {
+    if (isDayView) {
+      return (
+        <>
+          <h2 className="text-base">{selectedDay.format("DD, MMMM")}</h2>
+          <h2 className="text-base text-gray-400">
+            {selectedDay.format(", YY")}
+          </h2>
+        </>
+      );
+    }
+
+    if (isWeekView) {
+      const firstDayOfMonth = dayjs(new Date(dayjs().year(), monthIndex, 1));
+      const weekStart = firstDayOfMonth
+        .startOf("week")
+        .add(1, "day")
+        .add(selectedWeek, "week");
+      const weekEnd = weekStart.add(6, "day");
+
+      if (weekStart.month() !== weekEnd.month()) {
+        return (
+          <>
+            <h2 className="text-base">
+              {weekStart.format("MMMM")}-{weekEnd.format("MMMM")}
+            </h2>
+            <h2 className="text-base text-gray-400">
+              , {weekStart.format("YYYY")}
+            </h2>
+          </>
+        );
+      }
+
+      return (
+        <>
+          <h2 className="text-base">{weekStart.format("MMMM")}</h2>
+          <h2 className="text-base text-gray-400">
+            , {weekStart.format("YYYY")}
+          </h2>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <h2 className="text-base">
+          {dayjs(new Date(dayjs().year(), monthIndex)).format("MMMM")}
+        </h2>
+        <h2 className="text-base text-gray-400">
+          , {dayjs(new Date(dayjs().year(), monthIndex)).format("YYYY")}
+        </h2>
+      </>
+    );
+  };
+
+  const getHeaderWidth = () => {
+    if (isWeekView) {
+      const firstDayOfMonth = dayjs(new Date(dayjs().year(), monthIndex, 1));
+      const weekStart = firstDayOfMonth
+        .startOf("week")
+        .add(1, "day")
+        .add(selectedWeek, "week");
+      const weekEnd = weekStart.add(6, "day");
+
+      return weekStart.month() !== weekEnd.month() ? "w-72" : "w-54";
+    }
+    return "w-54";
+  };
+
   return (
     <header className="px-4 py-2 flex justify-between items-center border-gray-200 border-b">
       <div className="flex">
-        <div className=" flex items-center justify-between w-54">
+        <div
+          className={`flex items-center justify-between ${getHeaderWidth()}`}
+        >
           <button
             className="transition-all  cursor-pointer hover:bg-gray-100 rounded-full border-gray-200 border-1 p-1.5"
             onClick={handlePrev}
           >
             <img src={left} className="w-6" />
           </button>
-          <div className="flex items-center">
-            {isDayView ? (
-              <>
-                <h2 className="text-base">{selectedDay.format("DD, MMMM")}</h2>
-                <h2 className="text-base text-gray-400">
-                  {selectedDay.format(", YY")}
-                </h2>
-              </>
-            ) : (
-              <>
-                <h2 className="text-base">
-                  {dayjs(new Date(dayjs().year(), monthIndex)).format("MMMM")}
-                </h2>
-                <h2 className="text-base text-gray-400">
-                  , {dayjs(new Date(dayjs().year(), monthIndex)).format("YYYY")}
-                </h2>
-              </>
-            )}
-          </div>
+          <div className="flex items-center">{getHeaderText()}</div>
           <button
             className="transition-all  cursor-pointer hover:bg-gray-100 rounded-full border-gray-200 border-1 p-1.5"
             onClick={handleNext}

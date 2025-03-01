@@ -16,9 +16,35 @@ import financeIcon from "../assets/finance.svg";
 import learningIcon from "../assets/learning.svg";
 import selfCareIcon from "../assets/self-care.svg";
 import eventsIcon from "../assets/event.svg";
+import pinIcon from "../assets/lock.svg";
+import deleteIcon from "../assets/delete_icon.svg";
 
 const TIME_SLOT_HEIGHT = 50;
 const TOTAL_HEIGHT = TIME_SLOT_HEIGHT * 24;
+
+const ContextMenu = ({ x, y, onLock, onDelete }) => {
+  return (
+    <div
+      className="fixed bg-white shadow-lg rounded-md py-2 z-50 min-w-32 border border-gray-200 context-menu"
+      style={{ left: x, top: y }}
+    >
+      <button
+        className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
+        onClick={onLock}
+      >
+        <img src={pinIcon} className="w-5" />
+        Lock
+      </button>
+      <button
+        className="w-full px-4 py-2 text-left hover:bg-gray-100 text-red-600 flex items-center gap-2"
+        onClick={onDelete}
+      >
+        <img src={deleteIcon} className="w-5" />
+        Delete
+      </button>
+    </div>
+  );
+};
 
 const DayView = () => {
   const timeGridRef = useRef(null);
@@ -34,6 +60,7 @@ const DayView = () => {
     setCategories,
     selectedCategory,
     setSelectedCategory,
+    dispatchEvent,
   } = useContext(Context);
 
   const calculateTimePosition = () => {
@@ -49,6 +76,12 @@ const DayView = () => {
   const [currentTimePosition, setCurrentTimePosition] = useState(
     calculateTimePosition()
   );
+  const [contextMenu, setContextMenu] = useState({
+    isOpen: false,
+    x: 0,
+    y: 0,
+    eventId: null,
+  });
 
   useEffect(() => {
     const events = savedEvents.filter(
@@ -74,13 +107,16 @@ const DayView = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const handlePrevDay = () => {
-    setSelectedDay(selectedDay.subtract(1, "day"));
-  };
+  useEffect(() => {
+    const handleGlobalClick = (e) => {
+      if (!e.target.closest(".context-menu")) {
+        setContextMenu({ isOpen: false, x: 0, y: 0, eventId: null });
+      }
+    };
 
-  const handleNextDay = () => {
-    setSelectedDay(selectedDay.add(1, "day"));
-  };
+    window.addEventListener("mousedown", handleGlobalClick);
+    return () => window.removeEventListener("mousedown", handleGlobalClick);
+  }, []);
 
   const getTimeFromMousePosition = (mouseY, gridElement) => {
     const rect = gridElement.getBoundingClientRect();
@@ -133,6 +169,22 @@ const DayView = () => {
     setShowEventModal(true);
   };
 
+  const handleContextMenu = (e, event) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    setContextMenu({ isOpen: false, x: 0, y: 0, eventId: null });
+
+    setTimeout(() => {
+      setContextMenu({
+        isOpen: true,
+        x: e.clientX,
+        y: e.clientY,
+        eventId: event.id,
+      });
+    }, 0);
+  };
+
   const positionEvent = (startTime, endTime) => {
     const getTimeSlot = (time) => {
       const [hour, minute] = time.split(":");
@@ -141,9 +193,16 @@ const DayView = () => {
 
     const startMinutes = getTimeSlot(startTime);
     const endMinutes = getTimeSlot(endTime);
-    const top = (startMinutes / 60) * TIME_SLOT_HEIGHT;
-    const height = ((endMinutes - startMinutes) / 60) * TIME_SLOT_HEIGHT;
+    let top;
+    let height;
 
+    if (endMinutes < startMinutes) {
+      top = (endMinutes / 60) * TIME_SLOT_HEIGHT;
+      height = ((startMinutes - endMinutes) / 60) * TIME_SLOT_HEIGHT;
+    } else {
+      top = (startMinutes / 60) * TIME_SLOT_HEIGHT;
+      height = ((endMinutes - startMinutes) / 60) * TIME_SLOT_HEIGHT;
+    }
     return { top: `${top}px`, height: `${height}px` };
   };
 
@@ -178,7 +237,7 @@ const DayView = () => {
 
             {isDragging && dragStart && dragEnd && (
               <div
-                className="eventt absolute left-0 w-full bg-gray-200 opacity-50 rounded-md"
+                className="eventt border-1 border-gray-500 min-h-3 opacity-50 absolute left-0 w-full rounded-md bg-gray-200"
                 style={positionEvent(dragStart, dragEnd)}
               />
             )}
@@ -198,9 +257,11 @@ const DayView = () => {
                     e.stopPropagation();
                     setTimeStart(event.timeStart);
                     setTimeEnd(event.timeEnd);
+                    setSelectedDay(dayjs(event.day));
                     setSelectedEvent(event);
                     setShowEventModal(true);
                   }}
+                  onContextMenu={(e) => handleContextMenu(e, event)}
                   className="py-0.5 px-0.5 eventt absolute left-0 w-full cursor-pointer"
                   style={{ top, height }}
                 >
@@ -372,6 +433,25 @@ const DayView = () => {
           </div>
         </div>
       </div>
+      {contextMenu.isOpen && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onLock={() => {
+            console.log("Pin event:", contextMenu.eventId);
+            setContextMenu({ isOpen: false, x: 0, y: 0, eventId: null });
+          }}
+          onDelete={() => {
+            const eventToDelete = savedEvents.find(
+              (e) => e.id === contextMenu.eventId
+            );
+            if (eventToDelete) {
+              dispatchEvent({ type: "delete", payload: eventToDelete });
+            }
+            setContextMenu({ isOpen: false, x: 0, y: 0, eventId: null });
+          }}
+        />
+      )}
     </div>
   );
 };
