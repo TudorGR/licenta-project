@@ -2,6 +2,7 @@ import React, { useEffect, useReducer, useState, useMemo } from "react";
 import Context from "./Context";
 import dayjs from "dayjs";
 import { api } from "../services/api.js";
+import axios from "axios";
 
 const asyncDispatchEvent = (dispatch, getState) => async (action) => {
   try {
@@ -26,6 +27,36 @@ const asyncDispatchEvent = (dispatch, getState) => async (action) => {
 
       case "set":
         dispatch(action);
+        break;
+
+      case "increase":
+        try {
+          const response = await axios.post("http://localhost:5000/api/algo", {
+            events: action.payload.events,
+            timeChange: action.payload.timeChange,
+            category: action.payload.category,
+          });
+          const modifiedEvents = response.data;
+          for (const event of modifiedEvents) {
+            await api.updateEvent(event.id, event);
+          }
+          const eventsAfterIncrease = await api.getEvents();
+          dispatch({ type: "set", payload: eventsAfterIncrease });
+        } catch (error) {
+          console.error("Error increasing event durations:", error);
+          throw error;
+        }
+        break;
+
+      case "lock":
+        try {
+          const updatedEvent = await api.toggleEventLock(action.payload.id);
+          const eventsAfterLock = await api.getEvents();
+          dispatch({ type: "set", payload: eventsAfterLock });
+        } catch (error) {
+          console.error("Error toggling event lock:", error);
+          throw error;
+        }
         break;
 
       default:

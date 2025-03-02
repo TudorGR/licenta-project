@@ -47,4 +47,14 @@ export const api = {
       throw error;
     }
   },
+
+  toggleEventLock: async (id) => {
+    try {
+      const response = await axios.patch(`${API_URL}/events/${id}/lock`);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to toggle event lock:", error);
+      throw error;
+    }
+  },
 };

@@ -19,7 +19,7 @@ router.post("/", async (req, res) => {
   try {
     const eventData = {
       ...req.body,
-      day: req.body.day.toString(), // Store as string to preserve timestamp
+      day: req.body.day.toString(),
     };
     const event = await Event.create(eventData);
     res.status(201).json(event);
@@ -36,7 +36,7 @@ router.put("/:id", async (req, res) => {
     if (event) {
       const eventData = {
         ...req.body,
-        day: req.body.day.toString(), // Store as string to preserve timestamp
+        day: req.body.day.toString(),
       };
       const updatedEvent = await event.update(eventData);
       res.json(updatedEvent);
@@ -61,6 +61,24 @@ router.delete("/:id", async (req, res) => {
     }
   } catch (error) {
     console.error("Error deleting event:", error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Add a new route to toggle lock status
+router.patch("/:id/lock", async (req, res) => {
+  try {
+    const event = await Event.findByPk(req.params.id);
+    if (event) {
+      const updatedEvent = await event.update({
+        locked: !event.locked,
+      });
+      res.json(updatedEvent);
+    } else {
+      res.status(404).json({ error: "Event not found" });
+    }
+  } catch (error) {
+    console.error("Error updating event lock:", error);
     res.status(400).json({ error: error.message });
   }
 });

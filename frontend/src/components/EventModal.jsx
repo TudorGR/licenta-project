@@ -52,6 +52,29 @@ export default function EventModal() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate minimum duration
+    const getMinutes = (timeStr) => {
+      const [hours, minutes] = timeStr.split(":").map(Number);
+      return hours * 60 + minutes;
+    };
+
+    let finalStartTime = startTime;
+    let finalEndTime = endTime;
+    const duration = getMinutes(endTime) - getMinutes(startTime);
+
+    if (duration < 15) {
+      // Add minutes to end time to make it 15 minutes duration
+      const startMinutes = getMinutes(startTime);
+      const newEndMinutes = startMinutes + 15;
+      const newEndHours = Math.floor(newEndMinutes / 60);
+      const newEndMins = newEndMinutes % 60;
+
+      finalEndTime = `${newEndHours.toString().padStart(2, "0")}:${newEndMins
+        .toString()
+        .padStart(2, "0")}`;
+    }
+
     if (!title.trim()) {
       setError(true);
       inputRef.current?.focus();
@@ -63,8 +86,8 @@ export default function EventModal() {
         title,
         description,
         label: color,
-        timeStart,
-        timeEnd,
+        timeStart: finalStartTime,
+        timeEnd: finalEndTime,
         category: selectedCategory || "None",
         location, // Add this
       };
@@ -479,7 +502,7 @@ export default function EventModal() {
                 } w-5 h-5 rounded-full flex items-center justify-center cursor-pointer`}
               >
                 {col === color && (
-                  <span className="bg-white w-3 h-3 rounded-full flex items-center justify-center"></span>
+                  <span className="bg-white w-4 h-4 rounded-full flex items-center justify-center"></span>
                 )}
               </span>
             ))}

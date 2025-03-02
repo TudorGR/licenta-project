@@ -36,6 +36,10 @@ const Event = sequelize.define("Event", {
     type: DataTypes.STRING,
     allowNull: true,
   },
+  locked: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
 });
 
 export default Event;

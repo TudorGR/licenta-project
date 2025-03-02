@@ -18,33 +18,10 @@ import selfCareIcon from "../assets/self-care.svg";
 import eventsIcon from "../assets/event.svg";
 import pinIcon from "../assets/lock.svg";
 import deleteIcon from "../assets/delete_icon.svg";
+import ContextMenu from "./ContextMenu";
 
 const TIME_SLOT_HEIGHT = 50;
 const TOTAL_HEIGHT = TIME_SLOT_HEIGHT * 24;
-
-const ContextMenu = ({ x, y, onLock, onDelete }) => {
-  return (
-    <div
-      className="fixed bg-white shadow-lg rounded-md py-2 z-50 min-w-32 border border-gray-200 context-menu"
-      style={{ left: x, top: y }}
-    >
-      <button
-        className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
-        onClick={onLock}
-      >
-        <img src={pinIcon} className="w-5" />
-        Lock
-      </button>
-      <button
-        className="w-full px-4 py-2 text-left hover:bg-gray-100 text-red-600 flex items-center gap-2"
-        onClick={onDelete}
-      >
-        <img src={deleteIcon} className="w-5" />
-        Delete
-      </button>
-    </div>
-  );
-};
 
 const DayView = () => {
   const timeGridRef = useRef(null);
@@ -162,7 +139,29 @@ const DayView = () => {
 
     e.preventDefault();
     setIsDragging(false);
-    const [startTime, endTime] = [dragStart, dragEnd].sort();
+
+    // Convert times to minutes for comparison
+    const getMinutes = (timeStr) => {
+      const [hours, minutes] = timeStr.split(":").map(Number);
+      return hours * 60 + minutes;
+    };
+
+    let [startTime, endTime] = [dragStart, dragEnd].sort();
+
+    // Calculate duration in minutes
+    const duration = getMinutes(endTime) - getMinutes(startTime);
+
+    // If duration is less than 15 minutes, extend the end time
+    if (duration < 15) {
+      const [hours, minutes] = startTime.split(":").map(Number);
+      const totalMinutes = hours * 60 + minutes + 15;
+      const newHours = Math.floor(totalMinutes / 60);
+      const newMinutes = totalMinutes % 60;
+      endTime = `${newHours.toString().padStart(2, "0")}:${newMinutes
+        .toString()
+        .padStart(2, "0")}`;
+    }
+
     setTimeStart(startTime);
     setTimeEnd(endTime);
     setSelectedEvent(null);
@@ -183,6 +182,27 @@ const DayView = () => {
         eventId: event.id,
       });
     }, 0);
+  };
+
+  const handleLock = async (eventId) => {
+    try {
+      await dispatchEvent({
+        type: "lock",
+        payload: { id: eventId },
+      });
+    } catch (error) {
+      console.error("Error locking event:", error);
+    }
+  };
+
+  const handleColorChange = async (eventId, newColor) => {
+    const eventToUpdate = savedEvents.find((e) => e.id === eventId);
+    if (eventToUpdate) {
+      await dispatchEvent({
+        type: "update",
+        payload: { ...eventToUpdate, label: newColor },
+      });
+    }
   };
 
   const positionEvent = (startTime, endTime) => {
@@ -262,11 +282,11 @@ const DayView = () => {
                     setShowEventModal(true);
                   }}
                   onContextMenu={(e) => handleContextMenu(e, event)}
-                  className="py-0.5 px-0.5 eventt absolute left-0 w-full cursor-pointer"
+                  className="transition-all py-0.5 px-0.5 eventt absolute left-0 w-full cursor-pointer"
                   style={{ top, height }}
                 >
                   <div
-                    className={`h-full rounded-md py-0.5 relative ${
+                    className={`h-full rounded-md  relative ${
                       event.label === "blue"
                         ? "blue-bg"
                         : event.label === "gray"
@@ -279,14 +299,30 @@ const DayView = () => {
                     }`}
                   >
                     {isSmallEvent ? (
-                      <div className="ml-2 text-sm overflow-hidden whitespace-nowrap flex items-center gap-1">
-                        <span>{event.title}</span>
-                        <span className="text-xs text-gray-600">
-                          • {event.timeStart} - {event.timeEnd}
-                        </span>
+                      <div className="text-sm ml-1 overflow-hidden whitespace-nowrap flex justify-between items-center gap-1 h-full">
+                        <div className="flex items-center">
+                          <span className="truncate">{event.title}</span>
+                          <div className="ml-2 text-xs text-nowrap overflow-clip text-gray-600">
+                            {`${event.timeStart} - ${event.timeEnd}`}
+                          </div>
+                        </div>
+                        {event.locked && (
+                          <img
+                            src={pinIcon}
+                            className="w-3 h-3 opacity-50 mr-1"
+                            alt="Locked"
+                          />
+                        )}
                       </div>
                     ) : (
                       <div className="relative">
+                        {event.locked && (
+                          <img
+                            src={pinIcon}
+                            className="absolute top-1 right-1 w-4 h-4 opacity-50"
+                            alt="Locked"
+                          />
+                        )}
                         <div
                           className={`border-l-2 absolute h-7 top-1.25 ${
                             event.label === "blue"
@@ -438,7 +474,7 @@ const DayView = () => {
           x={contextMenu.x}
           y={contextMenu.y}
           onLock={() => {
-            console.log("Pin event:", contextMenu.eventId);
+            handleLock(contextMenu.eventId);
             setContextMenu({ isOpen: false, x: 0, y: 0, eventId: null });
           }}
           onDelete={() => {
@@ -450,6 +486,16 @@ const DayView = () => {
             }
             setContextMenu({ isOpen: false, x: 0, y: 0, eventId: null });
           }}
+          onColorChange={(newColor) => {
+            handleColorChange(contextMenu.eventId, newColor);
+            setContextMenu({ isOpen: false, x: 0, y: 0, eventId: null });
+          }}
+          isLocked={
+            savedEvents.find((e) => e.id === contextMenu.eventId)?.locked
+          }
+          currentColor={
+            savedEvents.find((e) => e.id === contextMenu.eventId)?.label
+          }
         />
       )}
     </div>

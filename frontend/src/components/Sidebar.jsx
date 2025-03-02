@@ -2,6 +2,9 @@ import React, { useContext, useState } from "react";
 import Context from "../context/Context";
 import checkIcon from "../assets/check.svg";
 import CategoryStats from "./CategoryStats";
+import dayjs from "dayjs";
+import upIcon from "../assets/chevron-up.svg";
+import downIcon from "../assets/chevron-down.svg";
 
 const categoryColors = {
   Workout: "rgba(255, 87, 51, 0.7)",
@@ -39,6 +42,9 @@ const Sidebar = () => {
     workingHoursEnd,
     setWorkingHoursStart,
     setWorkingHoursEnd,
+    savedEvents,
+    dispatchEvent,
+    selectedDay,
   } = useContext(Context);
   const [dropdown, setDropdown] = useState(true);
   const handleCategoryToggle = (category) => {
@@ -51,6 +57,24 @@ const Sidebar = () => {
       }
       return newSet;
     });
+  };
+
+  const adjustStudyEvents = (minutes) => {
+    const todayEvents = savedEvents.filter(
+      (event) =>
+        dayjs(event.day).format("DD-MM-YY") === selectedDay.format("DD-MM-YY")
+    );
+
+    if (todayEvents.length > 0) {
+      dispatchEvent({
+        type: "increase",
+        payload: {
+          events: todayEvents,
+          timeChange: minutes,
+          category: "Study",
+        },
+      });
+    }
   };
 
   return (
@@ -197,6 +221,23 @@ const Sidebar = () => {
           </div>
         </>
       )}
+      <div className="w-[90%] flex justify-between items-center border border-gray-200 rounded-md p-2">
+        <h3 className="font-medium">Study</h3>
+        <div className="flex flex-col gap-1 w-8">
+          <button
+            onClick={() => adjustStudyEvents(15)} // Increase by 15 minutes
+            className="transition-all cursor-pointer border flex-1 h-10 border-gray-200 rounded-md hover:bg-gray-100"
+          >
+            <img src={upIcon} className="w-4 mx-auto" />
+          </button>
+          {/* <button
+            onClick={() => adjustStudyEvents(-15)} // Decrease by 15 minutes
+            className="transition-all cursor-pointer border flex-1 h-10 border-gray-200 rounded-md hover:bg-gray-100"
+          >
+            <img src={downIcon} className="w-4 mx-auto" />
+          </button> */}
+        </div>
+      </div>
     </aside>
   );
 };

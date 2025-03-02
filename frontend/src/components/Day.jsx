@@ -3,6 +3,8 @@ import React, { useContext, useEffect, useState } from "react";
 import Context from "../context/Context";
 import pinIcon from "../assets/lock.svg";
 import deleteIcon from "../assets/delete_icon.svg";
+import lockIcon from "../assets/lock.svg";
+import ContextMenu from "./ContextMenu";
 
 const Day = ({ day, index }) => {
   const [dayEvents, setDayEvents] = useState([]);
@@ -47,6 +49,27 @@ const Day = ({ day, index }) => {
         eventId: event.id,
       });
     }, 0);
+  };
+
+  const handleLock = async (eventId) => {
+    try {
+      await dispatchEvent({
+        type: "lock",
+        payload: { id: eventId },
+      });
+    } catch (error) {
+      console.error("Error locking event:", error);
+    }
+  };
+
+  const handleColorChange = async (eventId, newColor) => {
+    const eventToUpdate = savedEvents.find((e) => e.id === eventId);
+    if (eventToUpdate) {
+      await dispatchEvent({
+        type: "update",
+        payload: { ...eventToUpdate, label: newColor },
+      });
+    }
   };
 
   useEffect(() => {
@@ -102,7 +125,16 @@ const Day = ({ day, index }) => {
                 : "yellow-bg text-black"
             } px-1 mr-3 text-sm rounded mb-1 truncate`}
           >
-            {event.title}
+            <div className="relative">
+              {event.locked && (
+                <img
+                  src={lockIcon}
+                  className="absolute top-1 right-1 w-4 h-4 opacity-50"
+                  alt="Locked"
+                />
+              )}
+              {event.title}
+            </div>
           </div>
         ))}
         {dayEvents.length > 4 && index !== 0 ? (
@@ -118,7 +150,7 @@ const Day = ({ day, index }) => {
           x={contextMenu.x}
           y={contextMenu.y}
           onLock={() => {
-            console.log("Pin event:", contextMenu.eventId);
+            handleLock(contextMenu.eventId);
             setContextMenu({ isOpen: false, x: 0, y: 0, eventId: null });
           }}
           onDelete={() => {
@@ -130,32 +162,18 @@ const Day = ({ day, index }) => {
             }
             setContextMenu({ isOpen: false, x: 0, y: 0, eventId: null });
           }}
+          onColorChange={(newColor) => {
+            handleColorChange(contextMenu.eventId, newColor);
+            setContextMenu({ isOpen: false, x: 0, y: 0, eventId: null });
+          }}
+          isLocked={
+            savedEvents.find((e) => e.id === contextMenu.eventId)?.locked
+          }
+          currentColor={
+            savedEvents.find((e) => e.id === contextMenu.eventId)?.label
+          }
         />
       )}
-    </div>
-  );
-};
-
-const ContextMenu = ({ x, y, onLock, onDelete }) => {
-  return (
-    <div
-      className="fixed bg-white shadow-lg rounded-md py-2 z-50 min-w-32 border border-gray-200 context-menu"
-      style={{ left: x, top: y }}
-    >
-      <button
-        className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
-        onClick={onLock}
-      >
-        <img src={pinIcon} className="w-5" />
-        Lock
-      </button>
-      <button
-        className="w-full px-4 py-2 text-left hover:bg-gray-100 text-red-600 flex items-center gap-2"
-        onClick={onDelete}
-      >
-        <img src={deleteIcon} className="w-5" />
-        Delete
-      </button>
     </div>
   );
 };

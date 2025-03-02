@@ -18,6 +18,8 @@ import selfCareIcon from "../assets/self-care.svg";
 import eventsIcon from "../assets/event.svg";
 import pinIcon from "../assets/lock.svg";
 import deleteIcon from "../assets/delete_icon.svg";
+import lockIcon from "../assets/lock.svg";
+import ContextMenu from "./ContextMenu";
 
 const TIME_SLOT_HEIGHT = 50;
 const TOTAL_HEIGHT = TIME_SLOT_HEIGHT * 24;
@@ -39,30 +41,6 @@ const categoryColors = {
   "Self-care": "rgba(211, 84, 0, 0.7)",
   Events: "rgba(192, 57, 43, 0.7)",
   None: "rgba(189, 195, 199, 0.7)",
-};
-
-const ContextMenu = ({ x, y, onLock, onDelete }) => {
-  return (
-    <div
-      className="fixed bg-white shadow-lg rounded-md py-2 z-50 min-w-32 border border-gray-200 context-menu"
-      style={{ left: x, top: y }}
-    >
-      <button
-        className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
-        onClick={onLock}
-      >
-        <img src={pinIcon} className="w-5" />
-        Lock
-      </button>
-      <button
-        className="w-full px-4 py-2 text-left hover:bg-gray-100 text-red-600 flex items-center gap-2"
-        onClick={onDelete}
-      >
-        <img src={deleteIcon} className="w-5" />
-        Delete
-      </button>
-    </div>
-  );
 };
 
 const DayWeek = ({ day, index }) => {
@@ -92,9 +70,32 @@ const DayWeek = ({ day, index }) => {
     setTimeEnd,
     selectedEvent,
     selectedHeatmapCategories,
-    dispatchEvent,
+    dispatchEvent, // Get dispatchEvent from context
+    savedEvents,
+    loading,
+    showHeatmap,
   } = useContext(Context);
-  const { savedEvents, loading, showHeatmap } = useContext(Context);
+
+  const handleLock = async (eventId) => {
+    try {
+      await dispatchEvent({
+        type: "lock",
+        payload: { id: eventId },
+      });
+    } catch (error) {
+      console.error("Error locking event:", error);
+    }
+  };
+
+  const handleColorChange = async (eventId, newColor) => {
+    const eventToUpdate = savedEvents.find((e) => e.id === eventId);
+    if (eventToUpdate) {
+      await dispatchEvent({
+        type: "update",
+        payload: { ...eventToUpdate, label: newColor },
+      });
+    }
+  };
 
   const calculateTimePosition = () => {
     const now = dayjs();
@@ -389,7 +390,7 @@ const DayWeek = ({ day, index }) => {
               {dayEvents.map((event) => {
                 const { timeStart, timeEnd, category, id } = event; // Extract id
                 const eventPosition = positionEvent(timeStart, timeEnd);
-                const isSmallEvent = parseInt(eventPosition.height) < 50;
+                const isSmallEvent = parseInt(eventPosition.height) < 30; // Changed from 50 to 25
 
                 return (
                   <div
@@ -397,7 +398,7 @@ const DayWeek = ({ day, index }) => {
                       id ||
                       `${day.format("YYYY-MM-DD")}-${timeStart}-${timeEnd}`
                     }`}
-                    className="event"
+                    className="event transition-all"
                     style={{
                       position: "absolute",
                       top: eventPosition.top,
@@ -425,7 +426,9 @@ const DayWeek = ({ day, index }) => {
                       style={{
                         height: "100%",
                       }}
-                      className={`relative rounded-md pr-0.5 py-0.5 ${
+                      className={`relative rounded-md pr-0.5 ${
+                        isSmallEvent ? "py-0" : "py-0.5"
+                      } ${
                         event.label === "blue"
                           ? " blue-bg"
                           : event.label === "gray"
@@ -438,16 +441,32 @@ const DayWeek = ({ day, index }) => {
                       }`}
                     >
                       {isSmallEvent ? (
-                        <div className="text-sm ml-1 overflow-hidden whitespace-nowrap flex items-center gap-1">
-                          <span>{event.title}</span>
-                          <span className="text-xs text-gray-600">
-                            • {timeStart} - {timeEnd}
-                          </span>
+                        <div className="text-sm ml-1 overflow-hidden whitespace-nowrap flex justify-between items-center gap-1 h-full">
+                          <div className="flex items-center">
+                            <span className="truncate">{event.title}</span>
+                            <div className="ml-2 text-xs text-nowrap overflow-clip text-gray-600">
+                              {`${timeStart} - ${timeEnd}`}
+                            </div>
+                          </div>
+                          {event.locked && (
+                            <img
+                              src={lockIcon}
+                              className="w-3 h-3 opacity-50 mr-1"
+                              alt="Locked"
+                            />
+                          )}
                         </div>
                       ) : (
                         <div className="relative">
+                          {event.locked && (
+                            <img
+                              src={lockIcon}
+                              className="absolute top-1 right-1 w-4 h-4 opacity-50"
+                              alt="Locked"
+                            />
+                          )}
                           <div
-                            className={`border-l-2 absolute h-7 top-1.25 ${
+                            className={`border-l-2 absolute h-6 top-1.5 ${
                               event.label === "blue"
                                 ? " border-blue-300"
                                 : event.label === "gray"
@@ -585,7 +604,7 @@ const DayWeek = ({ day, index }) => {
           x={contextMenu.x}
           y={contextMenu.y}
           onLock={() => {
-            console.log("Pin event:", contextMenu.eventId);
+            handleLock(contextMenu.eventId);
             setContextMenu({ isOpen: false, x: 0, y: 0, eventId: null });
           }}
           onDelete={() => {
@@ -597,6 +616,16 @@ const DayWeek = ({ day, index }) => {
             }
             setContextMenu({ isOpen: false, x: 0, y: 0, eventId: null });
           }}
+          onColorChange={(newColor) => {
+            handleColorChange(contextMenu.eventId, newColor);
+            setContextMenu({ isOpen: false, x: 0, y: 0, eventId: null });
+          }}
+          isLocked={
+            savedEvents.find((e) => e.id === contextMenu.eventId)?.locked
+          }
+          currentColor={
+            savedEvents.find((e) => e.id === contextMenu.eventId)?.label
+          }
         />
       )}
     </div>
