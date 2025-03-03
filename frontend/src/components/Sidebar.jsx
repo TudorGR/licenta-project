@@ -2,6 +2,7 @@ import React, { useContext, useState } from "react";
 import Context from "../context/Context";
 import checkIcon from "../assets/check.svg";
 import CategoryStats from "./CategoryStats";
+import CategoryAnalysis from "./CategoryAnalysis";
 import dayjs from "dayjs";
 import upIcon from "../assets/chevron-up.svg";
 import downIcon from "../assets/chevron-down.svg";
@@ -191,6 +192,9 @@ const Sidebar = () => {
               </div>
             </div>
           )}
+          <div className="w-[90%] border border-gray-200 rounded-md">
+            <CategoryAnalysis />
+          </div>
         </>
       )}
       {(isWeekView || isMonthView || isDayView) && (

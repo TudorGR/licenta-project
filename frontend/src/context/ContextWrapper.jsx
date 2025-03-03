@@ -4,7 +4,7 @@ import dayjs from "dayjs";
 import { api } from "../services/api.js";
 import axios from "axios";
 
-const asyncDispatchEvent = (dispatch, getState) => async (action) => {
+const asyncDispatchEvent = (dispatch) => async (action) => {
   try {
     switch (action.type) {
       case "push":
@@ -97,14 +97,11 @@ export default function ContextWrapper(props) {
   });
   const [workingHoursStart, setWorkingHoursStart] = useState("07:00");
   const [workingHoursEnd, setWorkingHoursEnd] = useState("19:00");
+  const [learnedParameters, setLearnedParameters] = useState(null);
 
   const [savedEvents, dispatch] = useReducer(savedEventsReducer, []);
-  const getState = useMemo(() => () => savedEvents, [savedEvents]);
 
-  const dispatchEvent = useMemo(
-    () => asyncDispatchEvent(dispatch, getState),
-    [dispatch, getState]
-  );
+  const dispatchEvent = useMemo(() => asyncDispatchEvent(dispatch), [dispatch]);
 
   const [loading, setLoading] = useState(true);
   const [categories] = useState([
@@ -159,6 +156,27 @@ export default function ContextWrapper(props) {
     }
   }, [showEventModal]);
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        console.log("Fetching learned parameters...");
+        const response = await axios.get(
+          "http://localhost:5000/api/algo/learn"
+        );
+        console.log("Received learned parameters:", response.data);
+        if (response.data && Object.keys(response.data).length > 0) {
+          setLearnedParameters(response.data);
+        } else {
+          console.warn("No learned parameters received");
+        }
+      } catch (error) {
+        console.error("Failed to fetch learned parameters:", error);
+        setLearnedParameters(null);
+      }
+    };
+    fetchData();
+  }, [savedEvents]); // Re-run when events change
+
   return (
     <Context.Provider
       value={{
@@ -198,6 +216,7 @@ export default function ContextWrapper(props) {
         workingHoursEnd,
         setWorkingHoursStart,
         setWorkingHoursEnd,
+        learnedParameters,
       }}
     >
       {props.children}
