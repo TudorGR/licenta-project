@@ -1,5 +1,11 @@
 import express from "express";
 import Event from "../models/Event.js";
+import dayjs from "dayjs";
+import weekOfYear from "dayjs/plugin/isoWeek.js";
+import { Op } from "sequelize";
+
+// Extend dayjs with the weekOfYear plugin
+dayjs.extend(weekOfYear);
 
 const router = express.Router();
 
@@ -80,6 +86,60 @@ router.patch("/:id/lock", async (req, res) => {
   } catch (error) {
     console.error("Error updating event lock:", error);
     res.status(400).json({ error: error.message });
+  }
+});
+
+// Add this new route
+router.get("/past-events", async (req, res) => {
+  try {
+    const today = dayjs();
+    const threeMonthsAgo = today.subtract(3, "month");
+
+    const pastEvents = await Event.findAll({
+      where: {
+        day: {
+          [Op.between]: [threeMonthsAgo.valueOf(), today.valueOf()],
+        },
+      },
+      order: [["day", "ASC"]],
+    });
+
+    // Initialize weeks array
+    const weeks = [];
+    let currentWeek = Array(7)
+      .fill()
+      .map(() => []); // Array of 7 empty arrays
+    let currentWeekNum = null;
+
+    // Group events by weeks
+    pastEvents.forEach((event) => {
+      const eventDate = dayjs(parseInt(event.day));
+      const weekNum = eventDate.isoWeek();
+
+      if (weekNum !== currentWeekNum) {
+        if (currentWeekNum !== null) {
+          weeks.push(currentWeek);
+        }
+        currentWeek = Array(7)
+          .fill()
+          .map(() => []); // Reset to new array of empty arrays
+        currentWeekNum = weekNum;
+      }
+
+      // Add event to appropriate day array in current week
+      const dayIndex = eventDate.day();
+      currentWeek[dayIndex].push(event);
+    });
+
+    // Add last week if it has any events
+    if (currentWeek.some((dayEvents) => dayEvents.length > 0)) {
+      weeks.push(currentWeek);
+    }
+
+    res.json(weeks);
+  } catch (error) {
+    console.error("Error fetching past events:", error);
+    res.status(500).json({ error: error.message });
   }
 });
 

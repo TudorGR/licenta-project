@@ -9,9 +9,43 @@ import saveIcon from "../assets/save.svg";
 import recurringIcon from "../assets/recurring.svg";
 import categoryIcon from "../assets/category.svg";
 import locationIcon from "../assets/location.svg";
+import workoutIcon from "../assets/workout.svg";
+import meetingIcon from "../assets/meeting.svg";
+import studyIcon from "../assets/study.svg";
+import personalIcon from "../assets/personal.svg";
+import workIcon from "../assets/work.svg";
+import socialIcon from "../assets/social.svg";
+import familyIcon from "../assets/family.svg";
+import healthIcon from "../assets/health.svg";
+import hobbyIcon from "../assets/hobby.svg";
+import choresIcon from "../assets/chores.svg";
+import travelIcon from "../assets/travel.svg";
+import financeIcon from "../assets/finance.svg";
+import learningIcon from "../assets/learning.svg";
+import selfCareIcon from "../assets/self-care.svg";
+import eventsIcon from "../assets/event.svg";
 
 const colors = ["gray", "blue", "green", "purple", "yellow"];
 const recurringOptions = ["None", "Daily", "Weekly", "Monthly"];
+
+const categoryIcons = {
+  None: null,
+  Workout: workoutIcon,
+  Meeting: meetingIcon,
+  Study: studyIcon,
+  Personal: personalIcon,
+  Work: workIcon,
+  Social: socialIcon,
+  Family: familyIcon,
+  Health: healthIcon,
+  Hobby: hobbyIcon,
+  Chores: choresIcon,
+  Travel: travelIcon,
+  Finance: financeIcon,
+  Learning: learningIcon,
+  "Self-care": selfCareIcon,
+  Events: eventsIcon,
+};
 
 export default function EventModal() {
   const {
@@ -49,6 +83,9 @@ export default function EventModal() {
 
   const [suggestions, setSuggestions] = useState([]);
   const [currentSuggestionIndex, setCurrentSuggestionIndex] = useState(0);
+
+  // Add state for dropdown
+  const [isSelectOpen, setIsSelectOpen] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -222,6 +259,7 @@ export default function EventModal() {
     suggestions,
     currentSuggestionIndex,
     setTitle,
+    selectedCategory,
     setSelectedCategory,
     setShowEventModal,
   ]);
@@ -315,6 +353,17 @@ export default function EventModal() {
     getPastEvents();
   }, [savedEvents, selectedDay, timeStart, timeEnd]);
 
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest(".category-select")) {
+        setIsSelectOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
     <div className="fixed inset-0 bg-black/40 bg-opacity-50 flex justify-center items-center z-20">
       {smallCalendar && <SmallCalendar />}
@@ -407,27 +456,58 @@ export default function EventModal() {
             </div>
             <div className="flex gap-2 w-full">
               <div className="flex-1">
-                <div className="relative">
-                  <img
-                    src={categoryIcon}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 w-6 h-6"
-                    alt="category"
-                  />
-                  <select
-                    name="category"
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className=" border-gray-200 border-1 py-2 pl-9 pr-4 outline-0 w-full rounded-md"
+                <div className="relative category-select">
+                  {!selectedCategory && !categoryIcons[selectedCategory] && (
+                    <img
+                      src={categoryIcon}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 w-6 h-6"
+                      alt="category"
+                    />
+                  )}
+                  <div
+                    className={`border-gray-200 border-1 py-2 ${
+                      !selectedCategory && !categoryIcons[selectedCategory]
+                        ? "pl-9"
+                        : "pl-4"
+                    } pr-4 outline-0 w-full rounded-md cursor-pointer`}
+                    onClick={() => setIsSelectOpen(!isSelectOpen)}
                   >
-                    <option value="" disabled hidden>
-                      Select a category
-                    </option>
-                    {categories.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
+                    <div className="flex items-center gap-2">
+                      {selectedCategory && categoryIcons[selectedCategory] && (
+                        <img
+                          src={categoryIcons[selectedCategory]}
+                          alt={selectedCategory}
+                          className="w-5 h-5"
+                        />
+                      )}
+                      {selectedCategory || "Select a category"}
+                    </div>
+                  </div>
+                  {isSelectOpen && (
+                    <div className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-md mt-1 shadow-lg max-h-60 overflow-y-auto z-50">
+                      {categories.map((category) => (
+                        <div
+                          key={category}
+                          className={`flex items-center gap-2 px-4 py-2 hover:bg-gray-100 cursor-pointer ${
+                            category === selectedCategory ? "bg-gray-50" : ""
+                          }`}
+                          onClick={() => {
+                            setSelectedCategory(category);
+                            setIsSelectOpen(false);
+                          }}
+                        >
+                          {categoryIcons[category] && (
+                            <img
+                              src={categoryIcons[category]}
+                              alt={category}
+                              className="w-5 h-5"
+                            />
+                          )}
+                          {category}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex-1">
