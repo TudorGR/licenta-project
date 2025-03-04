@@ -1,10 +1,15 @@
 import React, { useEffect, useReducer, useState, useMemo } from "react";
 import Context from "./Context";
 import dayjs from "dayjs";
+import isBetween from "dayjs/plugin/isBetween";
 import { api } from "../services/api.js";
 import axios from "axios";
 
-const asyncDispatchEvent = (dispatch) => async (action) => {
+// Extend dayjs with the isBetween plugin
+dayjs.extend(isBetween);
+
+// Modify the asyncDispatchEvent function to accept savedEvents as a parameter
+const asyncDispatchEvent = (dispatch) => async (action, getState) => {
   try {
     switch (action.type) {
       case "push":
@@ -31,15 +36,60 @@ const asyncDispatchEvent = (dispatch) => async (action) => {
 
       case "increase":
         try {
-          const response = await axios.post("http://localhost:5000/api/algo", {
-            events: action.payload.events,
-            timeChange: action.payload.timeChange,
-            category: action.payload.category,
+          const { category, timeChange } = action.payload;
+          const savedEvents = getState(); // Get current events from the state
+
+          // Get all events for the current week instead of just filtered events
+          const today = dayjs();
+          const startOfWeek = today.startOf("week");
+          const endOfWeek = today.endOf("week");
+
+          // Get all events for the current week
+          const eventsToSend = savedEvents.filter((event) => {
+            const eventDay = dayjs(parseInt(event.day));
+            return eventDay.isBetween(startOfWeek, endOfWeek, null, "[]");
           });
-          const modifiedEvents = response.data;
+
+          // Keep track of the events with the target category
+          const matchingEvents = eventsToSend.filter(
+            (event) => event.category === category
+          );
+
+          const response = await axios.post("http://localhost:5000/api/algo", {
+            events: eventsToSend, // Send ALL events for the week
+            timeChange: timeChange,
+            category: category,
+          });
+
+          // The response now contains both events and detailed metadata
+          const result = response.data;
+          const modifiedEvents = result.events;
+
+          // Log the summary message
+
+          if (result.increase && result.increase.success) {
+            // Log success with green color
+
+            // Log detailed results for each event
+            if (result.increase.results && result.increase.results.length > 0) {
+              result.increase.results.forEach((eventResult) => {
+                const changeDescription =
+                  eventResult.direction === "forward"
+                    ? `Extended end time from ${eventResult.originalEndTime} to ${eventResult.newEndTime}`
+                    : `Extended start time from ${eventResult.originalStartTime} to ${eventResult.newStartTime}`;
+              });
+              console.groupEnd();
+            }
+          } else {
+            // Log failure with red color
+          }
+
+          // Update events in the database
           for (const event of modifiedEvents) {
             await api.updateEvent(event.id, event);
           }
+
+          // Refresh events from the database
           const eventsAfterIncrease = await api.getEvents();
           dispatch({ type: "set", payload: eventsAfterIncrease });
         } catch (error) {
@@ -101,7 +151,10 @@ export default function ContextWrapper(props) {
 
   const [savedEvents, dispatch] = useReducer(savedEventsReducer, []);
 
-  const dispatchEvent = useMemo(() => asyncDispatchEvent(dispatch), [dispatch]);
+  const dispatchEvent = useMemo(() => {
+    const dispatcher = asyncDispatchEvent(dispatch);
+    return (action) => dispatcher(action, () => savedEvents);
+  }, [dispatch, savedEvents]);
 
   const [loading, setLoading] = useState(true);
   const [categories] = useState([
@@ -159,19 +212,22 @@ export default function ContextWrapper(props) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        console.log("Fetching learned parameters...");
         const response = await axios.get(
           "http://localhost:5000/api/algo/learn"
         );
-        console.log("Received learned parameters:", response.data);
-        if (response.data && Object.keys(response.data).length > 0) {
-          setLearnedParameters(response.data);
+
+        if (response.data && response.data.success && response.data.data) {
+          setLearnedParameters(response.data.data);
         } else {
-          console.warn("No learned parameters received");
+          console.warn(
+            "No learned parameters received or invalid format",
+            response.data
+          );
+          setLearnedParameters({});
         }
       } catch (error) {
         console.error("Failed to fetch learned parameters:", error);
-        setLearnedParameters(null);
+        setLearnedParameters({});
       }
     };
     fetchData();

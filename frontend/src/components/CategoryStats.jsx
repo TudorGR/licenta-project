@@ -46,6 +46,15 @@ const CategoryStats = ({ view = "week" }) => {
     // Modified filtering logic to include start and end dates
     const filteredEvents = savedEvents.filter((event) => {
       const eventDay = dayjs(event.day);
+      const currentWeekStart = dayjs().startOf("week").add(1, "day");
+      const isCurrentWeek =
+        eventDay.isAfter(currentWeekStart) ||
+        eventDay.isSame(currentWeekStart, "day");
+
+      // Exclude events from current week
+      if (isCurrentWeek) return false;
+
+      // Original filtering logic
       if (view === "day") {
         return (
           eventDay.format("YYYY-MM-DD") === selectedDay.format("YYYY-MM-DD")

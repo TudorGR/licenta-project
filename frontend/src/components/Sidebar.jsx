@@ -61,20 +61,48 @@ const Sidebar = () => {
   };
 
   const adjustStudyEvents = (minutes) => {
-    const todayEvents = savedEvents.filter(
-      (event) =>
-        dayjs(event.day).format("DD-MM-YY") === selectedDay.format("DD-MM-YY")
-    );
+    // Get start and end of current week (Monday to Sunday)
+    const today = dayjs();
+    const startOfWeek = today.startOf("week").add(1, "day"); // Monday
+    const endOfWeek = startOfWeek.add(6, "day"); // Sunday
 
-    if (todayEvents.length > 0) {
+    // Filter events for the entire week
+    const weekEvents = savedEvents.filter((event) => {
+      const eventDay = dayjs(parseInt(event.day));
+      return eventDay.isBetween(startOfWeek, endOfWeek, null, "[]"); // [] means inclusive
+    });
+
+    // Sort events chronologically - first by day, then by time
+    weekEvents.sort((a, b) => {
+      // First compare by day
+      const dayA = dayjs(parseInt(a.day));
+      const dayB = dayjs(parseInt(b.day));
+
+      if (!dayA.isSame(dayB, "day")) {
+        return dayA.valueOf() - dayB.valueOf();
+      }
+
+      // If same day, compare by start time
+      const getMinutesFromTime = (timeString) => {
+        const [hours, minutes] = timeString.split(":").map(Number);
+        return hours * 60 + minutes;
+      };
+
+      const aStart = getMinutesFromTime(a.timeStart);
+      const bStart = getMinutesFromTime(b.timeStart);
+      return aStart - bStart;
+    });
+
+    if (weekEvents.length > 0) {
       dispatchEvent({
         type: "increase",
         payload: {
-          events: todayEvents,
           timeChange: minutes,
           category: "Study",
         },
       });
+    } else {
+      console.log("No Study events found for the current week");
     }
   };
 
