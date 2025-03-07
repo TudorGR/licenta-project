@@ -15,38 +15,27 @@ function getMinutesFromTime(timeString) {
   return hours * 60 + minutes;
 }
 
-// Check if event overlaps with locked events
+// Helper function to check for overlaps
 function checkOverlap(event, existingEvents) {
   const eventStart = getMinutesFromTime(event.timeStart);
   const eventEnd = getMinutesFromTime(event.timeEnd);
   const eventId = event.id;
-  const eventDay = event.day; // Get the event's day
+  const eventDay = event.day;
 
-  console.log(
-    `Checking overlap for event ID=${eventId}, Day=${dayjs(
-      parseInt(eventDay)
-    ).format("ddd DD/MM")}, Time=${event.timeStart}-${event.timeEnd}`
-  );
-
-  // Make sure event end time is after start time
   if (eventEnd <= eventStart) {
     console.warn(
       `Event has invalid time range: start=${event.timeStart}, end=${event.timeEnd}`
     );
-    return true; // Consider this an overlap to prevent invalid events
+    return true;
   }
 
   for (const otherEvent of existingEvents) {
-    // Skip if it's the same event or if the other event is not locked
     if (otherEvent.id === eventId || !otherEvent.locked) continue;
-
-    // Skip if events are on different days
     if (otherEvent.day !== eventDay) continue;
 
     const otherStart = getMinutesFromTime(otherEvent.timeStart);
     const otherEnd = getMinutesFromTime(otherEvent.timeEnd);
 
-    // Skip events with invalid time ranges
     if (otherEnd <= otherStart) {
       console.warn(
         `Other event has invalid time range: ID=${otherEvent.id}, start=${otherEvent.timeStart}, end=${otherEvent.timeEnd}`
@@ -54,44 +43,78 @@ function checkOverlap(event, existingEvents) {
       continue;
     }
 
-    // Check for overlap
     const hasOverlap = eventStart < otherEnd && eventEnd > otherStart;
 
     if (hasOverlap) {
-      console.log(
-        `Overlap detected with locked event ID=${otherEvent.id}, Day=${dayjs(
-          parseInt(otherEvent.day)
-        ).format("ddd DD/MM")}, Time=${otherEvent.timeStart}-${
-          otherEvent.timeEnd
-        }`
-      );
       return true;
     }
   }
 
-  console.log(`No overlaps found for event ID=${eventId}`);
   return false;
+}
+
+// Add this new function to check for ANY overlap (not just with locked events)
+function checkAnyOverlap(newEvent, allEvents) {
+  const eventStart = getMinutesFromTime(newEvent.timeStart);
+  const eventEnd = getMinutesFromTime(newEvent.timeEnd);
+  // Convert to dayjs for consistent comparison
+  const eventDayjs = dayjs(parseInt(newEvent.day));
+
+  if (eventEnd <= eventStart) {
+    console.warn(
+      `Event has invalid time range: start=${newEvent.timeStart}, end=${newEvent.timeEnd}`
+    );
+    return true;
+  }
+
+  for (const otherEvent of allEvents) {
+    if (otherEvent.id === newEvent.id) continue;
+
+    // Convert other event's day to dayjs for comparison
+    const otherDayjs = dayjs(parseInt(otherEvent.day));
+
+    // Compare using isSame to handle edge cases
+    if (!eventDayjs.isSame(otherDayjs, "day")) continue;
+
+    const otherStart = getMinutesFromTime(otherEvent.timeStart);
+    const otherEnd = getMinutesFromTime(otherEvent.timeEnd);
+
+    if (otherEnd <= otherStart) {
+      console.warn(
+        `Other event has invalid time range: ID=${otherEvent.id}, start=${otherEvent.timeStart}, end=${otherEvent.timeEnd}`
+      );
+      continue;
+    }
+
+    const hasOverlap = eventStart < otherEnd && eventEnd > otherStart;
+
+    if (hasOverlap) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// Helper function to check for duplicates
+function isDuplicateEvent(newEvent, allEvents) {
+  const newEventDayjs = dayjs(parseInt(newEvent.day));
+
+  return allEvents.some((event) => {
+    const sameTime =
+      event.timeStart === newEvent.timeStart &&
+      event.timeEnd === newEvent.timeEnd;
+    const sameDay = dayjs(parseInt(event.day)).isSame(newEventDayjs, "day");
+    const sameCategory = event.category === newEvent.category;
+
+    return sameTime && sameDay && sameCategory;
+  });
 }
 
 // Main algorithm endpoint
 router.post("/", async (req, res) => {
   try {
     const { events, timeChange, category } = req.body;
-
-    console.log("Algorithm input:");
-    console.log(`Category to increase: "${category}"`);
-    console.log(`Time change amount: ${timeChange} minutes`);
-    console.log(`Total events received: ${events.length}`);
-
-    // Debug all events to see what's coming from the frontend
-    console.log("All events received:");
-    events.forEach((event, i) => {
-      console.log(
-        `Event ${i + 1}: ID=${event.id}, Category=${event.category}, Day=${
-          event.day
-        }, Time=${event.timeStart}-${event.timeEnd}, Locked=${event.locked}`
-      );
-    });
 
     // Get study events and sort them chronologically
     const studyEvents = events
@@ -111,10 +134,6 @@ router.post("/", async (req, res) => {
         return aStart - bStart;
       });
 
-    console.log(
-      `Found ${studyEvents.length} events with category "${category}"`
-    );
-
     if (studyEvents.length === 0) {
       return res.status(200).json({
         events,
@@ -133,17 +152,21 @@ router.post("/", async (req, res) => {
     // Get historical data for the category to make smarter decisions
     const today = dayjs();
     const threeMonthsAgo = today.subtract(3, "month");
+    // Start from Monday by adding 1 day to start of week
     const currentWeekStart = today.startOf("week").add(1, "day");
     const currentWeekEnd = currentWeekStart.add(6, "day");
 
     // Fetch historical events for this category
+    // In the main algorithm endpoint
+    // In the main algorithm endpoint
     const historicalEvents = await Event.findAll({
       where: {
         category: category,
         day: {
           [Op.between]: [
             threeMonthsAgo.valueOf(),
-            currentWeekStart.subtract(1, "day").valueOf(),
+            // Include the full week starting from Monday
+            currentWeekStart.add(6, "day").endOf("day").valueOf(),
           ],
         },
       },
@@ -158,35 +181,20 @@ router.post("/", async (req, res) => {
       return eventDay.isBetween(currentWeekStart, currentWeekEnd, null, "[]");
     });
 
-    console.log("Current week events:");
-    currentWeekEvents.forEach((event, i) => {
-      console.log(
-        `Event ${i + 1}: ID=${event.id}, Day=${dayjs(
-          parseInt(event.day)
-        ).format("ddd DD/MM")}, Time=${event.timeStart}-${
-          event.timeEnd
-        }, Locked=${event.locked}`
-      );
-    });
-
     // Function to process a single event with a specific strategy
     function processEventWithStrategy(studyEvent, strategy) {
       const eventDay = dayjs(parseInt(studyEvent.day)).day();
       const eventStart = getMinutesFromTime(studyEvent.timeStart);
       const eventEnd = getMinutesFromTime(studyEvent.timeEnd);
 
-      // Store original times for logging
       const originalStartTime = studyEvent.timeStart;
       const originalEndTime = studyEvent.timeEnd;
 
-      // Define variables for both forward and backward extension
       let forwardEndMinutes = eventEnd + timeChange;
       let backwardStartMinutes = Math.max(0, eventStart - timeChange);
 
-      // Handle day boundary
       forwardEndMinutes = Math.min(forwardEndMinutes, 24 * 60 - 1);
 
-      // Variables to track best pattern matches
       let bestForwardFit = null;
       let bestBackwardFit = null;
       let bestForwardScore = -1;
@@ -194,7 +202,6 @@ router.post("/", async (req, res) => {
       let forwardStrategy = "none";
       let backwardStrategy = "none";
 
-      // Try daily patterns if that's the requested strategy
       if (
         strategy === "daily" &&
         categoryAnalysis &&
@@ -204,28 +211,21 @@ router.post("/", async (req, res) => {
       ) {
         const dailyPatterns = categoryAnalysis.byDay[eventDay].commonTimeRanges;
 
-        // Check patterns for forward extension
         for (const pattern of dailyPatterns) {
           const patternStart = getMinutesFromTime(pattern.start);
           const patternEnd = getMinutesFromTime(pattern.end);
 
-          // If event overlaps with this pattern
           if (eventStart < patternEnd && patternStart < eventEnd) {
-            // Calculate how much the event is already within this pattern
             const overlapStart = Math.max(eventStart, patternStart);
             const overlapEnd = Math.min(eventEnd, patternEnd);
             const overlapDuration = overlapEnd - overlapStart;
 
-            // Calculate how much we can grow within this pattern (forward)
             const roomToGrowForward = patternEnd - eventEnd;
             if (roomToGrowForward > 0) {
-              // Score is based on overlap + room to grow + frequency
               const forwardScore =
                 overlapDuration +
                 Math.min(roomToGrowForward, timeChange) +
                 pattern.frequency * 10;
-
-              // Keep the best matching pattern
               if (forwardScore > bestForwardScore) {
                 bestForwardScore = forwardScore;
                 bestForwardFit = pattern;
@@ -233,16 +233,12 @@ router.post("/", async (req, res) => {
               }
             }
 
-            // Calculate how much we can grow within this pattern (backward)
             const roomToGrowBackward = eventStart - patternStart;
             if (roomToGrowBackward > 0) {
-              // Score is based on overlap + room to grow + frequency
               const backwardScore =
                 overlapDuration +
                 Math.min(roomToGrowBackward, timeChange) +
                 pattern.frequency * 10;
-
-              // Keep the best matching pattern
               if (backwardScore > bestBackwardScore) {
                 bestBackwardScore = backwardScore;
                 bestBackwardFit = pattern;
@@ -251,34 +247,24 @@ router.post("/", async (req, res) => {
             }
           }
         }
-      }
-
-      // Try weekly patterns if that's the requested strategy
-      else if (strategy === "weekly" && categoryAnalysis) {
+      } else if (strategy === "weekly" && categoryAnalysis) {
         const weeklyPatterns = getWeeklyPatterns(categoryAnalysis);
 
-        // Check patterns for forward extension
         for (const pattern of weeklyPatterns) {
           const patternStart = getMinutesFromTime(pattern.start);
           const patternEnd = getMinutesFromTime(pattern.end);
 
-          // If event overlaps with this pattern
           if (eventStart < patternEnd && patternStart < eventEnd) {
-            // Calculate how much the event is already within this pattern
             const overlapStart = Math.max(eventStart, patternStart);
             const overlapEnd = Math.min(eventEnd, patternEnd);
             const overlapDuration = overlapEnd - overlapStart;
 
-            // Calculate how much we can grow within this pattern (forward)
             const roomToGrowForward = patternEnd - eventEnd;
             if (roomToGrowForward > 0) {
-              // Score is based on overlap + room to grow + frequency
               const forwardScore =
                 overlapDuration +
                 Math.min(roomToGrowForward, timeChange) +
                 pattern.frequency * 10;
-
-              // Keep the best matching pattern
               if (forwardScore > bestForwardScore) {
                 bestForwardScore = forwardScore;
                 bestForwardFit = pattern;
@@ -286,16 +272,12 @@ router.post("/", async (req, res) => {
               }
             }
 
-            // Calculate how much we can grow within this pattern (backward)
             const roomToGrowBackward = eventStart - patternStart;
             if (roomToGrowBackward > 0) {
-              // Score is based on overlap + room to grow + frequency
               const backwardScore =
                 overlapDuration +
                 Math.min(roomToGrowBackward, timeChange) +
                 pattern.frequency * 10;
-
-              // Keep the best matching pattern
               if (backwardScore > bestBackwardScore) {
                 bestBackwardScore = backwardScore;
                 bestBackwardFit = pattern;
@@ -304,30 +286,23 @@ router.post("/", async (req, res) => {
             }
           }
         }
-      }
-
-      // Use default strategy if that's the requested strategy
-      else if (strategy === "default") {
+      } else if (strategy === "default") {
         forwardStrategy = "default";
       }
 
-      // Decide on which direction to use based on score
       let tempEvent = null;
       let newStartTime = originalStartTime;
       let newEndTime = originalEndTime;
       let directionUsed = null;
       let increaseStrategy = "none";
 
-      // If both directions have patterns, choose the better one
       if (bestForwardScore > 0 && bestBackwardScore > 0) {
         if (bestForwardScore >= bestBackwardScore) {
-          // Use forward extension
           if (bestForwardFit) {
             const patternEnd = getMinutesFromTime(bestForwardFit.end);
             forwardEndMinutes = Math.min(forwardEndMinutes, patternEnd);
           }
 
-          // Format new end time
           const newEndHours = Math.floor(forwardEndMinutes / 60);
           const newEndMins = forwardEndMinutes % 60;
           newEndTime = `${newEndHours.toString().padStart(2, "0")}:${newEndMins
@@ -342,13 +317,11 @@ router.post("/", async (req, res) => {
           increaseStrategy = forwardStrategy;
           directionUsed = "forward";
         } else {
-          // Use backward extension
           if (bestBackwardFit) {
             const patternStart = getMinutesFromTime(bestBackwardFit.start);
             backwardStartMinutes = Math.max(backwardStartMinutes, patternStart);
           }
 
-          // Format new start time
           const newStartHours = Math.floor(backwardStartMinutes / 60);
           const newStartMins = backwardStartMinutes % 60;
           newStartTime = `${newStartHours
@@ -363,15 +336,12 @@ router.post("/", async (req, res) => {
           increaseStrategy = backwardStrategy;
           directionUsed = "backward";
         }
-      }
-      // Only forward pattern available
-      else if (bestForwardScore > 0 || forwardStrategy === "default") {
+      } else if (bestForwardScore > 0 || forwardStrategy === "default") {
         if (bestForwardFit) {
           const patternEnd = getMinutesFromTime(bestForwardFit.end);
           forwardEndMinutes = Math.min(forwardEndMinutes, patternEnd);
         }
 
-        // Format new end time
         const newEndHours = Math.floor(forwardEndMinutes / 60);
         const newEndMins = forwardEndMinutes % 60;
         newEndTime = `${newEndHours.toString().padStart(2, "0")}:${newEndMins
@@ -385,15 +355,12 @@ router.post("/", async (req, res) => {
 
         increaseStrategy = forwardStrategy;
         directionUsed = "forward";
-      }
-      // Only backward pattern available
-      else if (bestBackwardScore > 0) {
+      } else if (bestBackwardScore > 0) {
         if (bestBackwardFit) {
           const patternStart = getMinutesFromTime(bestBackwardFit.start);
           backwardStartMinutes = Math.max(backwardStartMinutes, patternStart);
         }
 
-        // Format new start time
         const newStartHours = Math.floor(backwardStartMinutes / 60);
         const newStartMins = backwardStartMinutes % 60;
         newStartTime = `${newStartHours
@@ -417,7 +384,6 @@ router.post("/", async (req, res) => {
         };
       }
 
-      // Check if we're actually changing the time (don't consider it an increase if times are the same)
       if (directionUsed === "forward" && newEndTime === originalEndTime) {
         return {
           increased: false,
@@ -434,9 +400,7 @@ router.post("/", async (req, res) => {
         };
       }
 
-      // Check if modification would cause overlap with locked events
       if (!checkOverlap(tempEvent, modifiedEvents)) {
-        // Return success
         return {
           increased: true,
           strategy: increaseStrategy,
@@ -449,7 +413,15 @@ router.post("/", async (req, res) => {
           day: dayjs(parseInt(studyEvent.day)).format("ddd DD/MM"),
         };
       } else {
-        // Return failure due to overlap
+        if (strategy === "default") {
+          return {
+            increased: false,
+            strategy: increaseStrategy,
+            message: "Overlap with locked event detected",
+            createNewEvent: true,
+          };
+        }
+
         return {
           increased: false,
           strategy: increaseStrategy,
@@ -459,23 +431,52 @@ router.post("/", async (req, res) => {
     }
 
     // Group events by day for easier tracking
-    const eventsByDay = studyEvents.reduce((acc, event) => {
-      const day = dayjs(parseInt(event.day)).format("YYYY-MM-DD");
-      if (!acc[day]) {
-        acc[day] = [];
-      }
-      acc[day].push(event);
-      return acc;
-    }, {});
+    // Ensure all days of the week are represented in the event groups
+    const ensureAllWeekDays = () => {
+      const weekDays = {};
+      // Start from Monday by adding 1 day to start of week
+      const weekStart = currentWeekStart.startOf("week").add(1, "day");
 
-    // Sort days chronologically
-    // The existing sort() method sorts lexicographically, which is fine for YYYY-MM-DD format,
-    // but let's be extra safe by sorting using dayjs
+      // Debug logging
+
+      // Create array for all 7 days starting from Monday
+      for (let i = 0; i < 7; i++) {
+        const day = weekStart.add(i, "day");
+        weekDays[day.format("YYYY-MM-DD")] = [];
+      }
+
+      // Filter and group study events
+      studyEvents.forEach((event) => {
+        const eventDay = dayjs(parseInt(event.day));
+        const day = eventDay.format("YYYY-MM-DD");
+
+        // Only include category-specific events
+        if (event.category === category) {
+          if (!weekDays[day]) {
+            weekDays[day] = [];
+          }
+          weekDays[day].push(event);
+        }
+      });
+
+      // Sort events within each day
+      Object.values(weekDays).forEach((dayEvents) => {
+        dayEvents.sort(
+          (a, b) =>
+            getMinutesFromTime(a.timeStart) - getMinutesFromTime(b.timeStart)
+        );
+      });
+
+      return weekDays;
+    };
+
+    // Replace the existing event grouping with our new function
+    const eventsByDay = ensureAllWeekDays();
+
+    // Sort days chronologically - this remains the same
     const sortedDays = Object.keys(eventsByDay).sort((a, b) => {
       return dayjs(a).valueOf() - dayjs(b).valueOf();
     });
-
-    console.log("Sorted days to process:", sortedDays);
 
     // Try each phase in order
     const tryPhase = (strategy) => {
@@ -484,16 +485,15 @@ router.post("/", async (req, res) => {
       // Go through each day in the week
       for (const day of sortedDays) {
         const dayEvents = eventsByDay[day];
-        console.log(`Trying ${strategy} strategy for ${day}`);
+
+        // Skip days with no events
+        if (dayEvents.length === 0) {
+          continue;
+        }
 
         // Try each event for this day
         for (const studyEvent of dayEvents) {
           const result = processEventWithStrategy(studyEvent, strategy);
-          console.log(
-            `- Event ${studyEvent.id}: ${
-              result.increased ? "SUCCESS" : "FAILED - " + result.message
-            }`
-          );
 
           if (result.increased) {
             // Update the event in modifiedEvents array
@@ -512,7 +512,7 @@ router.post("/", async (req, res) => {
               phaseSuccess = true;
 
               // Return immediately after finding one event to increase
-              return true; // <-- This is the key change
+              return true;
             }
           }
         }
@@ -521,72 +521,195 @@ router.post("/", async (req, res) => {
       return phaseSuccess;
     };
 
+    // Create two versions of the createNewEventIfNeeded function
+    const createNewPatternEvent = () => {
+      if (!increasedEvent && categoryAnalysis) {
+        // Keep track of newly created events during this operation
+        const createdEventsInThisRun = [];
+
+        // Get weekly patterns first since they're more reliable across the week
+        const weeklyPatterns = getWeeklyPatterns(categoryAnalysis);
+
+        // Try each day
+        for (const day of sortedDays) {
+          const dayDate = dayjs(day);
+          const dayOfWeek = dayDate.day();
+          const dayTimestamp = dayDate.valueOf();
+
+          // Check against both existing events and newly created ones
+          const allEventsToCheck = [
+            ...modifiedEvents,
+            ...createdEventsInThisRun,
+          ];
+
+          // First try weekly patterns
+          for (const pattern of weeklyPatterns) {
+            if (pattern.frequency < 0.3) continue;
+
+            const potentialEvent = {
+              timeStart: pattern.start,
+              timeEnd: pattern.end,
+              day: dayTimestamp,
+            };
+
+            // Check against ALL events including newly created ones
+            if (!checkAnyOverlap(potentialEvent, allEventsToCheck)) {
+              const fullEventDetails = {
+                ...potentialEvent,
+                category: category,
+              };
+
+              if (!isDuplicateEvent(fullEventDetails, allEventsToCheck)) {
+                const newEvent = {
+                  title: `${category}`,
+                  description: "Auto-generated from weekly pattern",
+                  category: category,
+                  label: "purple",
+                  timeStart: pattern.start,
+                  timeEnd: pattern.end,
+                  day: dayTimestamp,
+                  location: "",
+                  locked: false,
+                  id: `new-${Date.now()}`,
+                  isNewlyCreated: true,
+                  createdAt: new Date().toISOString(),
+                };
+
+                // Add to tracking arrays
+                createdEventsInThisRun.push(newEvent);
+                modifiedEvents.push(newEvent);
+
+                increasedEvent = {
+                  increased: true,
+                  strategy: "new-weekly-pattern",
+                  originalEvent: null,
+                  newEventDay: dayDate.format("ddd DD/MM"),
+                  newEventTime: `${pattern.start}-${pattern.end}`,
+                  eventId: newEvent.id,
+                  isNewlyCreated: true,
+                  patternFrequency: pattern.frequency,
+                };
+
+                return true;
+              }
+            }
+          }
+        }
+      }
+      return false;
+    };
+
+    const createNewAnySlotEvent = () => {
+      if (!increasedEvent && categoryAnalysis) {
+        // Get all existing events for this day to check duplicates
+        const existingEvents = new Set();
+
+        // Track created events to prevent duplicates within the same operation
+        for (const day of sortedDays) {
+          for (const studyEvent of eventsByDay[day]) {
+            const result = processEventWithStrategy(studyEvent, "default");
+
+            if (result.createNewEvent) {
+              const eventKey = `${studyEvent.day}-${studyEvent.timeStart}-${studyEvent.timeEnd}`;
+
+              // Skip if we already processed this time slot
+              if (existingEvents.has(eventKey)) {
+                continue;
+              }
+
+              existingEvents.add(eventKey);
+
+              // Find the next available time slot
+              const nextTimeSlot = findNextAvailableTimeSlot(
+                studyEvent,
+                modifiedEvents,
+                categoryAnalysis
+              );
+
+              if (nextTimeSlot) {
+                // Double check this slot isn't already used
+                const newEventKey = `${nextTimeSlot.day}-${nextTimeSlot.startTime}-${nextTimeSlot.endTime}`;
+                if (existingEvents.has(newEventKey)) {
+                  continue;
+                }
+
+                // Create new event
+                const newEvent = {
+                  title: studyEvent.title,
+                  description: studyEvent.description || "",
+                  category: studyEvent.category,
+                  label: studyEvent.label,
+                  timeStart: nextTimeSlot.startTime,
+                  timeEnd: nextTimeSlot.endTime,
+                  day: nextTimeSlot.day,
+                  location: studyEvent.location || "",
+                  locked: false,
+                  id: `new-${Date.now()}`,
+                  isNewlyCreated: true,
+                  createdAt: new Date().toISOString(),
+                };
+
+                // Add to tracking set
+                existingEvents.add(newEventKey);
+
+                // Add to modified events
+                modifiedEvents.push(newEvent);
+
+                increasedEvent = {
+                  increased: true,
+                  strategy: "new-fallback-event",
+                  originalEvent: studyEvent.id,
+                  newEventDay: dayjs(parseInt(nextTimeSlot.day)).format(
+                    "ddd DD/MM"
+                  ),
+                  newEventTime: `${nextTimeSlot.startTime}-${nextTimeSlot.endTime}`,
+                  eventId: newEvent.id,
+                  isNewlyCreated: true,
+                };
+
+                return true;
+              }
+              break; // Only try one new event creation per iteration
+            }
+          }
+          if (increasedEvent) break;
+        }
+      }
+      return false;
+    };
+
     // Try each phase in order
-    console.log("Starting Phase 1: Daily Patterns");
     const dailyPhaseSuccess = tryPhase("daily");
 
     if (!dailyPhaseSuccess) {
-      console.log("Starting Phase 2: Weekly Patterns");
       const weeklyPhaseSuccess = tryPhase("weekly");
 
       if (!weeklyPhaseSuccess) {
-        console.log("Starting Phase 3: Default Strategy");
-        tryPhase("default");
+        const patternEventSuccess = createNewPatternEvent();
+
+        if (!patternEventSuccess) {
+          const defaultPhaseSuccess = tryPhase("default");
+
+          if (!defaultPhaseSuccess) {
+            createNewAnySlotEvent();
+          }
+        }
       }
     }
-
-    // Debug info after all phases
-    console.log("Debug info for algorithm execution:");
-    console.log(`Total study events found: ${studyEvents.length}`);
-    console.log(`Events successfully increased: ${increasedEvent ? 1 : 0}`);
-    console.log(`Failed events: ${failedEvents}`);
-
-    // Log details about each study event (to see if they're valid candidates)
-    console.log("Study events candidates:");
-    studyEvents.forEach((event, index) => {
-      console.log(
-        `Event ${index + 1}: ID=${event.id}, Day=${dayjs(
-          parseInt(event.day)
-        ).format("ddd DD/MM")}, Time=${event.timeStart}-${
-          event.timeEnd
-        }, Locked=${event.locked}`
-      );
-
-      // Test each event with each strategy to see why it's failing
-      const dailyResult = processEventWithStrategy(event, "daily");
-      const weeklyResult = processEventWithStrategy(event, "weekly");
-      const defaultResult = processEventWithStrategy(event, "default");
-
-      console.log(
-        `  Daily strategy: ${
-          dailyResult.increased ? "SUCCESS" : `FAILED - ${dailyResult.message}`
-        }`
-      );
-      console.log(
-        `  Weekly strategy: ${
-          weeklyResult.increased
-            ? "SUCCESS"
-            : `FAILED - ${weeklyResult.message}`
-        }`
-      );
-      console.log(
-        `  Default strategy: ${
-          defaultResult.increased
-            ? "SUCCESS"
-            : `FAILED - ${defaultResult.message}`
-        }`
-      );
-    });
 
     // Prepare the summary message
     let summaryMessage;
     if (increasedEvent) {
-      summaryMessage = `Successfully increased ${category} event on ${increasedEvent.day} using ${increasedEvent.strategy} strategy.`;
-
-      if (increasedEvent.direction === "forward") {
-        summaryMessage += ` Extended end time from ${increasedEvent.originalEndTime} to ${increasedEvent.newEndTime}.`;
+      if (increasedEvent.isNewlyCreated) {
+        summaryMessage = `Created new ${category} event on ${increasedEvent.newEventDay} at ${increasedEvent.newEventTime}.`;
       } else {
-        summaryMessage += ` Extended start time from ${increasedEvent.originalStartTime} to ${increasedEvent.newStartTime}.`;
+        summaryMessage = `Successfully increased ${category} event on ${increasedEvent.day} using ${increasedEvent.strategy} strategy.`;
+
+        if (increasedEvent.direction === "forward") {
+          summaryMessage += ` Extended end time from ${increasedEvent.originalEndTime} to ${increasedEvent.newEndTime}.`;
+        } else {
+          summaryMessage += ` Extended start time from ${increasedEvent.originalStartTime} to ${increasedEvent.newStartTime}.`;
+        }
       }
     } else {
       summaryMessage = `Could not increase any ${category} events due to overlaps or constraints.`;
@@ -603,6 +726,7 @@ router.post("/", async (req, res) => {
         timeChange: timeChange,
         category: category,
         results: increasedEvent ? [increasedEvent] : [],
+        newEventCreated: increasedEvent && increasedEvent.isNewlyCreated,
         patternsConsidered: {
           daily: categoryAnalysis
             ? categoryAnalysis.byDay.reduce(
@@ -617,7 +741,6 @@ router.post("/", async (req, res) => {
       },
     };
 
-    console.log(summaryMessage);
     res.status(200).json(responseData);
   } catch (error) {
     console.error("Error modifying events:", error);
@@ -631,17 +754,19 @@ router.get("/learn", async (req, res) => {
     const threeMonthsAgo = today.subtract(3, "month");
     const currentWeekStart = today.startOf("week").add(1, "day");
 
+    // Fetch all events without category filter
     const historicalEvents = await Event.findAll({
       where: {
         day: {
           [Op.between]: [
             threeMonthsAgo.valueOf(),
-            currentWeekStart.subtract(1, "day").valueOf(),
+            currentWeekStart.add(6, "day").endOf("day").valueOf(),
           ],
         },
       },
     });
 
+    // Group events by category
     const eventsByCategory = {};
     historicalEvents.forEach((event) => {
       if (!eventsByCategory[event.category]) {
@@ -650,6 +775,7 @@ router.get("/learn", async (req, res) => {
       eventsByCategory[event.category].push(event);
     });
 
+    // Process each category's events
     const learningData = {};
     for (const [category, events] of Object.entries(eventsByCategory)) {
       const categoryAnalysis = processHistoricalData(events);
@@ -740,7 +866,7 @@ function processHistoricalData(events) {
     byDay: Array(7)
       .fill()
       .map(() => ({
-        timeSlots: Array(96).fill(0), // 96 slots for 24 hours in 15-min intervals
+        timeSlots: Array(96).fill(0),
         commonTimeRanges: [],
       })),
     globalStats: {
@@ -752,6 +878,7 @@ function processHistoricalData(events) {
   };
 
   events.forEach((event) => {
+    // Keep Sunday as 0, no conversion needed
     const dayOfWeek = dayjs(parseInt(event.day)).day();
     const startMinutes = getMinutesFromTime(event.timeStart);
     const endMinutes = getMinutesFromTime(event.timeEnd);
@@ -799,8 +926,10 @@ function processHistoricalData(events) {
 
 // Helper function to extract weekly patterns
 function getWeeklyPatterns(categoryAnalysis) {
-  const allTimeRanges = categoryAnalysis.byDay.flatMap((day) =>
-    day.commonTimeRanges.filter((range) => range.frequency > 0)
+  const allTimeRanges = categoryAnalysis.byDay.flatMap((day, index) =>
+    day.commonTimeRanges
+      .filter((range) => range.frequency > 0)
+      .map((range) => ({ ...range, dayOfWeek: index }))
   );
 
   // Group by time range and average frequencies
@@ -825,6 +954,252 @@ function getWeeklyPatterns(categoryAnalysis) {
       frequency: frequencies.reduce((a, b) => a + b, 0) / frequencies.length,
     }))
     .sort((a, b) => b.frequency - a.frequency);
+}
+
+function findNextAvailableTimeSlot(originalEvent, allEvents, categoryAnalysis) {
+  const eventDate = dayjs(parseInt(originalEvent.day));
+  const minDuration = categoryAnalysis.globalStats.minDuration || 30; // Default to 30 minutes
+
+  // Try each day starting from the day after the original event
+  for (let i = 1; i <= 7; i++) {
+    const nextDay = eventDate.add(i, "day");
+    const dayOfWeek = nextDay.day();
+    const dayTimestamp = nextDay.valueOf();
+
+    // First try to use daily patterns for this day of week
+    if (
+      categoryAnalysis.byDay[dayOfWeek] &&
+      categoryAnalysis.byDay[dayOfWeek].commonTimeRanges.length > 0
+    ) {
+      const patterns = categoryAnalysis.byDay[dayOfWeek].commonTimeRanges;
+
+      for (const pattern of patterns) {
+        const startTime = pattern.start;
+        // Calculate end time using minimum duration
+        const startMinutes = getMinutesFromTime(startTime);
+        const endMinutes = startMinutes + minDuration;
+        const endHours = Math.floor(endMinutes / 60);
+        const endMins = endMinutes % 60;
+        const endTime = `${endHours.toString().padStart(2, "0")}:${endMins
+          .toString()
+          .padStart(2, "0")}`;
+
+        // Create potential new event
+        const potentialEvent = {
+          timeStart: startTime,
+          timeEnd: endTime,
+          day: dayTimestamp,
+        };
+
+        // Check if this time slot doesn't overlap with ANY existing events (locked or not)
+        if (!checkAnyOverlap(potentialEvent, allEvents)) {
+          // Also check if this would create a duplicate
+          const fullEventDetails = {
+            ...potentialEvent,
+            category: originalEvent.category,
+          };
+
+          if (!isDuplicateEvent(fullEventDetails, allEvents)) {
+            return {
+              startTime,
+              endTime,
+              day: dayTimestamp,
+            };
+          } else {
+          }
+        }
+      }
+    }
+
+    // If no daily pattern works, try weekly patterns
+    const weeklyPatterns = getWeeklyPatterns(categoryAnalysis);
+
+    for (const pattern of weeklyPatterns) {
+      const startTime = pattern.start;
+      // Calculate end time using minimum duration
+      const startMinutes = getMinutesFromTime(startTime);
+      const endMinutes = startMinutes + minDuration;
+      const endHours = Math.floor(endMinutes / 60);
+      const endMins = endMinutes % 60;
+      const endTime = `${endHours.toString().padStart(2, "0")}:${endMins
+        .toString()
+        .padStart(2, "0")}`;
+
+      // Create potential new event
+      const potentialEvent = {
+        timeStart: startTime,
+        timeEnd: endTime,
+        day: dayTimestamp,
+      };
+
+      // Check if this time slot doesn't overlap with ANY existing events
+      if (!checkAnyOverlap(potentialEvent, allEvents)) {
+        // Also check if this would create a duplicate
+        const fullEventDetails = {
+          ...potentialEvent,
+          category: originalEvent.category,
+        };
+
+        if (!isDuplicateEvent(fullEventDetails, allEvents)) {
+          return {
+            startTime,
+            endTime,
+            day: dayTimestamp,
+          };
+        } else {
+        }
+      }
+    }
+
+    // If no pattern works, try 15-minute intervals throughout the working day (8:00 AM to 5:00 PM)
+    // Start from 8:00 and check every 15 minutes until 17:00
+    for (let hour = 8; hour < 17; hour++) {
+      for (let minute = 0; minute < 60; minute += 15) {
+        const startTime = `${hour.toString().padStart(2, "0")}:${minute
+          .toString()
+          .padStart(2, "0")}`;
+        const startMinutes = hour * 60 + minute;
+        const endMinutes = startMinutes + minDuration;
+        const endHours = Math.floor(endMinutes / 60);
+        const endMins = endMinutes % 60;
+        const endTime = `${endHours.toString().padStart(2, "0")}:${endMins
+          .toString()
+          .padStart(2, "0")}`;
+
+        const potentialEvent = {
+          timeStart: startTime,
+          timeEnd: endTime,
+          day: dayTimestamp,
+        };
+
+        // Check against ALL events
+        if (!checkAnyOverlap(potentialEvent, allEvents)) {
+          // Also check if this would create a duplicate
+          const fullEventDetails = {
+            ...potentialEvent,
+            category: originalEvent.category,
+          };
+
+          if (!isDuplicateEvent(fullEventDetails, allEvents)) {
+            return {
+              startTime,
+              endTime,
+              day: dayTimestamp,
+            };
+          } else {
+          }
+        }
+      }
+    }
+  }
+
+  // No suitable time slot found
+  return null;
+}
+
+// In backend/routes/algo.js, create a modified version of findNextAvailableTimeSlot that only uses patterns:
+function findNextAvailablePatternTimeSlot(
+  originalEvent,
+  allEvents,
+  categoryAnalysis
+) {
+  const eventDate = dayjs(parseInt(originalEvent.day));
+  const minDuration = categoryAnalysis.globalStats.minDuration || 30; // Default to 30 minutes
+
+  // Try each day starting from the day after the original event
+  for (let i = 1; i <= 7; i++) {
+    const nextDay = eventDate.add(i, "day");
+    const dayOfWeek = nextDay.day();
+    const dayTimestamp = nextDay.valueOf();
+
+    // First try to use daily patterns for this day of week
+    if (
+      categoryAnalysis.byDay[dayOfWeek] &&
+      categoryAnalysis.byDay[dayOfWeek].commonTimeRanges.length > 0
+    ) {
+      const patterns = categoryAnalysis.byDay[dayOfWeek].commonTimeRanges;
+
+      for (const pattern of patterns) {
+        const startTime = pattern.start;
+        // Calculate end time using minimum duration
+        const startMinutes = getMinutesFromTime(startTime);
+        const endMinutes = startMinutes + minDuration;
+        const endHours = Math.floor(endMinutes / 60);
+        const endMins = endMinutes % 60;
+        const endTime = `${endHours.toString().padStart(2, "0")}:${endMins
+          .toString()
+          .padStart(2, "0")}`;
+
+        // Create potential new event
+        const potentialEvent = {
+          timeStart: startTime,
+          timeEnd: endTime,
+          day: dayTimestamp,
+        };
+
+        // Check if this time slot doesn't overlap with ANY existing events
+        if (!checkAnyOverlap(potentialEvent, allEvents)) {
+          // Also check if this would create a duplicate
+          const fullEventDetails = {
+            ...potentialEvent,
+            category: originalEvent.category,
+          };
+
+          if (!isDuplicateEvent(fullEventDetails, allEvents)) {
+            return {
+              startTime,
+              endTime,
+              day: dayTimestamp,
+            };
+          } else {
+          }
+        }
+      }
+    }
+
+    // If no daily pattern works, try weekly patterns
+    const weeklyPatterns = getWeeklyPatterns(categoryAnalysis);
+
+    for (const pattern of weeklyPatterns) {
+      const startTime = pattern.start;
+      // Calculate end time using minimum duration
+      const startMinutes = getMinutesFromTime(startTime);
+      const endMinutes = startMinutes + minDuration;
+      const endHours = Math.floor(endMinutes / 60);
+      const endMins = endMinutes % 60;
+      const endTime = `${endHours.toString().padStart(2, "0")}:${endMins
+        .toString()
+        .padStart(2, "0")}`;
+
+      // Create potential new event
+      const potentialEvent = {
+        timeStart: startTime,
+        timeEnd: endTime,
+        day: dayTimestamp,
+      };
+
+      // Check if this time slot doesn't overlap with ANY existing events
+      if (!checkAnyOverlap(potentialEvent, allEvents)) {
+        // Also check if this would create a duplicate
+        const fullEventDetails = {
+          ...potentialEvent,
+          category: originalEvent.category,
+        };
+
+        if (!isDuplicateEvent(fullEventDetails, allEvents)) {
+          return {
+            startTime,
+            endTime,
+            day: dayTimestamp,
+          };
+        } else {
+        }
+      }
+    }
+  }
+
+  // No suitable pattern-based time slot found
+  return null;
 }
 
 export default router;

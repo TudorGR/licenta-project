@@ -37,12 +37,12 @@ const asyncDispatchEvent = (dispatch) => async (action, getState) => {
       case "increase":
         try {
           const { category, timeChange } = action.payload;
-          const savedEvents = getState(); // Get current events from the state
+          const savedEvents = getState();
 
           // Get all events for the current week instead of just filtered events
           const today = dayjs();
           const startOfWeek = today.startOf("week");
-          const endOfWeek = today.endOf("week");
+          const endOfWeek = today.endOf("week").add(1);
 
           // Get all events for the current week
           const eventsToSend = savedEvents.filter((event) => {

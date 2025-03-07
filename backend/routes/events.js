@@ -38,16 +38,31 @@ router.post("/", async (req, res) => {
 // Update event
 router.put("/:id", async (req, res) => {
   try {
-    const event = await Event.findByPk(req.params.id);
-    if (event) {
+    const eventId = req.params.id;
+
+    // Check if this is a new event (ID starts with 'new-')
+    if (eventId.startsWith("new-")) {
+      // Create new event instead of updating
       const eventData = {
         ...req.body,
         day: req.body.day.toString(),
+        id: undefined, // Let the database assign a real ID
       };
-      const updatedEvent = await event.update(eventData);
-      res.json(updatedEvent);
+      const event = await Event.create(eventData);
+      res.status(201).json(event);
     } else {
-      res.status(404).json({ error: "Event not found" });
+      // Regular update for existing event
+      const event = await Event.findByPk(eventId);
+      if (event) {
+        const eventData = {
+          ...req.body,
+          day: req.body.day.toString(),
+        };
+        const updatedEvent = await event.update(eventData);
+        res.json(updatedEvent);
+      } else {
+        res.status(404).json({ error: "Event not found" });
+      }
     }
   } catch (error) {
     console.error("Error updating event:", error);
