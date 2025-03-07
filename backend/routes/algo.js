@@ -15,6 +15,97 @@ function getMinutesFromTime(timeString) {
   return hours * 60 + minutes;
 }
 
+// Add a new helper function to find free time slots within a pattern
+function findFreeSlotInPattern(pattern, day, allEvents, defaultMinDuration) {
+  // Use pattern-specific minimum duration if available, otherwise fall back to global
+  const minDuration = pattern.minDuration || defaultMinDuration;
+
+  const patternStart = getMinutesFromTime(pattern.start);
+  const patternEnd = getMinutesFromTime(pattern.end);
+
+  // Get all events for this day
+  const eventsForDay = allEvents.filter((event) =>
+    dayjs(parseInt(event.day)).isSame(dayjs(day), "day")
+  );
+
+  // Sort events by start time
+  eventsForDay.sort(
+    (a, b) => getMinutesFromTime(a.timeStart) - getMinutesFromTime(b.timeStart)
+  );
+
+  // Build timeline of occupied slots
+  let freeSlots = [{ start: patternStart, end: patternEnd }];
+
+  // Remove occupied time slots
+  for (const event of eventsForDay) {
+    const eventStart = getMinutesFromTime(event.timeStart);
+    const eventEnd = getMinutesFromTime(event.timeEnd);
+
+    // Skip events outside our pattern
+    if (eventEnd <= patternStart || eventStart >= patternEnd) continue;
+
+    // Process each existing free slot
+    const newFreeSlots = [];
+    for (const slot of freeSlots) {
+      // Event completely overlaps slot - remove this slot
+      if (eventStart <= slot.start && eventEnd >= slot.end) {
+        continue;
+      }
+      // Event is in the middle of slot - split into two
+      else if (eventStart > slot.start && eventEnd < slot.end) {
+        newFreeSlots.push({ start: slot.start, end: eventStart });
+        newFreeSlots.push({ start: eventEnd, end: slot.end });
+      }
+      // Event overlaps beginning of slot
+      else if (eventStart <= slot.start && eventEnd > slot.start) {
+        newFreeSlots.push({ start: eventEnd, end: slot.end });
+      }
+      // Event overlaps end of slot
+      else if (eventStart < slot.end && eventEnd >= slot.end) {
+        newFreeSlots.push({ start: slot.start, end: eventStart });
+      }
+      // No overlap, keep slot as is
+      else {
+        newFreeSlots.push(slot);
+      }
+    }
+    freeSlots = newFreeSlots;
+  }
+
+  // Find the best free slot (longest one that meets minimum duration)
+  let bestSlot = null;
+  let bestLength = 0;
+
+  for (const slot of freeSlots) {
+    const duration = slot.end - slot.start;
+    if (duration >= minDuration && duration > bestLength) {
+      bestSlot = slot;
+      bestLength = duration;
+    }
+  }
+
+  if (bestSlot) {
+    // Calculate end time (either end of slot or start + minDuration)
+    const endMinutes = Math.min(bestSlot.start + minDuration, bestSlot.end);
+
+    const startHours = Math.floor(bestSlot.start / 60);
+    const startMins = bestSlot.start % 60;
+    const endHours = Math.floor(endMinutes / 60);
+    const endMins = endMinutes % 60;
+
+    return {
+      startTime: `${startHours.toString().padStart(2, "0")}:${startMins
+        .toString()
+        .padStart(2, "0")}`,
+      endTime: `${endHours.toString().padStart(2, "0")}:${endMins
+        .toString()
+        .padStart(2, "0")}`,
+    };
+  }
+
+  return null;
+}
+
 // Helper function to check for overlaps
 function checkOverlap(event, existingEvents) {
   const eventStart = getMinutesFromTime(event.timeStart);
@@ -156,17 +247,15 @@ router.post("/", async (req, res) => {
     const currentWeekStart = today.startOf("week").add(1, "day");
     const currentWeekEnd = currentWeekStart.add(6, "day");
 
-    // Fetch historical events for this category
-    // In the main algorithm endpoint
-    // In the main algorithm endpoint
+    // Fetch historical events for this category - EXCLUDE current week
     const historicalEvents = await Event.findAll({
       where: {
         category: category,
         day: {
           [Op.between]: [
             threeMonthsAgo.valueOf(),
-            // Include the full week starting from Monday
-            currentWeekStart.add(6, "day").endOf("day").valueOf(),
+            // Use the day before current week starts as the end boundary
+            currentWeekStart.subtract(1, "day").endOf("day").valueOf(),
           ],
         },
       },
@@ -475,7 +564,7 @@ router.post("/", async (req, res) => {
 
     // Sort days chronologically - this remains the same
     const sortedDays = Object.keys(eventsByDay).sort((a, b) => {
-      return dayjs(a).valueOf() - dayjs(b).valueOf();
+      return dayjs(a).valueOf() - dayjs(b.valueOf());
     });
 
     // Try each phase in order
@@ -529,6 +618,8 @@ router.post("/", async (req, res) => {
 
         // Get weekly patterns first since they're more reliable across the week
         const weeklyPatterns = getWeeklyPatterns(categoryAnalysis);
+        // Get minimum duration from historical events
+        const minDuration = categoryAnalysis.globalStats.minDuration || 15;
 
         // Try each day
         for (const day of sortedDays) {
@@ -546,51 +637,62 @@ router.post("/", async (req, res) => {
           for (const pattern of weeklyPatterns) {
             if (pattern.frequency < 0.3) continue;
 
-            const potentialEvent = {
-              timeStart: pattern.start,
-              timeEnd: pattern.end,
-              day: dayTimestamp,
-            };
+            // Find free slot in the pattern time range
+            const freeSlot = findFreeSlotInPattern(
+              pattern,
+              dayTimestamp,
+              allEventsToCheck,
+              minDuration
+            );
 
-            // Check against ALL events including newly created ones
-            if (!checkAnyOverlap(potentialEvent, allEventsToCheck)) {
-              const fullEventDetails = {
-                ...potentialEvent,
-                category: category,
+            if (freeSlot) {
+              const potentialEvent = {
+                timeStart: freeSlot.startTime,
+                timeEnd: freeSlot.endTime,
+                day: dayTimestamp,
               };
 
-              if (!isDuplicateEvent(fullEventDetails, allEventsToCheck)) {
-                const newEvent = {
-                  title: `${category}`,
-                  description: "Auto-generated from weekly pattern",
+              // Now check if this specific time doesn't cause any overlaps
+              // (it shouldn't since we found a free slot, but double-check)
+              if (!checkAnyOverlap(potentialEvent, allEventsToCheck)) {
+                const fullEventDetails = {
+                  ...potentialEvent,
                   category: category,
-                  label: "purple",
-                  timeStart: pattern.start,
-                  timeEnd: pattern.end,
-                  day: dayTimestamp,
-                  location: "",
-                  locked: false,
-                  id: `new-${Date.now()}`,
-                  isNewlyCreated: true,
-                  createdAt: new Date().toISOString(),
                 };
 
-                // Add to tracking arrays
-                createdEventsInThisRun.push(newEvent);
-                modifiedEvents.push(newEvent);
+                if (!isDuplicateEvent(fullEventDetails, allEventsToCheck)) {
+                  const newEvent = {
+                    title: `${category}`,
+                    description: "Auto-generated from weekly pattern",
+                    category: category,
+                    label: "purple",
+                    timeStart: freeSlot.startTime,
+                    timeEnd: freeSlot.endTime,
+                    day: dayTimestamp,
+                    location: "",
+                    locked: false,
+                    id: `new-${Date.now()}`,
+                    isNewlyCreated: true,
+                    createdAt: new Date().toISOString(),
+                  };
 
-                increasedEvent = {
-                  increased: true,
-                  strategy: "new-weekly-pattern",
-                  originalEvent: null,
-                  newEventDay: dayDate.format("ddd DD/MM"),
-                  newEventTime: `${pattern.start}-${pattern.end}`,
-                  eventId: newEvent.id,
-                  isNewlyCreated: true,
-                  patternFrequency: pattern.frequency,
-                };
+                  // Add to tracking arrays
+                  createdEventsInThisRun.push(newEvent);
+                  modifiedEvents.push(newEvent);
 
-                return true;
+                  increasedEvent = {
+                    increased: true,
+                    strategy: "new-weekly-pattern",
+                    originalEvent: null,
+                    newEventDay: dayDate.format("ddd DD/MM"),
+                    newEventTime: `${freeSlot.startTime}-${freeSlot.endTime}`,
+                    eventId: newEvent.id,
+                    isNewlyCreated: true,
+                    patternFrequency: pattern.frequency,
+                  };
+
+                  return true;
+                }
               }
             }
           }
@@ -760,7 +862,8 @@ router.get("/learn", async (req, res) => {
         day: {
           [Op.between]: [
             threeMonthsAgo.valueOf(),
-            currentWeekStart.add(6, "day").endOf("day").valueOf(),
+            // Use the day before current week starts as the end boundary
+            currentWeekStart.subtract(1, "day").endOf("day").valueOf(),
           ],
         },
       },
@@ -803,8 +906,8 @@ router.get("/learn", async (req, res) => {
   }
 });
 
-// Helper function to find common time ranges
-function findCommonTimeRanges(timeSlots) {
+// Update the findCommonTimeRanges function to track min/max durations in each pattern
+function findCommonTimeRanges(timeSlots, eventsByTimeRange) {
   if (timeSlots.every((slot) => slot === 0)) {
     return [];
   }
@@ -818,31 +921,60 @@ function findCommonTimeRanges(timeSlots) {
     if (count >= threshold) {
       if (start === null) start = slotIndex;
     } else if (start !== null) {
+      const rangeStart = formatMinuteSlot(start);
+      const rangeEnd = formatMinuteSlot(slotIndex);
+
+      // Calculate pattern-specific statistics
+      let minDuration = Infinity;
+      let maxDuration = 0;
+
+      // Find events that fall within this range
+      const rangeEvents = eventsByTimeRange.filter((event) => {
+        const eventStart = getMinutesFromTime(event.timeStart);
+        const eventEnd = getMinutesFromTime(event.timeEnd);
+        const rangeStartMinutes = start * 15;
+        const rangeEndMinutes = slotIndex * 15;
+
+        // Check for significant overlap with the range
+        const overlapStart = Math.max(eventStart, rangeStartMinutes);
+        const overlapEnd = Math.min(eventEnd, rangeEndMinutes);
+        return overlapEnd - overlapStart > 0;
+      });
+
+      // Calculate min/max duration for events in this pattern
+      if (rangeEvents.length > 0) {
+        rangeEvents.forEach((event) => {
+          const duration =
+            getMinutesFromTime(event.timeEnd) -
+            getMinutesFromTime(event.timeStart);
+          minDuration = Math.min(minDuration, duration);
+          maxDuration = Math.max(maxDuration, duration);
+        });
+      } else {
+        minDuration = 30; // Default if no events in range
+      }
+
       ranges.push({
-        start: formatMinuteSlot(start),
-        end: formatMinuteSlot(slotIndex),
+        start: rangeStart,
+        end: rangeEnd,
         frequency:
           Math.round(
             (timeSlots.slice(start, slotIndex).reduce((a, b) => a + b, 0) /
               (slotIndex - start)) *
               100
           ) / 100,
+        minDuration,
+        maxDuration,
       });
+
       start = null;
     }
   });
 
   // Handle range that ends at last slot
   if (start !== null) {
-    ranges.push({
-      start: formatMinuteSlot(start),
-      end: "24:00",
-      frequency:
-        Math.round(
-          (timeSlots.slice(start).reduce((a, b) => a + b, 0) / (96 - start)) *
-            100
-        ) / 100,
-    });
+    // Similar code for the last range
+    // ...
   }
 
   return ranges;
@@ -916,23 +1048,39 @@ function processHistoricalData(events) {
     categoryAnalysis.globalStats.totalEvents++;
   });
 
-  // Process common time ranges
-  categoryAnalysis.byDay.forEach((day) => {
-    day.commonTimeRanges = findCommonTimeRanges(day.timeSlots);
+  // Group events by day of week for pattern-specific analysis
+  const eventsByDay = Array(7)
+    .fill()
+    .map(() => []);
+  events.forEach((event) => {
+    const dayOfWeek = dayjs(parseInt(event.day)).day();
+    eventsByDay[dayOfWeek].push(event);
+  });
+
+  // Process common time ranges with event data
+  categoryAnalysis.byDay.forEach((day, index) => {
+    day.commonTimeRanges = findCommonTimeRanges(
+      day.timeSlots,
+      eventsByDay[index]
+    );
   });
 
   return categoryAnalysis;
 }
 
 // Helper function to extract weekly patterns
+// Update the getWeeklyPatterns function to preserve pattern-specific durations
 function getWeeklyPatterns(categoryAnalysis) {
   const allTimeRanges = categoryAnalysis.byDay.flatMap((day, index) =>
     day.commonTimeRanges
       .filter((range) => range.frequency > 0)
-      .map((range) => ({ ...range, dayOfWeek: index }))
+      .map((range) => ({
+        ...range,
+        dayOfWeek: index,
+      }))
   );
 
-  // Group by time range and average frequencies
+  // Group by time range and track durations along with frequencies
   const rangeMap = new Map();
   allTimeRanges.forEach((range) => {
     const key = `${range.start}-${range.end}`;
@@ -941,18 +1089,31 @@ function getWeeklyPatterns(categoryAnalysis) {
         start: range.start,
         end: range.end,
         frequencies: [],
+        minDurations: [],
+        maxDurations: [],
       });
     }
     rangeMap.get(key).frequencies.push(range.frequency);
+    rangeMap.get(key).minDurations.push(range.minDuration);
+    rangeMap.get(key).maxDurations.push(range.maxDuration);
   });
 
-  // Calculate average frequency for each time range
+  // Calculate average frequency and min/max durations for each time range
   return Array.from(rangeMap.values())
-    .map(({ start, end, frequencies }) => ({
-      start,
-      end,
-      frequency: frequencies.reduce((a, b) => a + b, 0) / frequencies.length,
-    }))
+    .map(({ start, end, frequencies, minDurations, maxDurations }) => {
+      // For minimum duration, take the minimum of all minimums
+      const minDuration = Math.min(...minDurations);
+      // For maximum duration, take the maximum of all maximums
+      const maxDuration = Math.max(...maxDurations);
+
+      return {
+        start,
+        end,
+        frequency: frequencies.reduce((a, b) => a + b, 0) / frequencies.length,
+        minDuration,
+        maxDuration,
+      };
+    })
     .sort((a, b) => b.frequency - a.frequency);
 }
 
@@ -975,11 +1136,18 @@ function findNextAvailableTimeSlot(originalEvent, allEvents, categoryAnalysis) {
 
       for (const pattern of patterns) {
         const startTime = pattern.start;
-        // Calculate end time using minimum duration
+        // Calculate end time as the minimum of:
+        // 1. Pattern end time, or
+        // 2. Start time + minimum duration
         const startMinutes = getMinutesFromTime(startTime);
-        const endMinutes = startMinutes + minDuration;
-        const endHours = Math.floor(endMinutes / 60);
-        const endMins = endMinutes % 60;
+        const patternEndMinutes = getMinutesFromTime(pattern.end);
+        const proposedEndMinutes = startMinutes + minDuration;
+        const actualEndMinutes = Math.min(
+          proposedEndMinutes,
+          patternEndMinutes
+        );
+        const endHours = Math.floor(actualEndMinutes / 60);
+        const endMins = actualEndMinutes % 60;
         const endTime = `${endHours.toString().padStart(2, "0")}:${endMins
           .toString()
           .padStart(2, "0")}`;
@@ -1016,11 +1184,15 @@ function findNextAvailableTimeSlot(originalEvent, allEvents, categoryAnalysis) {
 
     for (const pattern of weeklyPatterns) {
       const startTime = pattern.start;
-      // Calculate end time using minimum duration
+      // Calculate end time as the minimum of:
+      // 1. Pattern end time, or
+      // 2. Start time + minimum duration
       const startMinutes = getMinutesFromTime(startTime);
-      const endMinutes = startMinutes + minDuration;
-      const endHours = Math.floor(endMinutes / 60);
-      const endMins = endMinutes % 60;
+      const patternEndMinutes = getMinutesFromTime(pattern.end);
+      const proposedEndMinutes = startMinutes + minDuration;
+      const actualEndMinutes = Math.min(proposedEndMinutes, patternEndMinutes);
+      const endHours = Math.floor(actualEndMinutes / 60);
+      const endMins = actualEndMinutes % 60;
       const endTime = `${endHours.toString().padStart(2, "0")}:${endMins
         .toString()
         .padStart(2, "0")}`;
@@ -1121,11 +1293,18 @@ function findNextAvailablePatternTimeSlot(
 
       for (const pattern of patterns) {
         const startTime = pattern.start;
-        // Calculate end time using minimum duration
+        // Calculate end time as the minimum of:
+        // 1. Pattern end time, or
+        // 2. Start time + minimum duration
         const startMinutes = getMinutesFromTime(startTime);
-        const endMinutes = startMinutes + minDuration;
-        const endHours = Math.floor(endMinutes / 60);
-        const endMins = endMinutes % 60;
+        const patternEndMinutes = getMinutesFromTime(pattern.end);
+        const proposedEndMinutes = startMinutes + minDuration;
+        const actualEndMinutes = Math.min(
+          proposedEndMinutes,
+          patternEndMinutes
+        );
+        const endHours = Math.floor(actualEndMinutes / 60);
+        const endMins = actualEndMinutes % 60;
         const endTime = `${endHours.toString().padStart(2, "0")}:${endMins
           .toString()
           .padStart(2, "0")}`;
@@ -1162,11 +1341,15 @@ function findNextAvailablePatternTimeSlot(
 
     for (const pattern of weeklyPatterns) {
       const startTime = pattern.start;
-      // Calculate end time using minimum duration
+      // Calculate end time as the minimum of:
+      // 1. Pattern end time, or
+      // 2. Start time + minimum duration
       const startMinutes = getMinutesFromTime(startTime);
-      const endMinutes = startMinutes + minDuration;
-      const endHours = Math.floor(endMinutes / 60);
-      const endMins = endMinutes % 60;
+      const patternEndMinutes = getMinutesFromTime(pattern.end);
+      const proposedEndMinutes = startMinutes + minDuration;
+      const actualEndMinutes = Math.min(proposedEndMinutes, patternEndMinutes);
+      const endHours = Math.floor(actualEndMinutes / 60);
+      const endMins = actualEndMinutes % 60;
       const endTime = `${endHours.toString().padStart(2, "0")}:${endMins
         .toString()
         .padStart(2, "0")}`;

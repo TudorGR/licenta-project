@@ -15,6 +15,9 @@ const CategoryAnalysis = () => {
   return (
     <div className="p-4 space-y-4 overflow-auto h-[500px]">
       <h3 className="font-medium">Category Analysis</h3>
+      <p className="text-xs text-gray-500 mb-2">
+        Based on historical data from the past 3 months (excluding current week)
+      </p>
       {Object.entries(learnedParameters).map(([category, analysis]) => {
         if (!analysis?.dailyPatterns || !analysis?.stats) {
           return null;
