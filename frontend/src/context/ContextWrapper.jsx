@@ -4,6 +4,9 @@ import dayjs from "dayjs";
 import isBetween from "dayjs/plugin/isBetween";
 import { api } from "../services/api.js";
 import axios from "axios";
+import weekday from "dayjs/plugin/weekday.js";
+
+dayjs.extend(weekday);
 
 // Extend dayjs with the isBetween plugin
 dayjs.extend(isBetween);
@@ -41,7 +44,7 @@ const asyncDispatchEvent = (dispatch) => async (action, getState) => {
 
           // Get all events for the current week instead of just filtered events
           const today = dayjs();
-          const startOfWeek = today.startOf("week");
+          const startOfWeek = dayjs().weekday(-7);
           const endOfWeek = today.endOf("week").add(1);
 
           // Get all events for the current week

@@ -2,9 +2,12 @@ import React, { useContext, useState } from "react";
 import Context from "../context/Context";
 import checkIcon from "../assets/check.svg";
 import CategoryStats from "./CategoryStats";
+import CategoryAnalysis from "./CategoryAnalysis";
 import dayjs from "dayjs";
 import upIcon from "../assets/chevron-up.svg";
-import downIcon from "../assets/chevron-down.svg";
+import weekday from "dayjs/plugin/weekday.js";
+
+dayjs.extend(weekday);
 
 const categoryColors = {
   Workout: "rgba(255, 87, 51, 0.7)",
@@ -62,7 +65,7 @@ const Sidebar = () => {
   const adjustStudyEvents = (minutes) => {
     // Get start and end of current week (Monday to Sunday)
     const today = dayjs();
-    const startOfWeek = today.startOf("week").add(1, "day"); // Monday
+    const startOfWeek = dayjs().weekday(-7); // Monday
     const endOfWeek = startOfWeek.add(6, "day"); // Sunday
 
     // Filter events for the entire week
@@ -227,6 +230,11 @@ const Sidebar = () => {
             <CategoryStats
               view={isWeekView ? "week" : isMonthView ? "month" : "day"}
             />
+          </div>
+
+          {/* Category Analysis Section */}
+          <div className="w-[90%] border border-gray-200 rounded-md">
+            <CategoryAnalysis />
           </div>
 
           <div className="w-[90%] border border-gray-200 rounded-md p-2 overflow-clip">
