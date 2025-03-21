@@ -4,10 +4,12 @@ import { Op } from "sequelize";
 import Event from "../models/Event.js";
 import isBetween from "dayjs/plugin/isBetween.js";
 import weekday from "dayjs/plugin/weekday.js";
+import isoWeek from "dayjs/plugin/isoWeek.js";
 
 // Extend dayjs with the isBetween plugin
 dayjs.extend(isBetween);
 dayjs.extend(weekday);
+dayjs.extend(isoWeek);
 
 const router = express.Router();
 
@@ -116,9 +118,6 @@ function checkOverlap(event, existingEvents) {
   const eventDay = event.day;
 
   if (eventEnd <= eventStart) {
-    console.warn(
-      `Event has invalid time range: start=${event.timeStart}, end=${event.timeEnd}`
-    );
     return true;
   }
 
@@ -130,9 +129,6 @@ function checkOverlap(event, existingEvents) {
     const otherEnd = getMinutesFromTime(otherEvent.timeEnd);
 
     if (otherEnd <= otherStart) {
-      console.warn(
-        `Other event has invalid time range: ID=${otherEvent.id}, start=${otherEvent.timeStart}, end=${otherEvent.timeEnd}`
-      );
       continue;
     }
 
@@ -154,9 +150,6 @@ function checkAnyOverlap(newEvent, allEvents) {
   const eventDayjs = dayjs(parseInt(newEvent.day));
 
   if (eventEnd <= eventStart) {
-    console.warn(
-      `Event has invalid time range: start=${newEvent.timeStart}, end=${newEvent.timeEnd}`
-    );
     return true;
   }
 
@@ -173,9 +166,6 @@ function checkAnyOverlap(newEvent, allEvents) {
     const otherEnd = getMinutesFromTime(otherEvent.timeEnd);
 
     if (otherEnd <= otherStart) {
-      console.warn(
-        `Other event has invalid time range: ID=${otherEvent.id}, start=${otherEvent.timeStart}, end=${otherEvent.timeEnd}`
-      );
       continue;
     }
 
@@ -207,9 +197,8 @@ function isDuplicateEvent(newEvent, allEvents) {
 // Main algorithm endpoint
 router.post("/", async (req, res) => {
   try {
-    const { events, timeChange, category } = req.body;
-
-    console.log(events);
+    const { events, timeChange, category, workingHoursStart, workingHoursEnd } =
+      req.body;
 
     // Get study events and sort them chronologically
     const studyEvents = events
@@ -228,14 +217,6 @@ router.post("/", async (req, res) => {
         const bStart = getMinutesFromTime(b.timeStart);
         return aStart - bStart;
       });
-
-    // Add logging to track algorithm progress
-    console.log(
-      `[ALGO] Starting algorithm for category: ${category}, time increase: ${timeChange} minutes`
-    );
-    console.log(
-      `[ALGO] Found ${studyEvents.length} ${category} events to process`
-    );
 
     if (studyEvents.length === 0) {
       return res.status(200).json({
@@ -256,8 +237,8 @@ router.post("/", async (req, res) => {
     const today = dayjs();
     const threeMonthsAgo = today.subtract(3, "month");
     // Start from Monday by adding 1 day to start of week
-    const currentWeekStart = dayjs().weekday(-6);
-    const currentWeekEnd = currentWeekStart.add(6, "day");
+    const currentWeekStart = dayjs().isoWeekday(1);
+    const currentWeekEnd = dayjs().isoWeekday(7);
 
     // Fetch historical events for this category - EXCLUDE current week
     const historicalEvents = await Event.findAll({
@@ -279,10 +260,8 @@ router.post("/", async (req, res) => {
     // Log the events of the specified category for the current week
     const currentWeekEvents = studyEvents.filter((event) => {
       const eventDay = dayjs(parseInt(event.day));
-      return eventDay.isBetween(currentWeekStart, currentWeekEnd, null, "[]");
+      return eventDay.isBetween(currentWeekStart, currentWeekEnd, "day", "[]");
     });
-
-    console.log(currentWeekEvents);
 
     // Function to process a single event with a specific strategy
     function processEventWithStrategy(studyEvent, strategy) {
@@ -293,8 +272,20 @@ router.post("/", async (req, res) => {
       const originalStartTime = studyEvent.timeStart;
       const originalEndTime = studyEvent.timeEnd;
 
+      // Declare forwardEndMinutes and backwardStartMinutes
       let forwardEndMinutes = eventEnd + timeChange;
       let backwardStartMinutes = Math.max(0, eventStart - timeChange);
+
+      // Ensure forwardEndMinutes does not exceed workingHoursEnd
+      const workingHoursEndMinutes = getMinutesFromTime(workingHoursEnd);
+      forwardEndMinutes = Math.min(forwardEndMinutes, workingHoursEndMinutes);
+
+      // Ensure backwardStartMinutes does not go below workingHoursStart
+      const workingHoursStartMinutes = getMinutesFromTime(workingHoursStart);
+      backwardStartMinutes = Math.max(
+        backwardStartMinutes,
+        workingHoursStartMinutes
+      );
 
       forwardEndMinutes = Math.min(forwardEndMinutes, 24 * 60 - 1);
 
@@ -538,7 +529,7 @@ router.post("/", async (req, res) => {
     const ensureAllWeekDays = () => {
       const weekDays = {};
       // Start from Monday by adding 1 day to start of week
-      const weekStart = dayjs().weekday(-6);
+      const weekStart = dayjs().isoWeekday(1);
 
       // Debug logging
 
@@ -584,100 +575,66 @@ router.post("/", async (req, res) => {
     // Try each phase in order
     const tryPhase = (strategy) => {
       let phaseSuccess = false;
-      console.log(`[ALGO] Starting ${strategy} phase`);
 
-      // Go through each day in the week
       for (const day of sortedDays) {
         const dayEvents = eventsByDay[day];
         const formattedDay = dayjs(day).format("ddd DD/MM");
 
-        // Skip days with no events
         if (dayEvents.length === 0) {
-          console.log(
-            `[ALGO] ${strategy} phase - ${formattedDay}: No events to process`
-          );
           continue;
         }
 
-        console.log(
-          `[ALGO] ${strategy} phase - ${formattedDay}: Processing ${dayEvents.length} events`
-        );
-
-        // Try each event for this day
         for (const studyEvent of dayEvents) {
-          console.log(
-            `[ALGO] ${strategy} phase - Trying event ID: ${studyEvent.id}, time: ${studyEvent.timeStart}-${studyEvent.timeEnd}`
-          );
           const result = processEventWithStrategy(studyEvent, strategy);
 
           if (result.increased) {
-            // Update the event in modifiedEvents array
             const index = modifiedEvents.findIndex(
               (e) => e.id === studyEvent.id
             );
             if (index !== -1) {
+              const newEndMinutes = getMinutesFromTime(result.newEndTime);
+              const workingHoursEndMinutes =
+                getMinutesFromTime(workingHoursEnd);
+
+              // Ensure the increased event does not exceed workingHoursEnd
+              if (newEndMinutes > workingHoursEndMinutes) {
+                continue;
+              }
+
               if (result.direction === "forward") {
-                console.log(
-                  `[ALGO] ${strategy} phase - SUCCESS: Extended event end time from ${modifiedEvents[index].timeEnd} to ${result.newEndTime}`
-                );
                 modifiedEvents[index].timeEnd = result.newEndTime;
               } else {
-                console.log(
-                  `[ALGO] ${strategy} phase - SUCCESS: Extended event start time from ${modifiedEvents[index].timeStart} to ${result.newStartTime}`
-                );
                 modifiedEvents[index].timeStart = result.newStartTime;
               }
 
-              // Store info about the increased event
               increasedEvent = result;
               phaseSuccess = true;
 
-              // Return immediately after finding one event to increase
               return true;
             }
-          } else {
-            console.log(
-              `[ALGO] ${strategy} phase - FAILED: ${
-                result.message || "Unknown reason"
-              }`
-            );
           }
         }
       }
 
-      console.log(
-        `[ALGO] ${strategy} phase completed - Success: ${phaseSuccess}`
-      );
       return phaseSuccess;
     };
 
     // Create two versions of the createNewEventIfNeeded function
     const createNewPatternEvent = () => {
-      console.log(`[ALGO] Starting new-pattern-event phase`);
-
       if (!increasedEvent && categoryAnalysis) {
         // Keep track of newly created events during this operation
         const createdEventsInThisRun = [];
 
         // Get weekly patterns first since they're more reliable across the week
         const weeklyPatterns = getWeeklyPatterns(categoryAnalysis);
-        console.log(
-          `[ALGO] new-pattern-event phase - Found ${weeklyPatterns.length} weekly patterns to try`
-        );
 
         // Get minimum duration from historical events
         const minDuration = categoryAnalysis.globalStats.minDuration || 15;
-        console.log(
-          `[ALGO] new-pattern-event phase - Using minimum duration: ${minDuration} minutes`
-        );
 
         // Try each day
         for (const day of sortedDays) {
           const dayDate = dayjs(day);
           const formattedDay = dayDate.format("ddd DD/MM");
-          console.log(
-            `[ALGO] new-pattern-event phase - Trying day: ${formattedDay}`
-          );
 
           const dayOfWeek = dayDate.day();
           const dayTimestamp = dayDate.valueOf();
@@ -691,15 +648,8 @@ router.post("/", async (req, res) => {
           // First try weekly patterns
           for (const pattern of weeklyPatterns) {
             if (pattern.frequency < 0.3) {
-              console.log(
-                `[ALGO] new-pattern-event phase - Skipping pattern ${pattern.start}-${pattern.end} (frequency ${pattern.frequency} too low)`
-              );
               continue;
             }
-
-            console.log(
-              `[ALGO] new-pattern-event phase - Trying pattern ${pattern.start}-${pattern.end} (frequency: ${pattern.frequency})`
-            );
 
             // Find free slot in the pattern time range
             const freeSlot = findFreeSlotInPattern(
@@ -710,10 +660,6 @@ router.post("/", async (req, res) => {
             );
 
             if (freeSlot) {
-              console.log(
-                `[ALGO] new-pattern-event phase - Found free slot: ${freeSlot.startTime}-${freeSlot.endTime}`
-              );
-
               const potentialEvent = {
                 timeStart: freeSlot.startTime,
                 timeEnd: freeSlot.endTime,
@@ -744,10 +690,6 @@ router.post("/", async (req, res) => {
                     createdAt: new Date().toISOString(),
                   };
 
-                  console.log(
-                    `[ALGO] new-pattern-event phase - SUCCESS: Created new event at ${freeSlot.startTime}-${freeSlot.endTime} on ${formattedDay}`
-                  );
-
                   // Add to tracking arrays
                   createdEventsInThisRun.push(newEvent);
                   modifiedEvents.push(newEvent);
@@ -764,94 +706,53 @@ router.post("/", async (req, res) => {
                   };
 
                   return true;
-                } else {
-                  console.log(
-                    `[ALGO] new-pattern-event phase - FAILED: Would create duplicate event`
-                  );
                 }
-              } else {
-                console.log(
-                  `[ALGO] new-pattern-event phase - FAILED: Slot would create overlap`
-                );
               }
-            } else {
-              console.log(
-                `[ALGO] new-pattern-event phase - No free slot found in pattern ${pattern.start}-${pattern.end}`
-              );
             }
           }
         }
       }
-      console.log(
-        `[ALGO] new-pattern-event phase completed - Success: ${
-          increasedEvent !== null
-        }`
-      );
+
       return false;
     };
 
     const createNewAnySlotEvent = () => {
-      console.log(`[ALGO] Starting new-any-slot-event phase`);
-
       if (!increasedEvent && categoryAnalysis) {
-        // Get all existing events for this day to check duplicates
         const existingEvents = new Set();
 
-        // Track created events to prevent duplicates within the same operation
         for (const day of sortedDays) {
           const formattedDay = dayjs(day).format("ddd DD/MM");
-          console.log(
-            `[ALGO] new-any-slot-event phase - Processing day: ${formattedDay}`
-          );
 
           for (const studyEvent of eventsByDay[day]) {
             const result = processEventWithStrategy(studyEvent, "default");
 
             if (result.createNewEvent) {
-              console.log(
-                `[ALGO] new-any-slot-event phase - Event ${studyEvent.id} suggests creating new event`
-              );
-
               const eventKey = `${studyEvent.day}-${studyEvent.timeStart}-${studyEvent.timeEnd}`;
 
-              // Skip if we already processed this time slot
               if (existingEvents.has(eventKey)) {
-                console.log(
-                  `[ALGO] new-any-slot-event phase - Already processed this time slot, skipping`
-                );
                 continue;
               }
 
               existingEvents.add(eventKey);
 
-              // Find the next available time slot
-              console.log(
-                `[ALGO] new-any-slot-event phase - Finding next available time slot`
-              );
               const nextTimeSlot = findNextAvailableTimeSlot(
                 studyEvent,
                 modifiedEvents,
-                categoryAnalysis
+                categoryAnalysis,
+                workingHoursStart || "08:00",
+                workingHoursEnd || "19:00"
               );
 
               if (nextTimeSlot) {
-                const slotDay = dayjs(parseInt(nextTimeSlot.day)).format(
-                  "ddd DD/MM"
-                );
-                console.log(
-                  `[ALGO] new-any-slot-event phase - Found available slot: ${nextTimeSlot.startTime}-${nextTimeSlot.endTime} on ${slotDay}`
-                );
+                const slotEndMinutes = getMinutesFromTime(nextTimeSlot.endTime);
+                const workingHoursEndMinutes =
+                  getMinutesFromTime(workingHoursEnd);
 
-                // Double check this slot isn't already used
-                const newEventKey = `${nextTimeSlot.day}-${nextTimeSlot.startTime}-${nextTimeSlot.endTime}`;
-                if (existingEvents.has(newEventKey)) {
-                  console.log(
-                    `[ALGO] new-any-slot-event phase - Slot already used in this run, skipping`
-                  );
+                // Ensure the new event does not exceed workingHoursEnd
+                if (slotEndMinutes > workingHoursEndMinutes) {
                   continue;
                 }
 
-                // Create new event
                 const newEvent = {
                   title: studyEvent.title,
                   description: studyEvent.description || "",
@@ -867,14 +768,10 @@ router.post("/", async (req, res) => {
                   createdAt: new Date().toISOString(),
                 };
 
-                console.log(
-                  `[ALGO] new-any-slot-event phase - SUCCESS: Created new event at ${nextTimeSlot.startTime}-${nextTimeSlot.endTime} on ${slotDay}`
+                existingEvents.add(
+                  `${nextTimeSlot.day}-${nextTimeSlot.startTime}-${nextTimeSlot.endTime}`
                 );
 
-                // Add to tracking set
-                existingEvents.add(newEventKey);
-
-                // Add to modified events
                 modifiedEvents.push(newEvent);
 
                 increasedEvent = {
@@ -890,22 +787,13 @@ router.post("/", async (req, res) => {
                 };
 
                 return true;
-              } else {
-                console.log(
-                  `[ALGO] new-any-slot-event phase - FAILED: No available time slot found`
-                );
               }
-              break; // Only try one new event creation per iteration
             }
           }
           if (increasedEvent) break;
         }
       }
-      console.log(
-        `[ALGO] new-any-slot-event phase completed - Success: ${
-          increasedEvent !== null
-        }`
-      );
+
       return false;
     };
 
@@ -922,7 +810,14 @@ router.post("/", async (req, res) => {
           const defaultPhaseSuccess = tryPhase("default");
 
           if (!defaultPhaseSuccess) {
-            createNewAnySlotEvent();
+            const anySlotEventSuccess = createNewAnySlotEvent();
+
+            if (!anySlotEventSuccess) {
+              // Log a message when no options are available
+              console.log(
+                "No more options available to increase or create events."
+              );
+            }
           }
         }
       }
@@ -983,7 +878,7 @@ router.get("/learn", async (req, res) => {
   try {
     const today = dayjs();
     const threeMonthsAgo = today.subtract(3, "month");
-    const currentWeekStart = dayjs().weekday(-6);
+    const currentWeekStart = dayjs().isoWeekday(1);
 
     // Fetch all events without category filter
     const historicalEvents = await Event.findAll({
@@ -1246,15 +1141,29 @@ function getWeeklyPatterns(categoryAnalysis) {
     .sort((a, b) => b.frequency - a.frequency);
 }
 
-function findNextAvailableTimeSlot(originalEvent, allEvents, categoryAnalysis) {
+function findNextAvailableTimeSlot(
+  originalEvent,
+  allEvents,
+  categoryAnalysis,
+  workingHoursStart = "08:00",
+  workingHoursEnd = "19:00"
+) {
   const eventDate = dayjs(parseInt(originalEvent.day));
   const minDuration = categoryAnalysis.globalStats.minDuration || 30; // Default to 30 minutes
 
+  // Extract hours and minutes from working hours
+  const [startHour, startMinute] = workingHoursStart.split(":").map(Number);
+  const [endHour, endMinute] = workingHoursEnd.split(":").map(Number);
+
   // Try each day starting from the day after the original event
-  for (let i = 1; i <= 7; i++) {
+  for (let i = 0; i < 7; i++) {
     const nextDay = eventDate.add(i, "day");
     const dayOfWeek = nextDay.day();
     const dayTimestamp = nextDay.valueOf();
+
+    if (nextDay.isAfter(dayjs().isoWeekday(7))) {
+      break;
+    }
 
     // First try to use daily patterns for this day of week
     if (
@@ -1354,8 +1263,18 @@ function findNextAvailableTimeSlot(originalEvent, allEvents, categoryAnalysis) {
 
     // If no pattern works, try 15-minute intervals throughout the working day (8:00 AM to 5:00 PM)
     // Start from 8:00 and check every 15 minutes until 17:00
-    for (let hour = 8; hour < 17; hour++) {
+    for (
+      let hour = startHour;
+      hour < endHour || (hour === endHour && startMinute < endMinute);
+      hour++
+    ) {
       for (let minute = 0; minute < 60; minute += 15) {
+        // Skip minutes before start minute in the first hour
+        if (hour === startHour && minute < startMinute) continue;
+
+        // Skip minutes after end minute in the last hour
+        if (hour === endHour && minute >= endMinute) continue;
+
         const startTime = `${hour.toString().padStart(2, "0")}:${minute
           .toString()
           .padStart(2, "0")}`;
@@ -1402,7 +1321,9 @@ function findNextAvailableTimeSlot(originalEvent, allEvents, categoryAnalysis) {
 function findNextAvailablePatternTimeSlot(
   originalEvent,
   allEvents,
-  categoryAnalysis
+  categoryAnalysis,
+  workingHoursStart = "08:00",
+  workingHoursEnd = "22:00"
 ) {
   const eventDate = dayjs(parseInt(originalEvent.day));
   const minDuration = categoryAnalysis.globalStats.minDuration || 30; // Default to 30 minutes

@@ -6,8 +6,10 @@ import CategoryAnalysis from "./CategoryAnalysis";
 import dayjs from "dayjs";
 import upIcon from "../assets/chevron-up.svg";
 import weekday from "dayjs/plugin/weekday.js";
+import isoWeek from "dayjs/plugin/isoWeek";
 
 dayjs.extend(weekday);
+dayjs.extend(isoWeek);
 
 const categoryColors = {
   Workout: "rgba(255, 87, 51, 0.7)",
@@ -64,14 +66,13 @@ const Sidebar = () => {
 
   const adjustStudyEvents = (minutes) => {
     // Get start and end of current week (Monday to Sunday)
-    const today = dayjs();
-    const startOfWeek = dayjs().weekday(-7); // Monday
-    const endOfWeek = startOfWeek.add(6, "day"); // Sunday
+    const startOfWeek = dayjs().isoWeekday(1); // Monday
+    const endOfWeek = dayjs().isoWeekday(7); // Sunday
 
     // Filter events for the entire week
     const weekEvents = savedEvents.filter((event) => {
       const eventDay = dayjs(parseInt(event.day));
-      return eventDay.isBetween(startOfWeek, endOfWeek, null, "[]"); // [] means inclusive
+      return eventDay.isBetween(startOfWeek, endOfWeek, "day", "[]"); // [] means inclusive
     });
 
     // Sort events chronologically - first by day, then by time
@@ -233,9 +234,9 @@ const Sidebar = () => {
           </div>
 
           {/* Category Analysis Section */}
-          <div className="w-[90%] border border-gray-200 rounded-md">
+          {/* <div className="w-[90%] border border-gray-200 rounded-md">
             <CategoryAnalysis />
-          </div>
+          </div> */}
 
           <div className="w-[90%] border border-gray-200 rounded-md p-2 overflow-clip">
             <h3 className="font-medium mb-2">Working Hours</h3>

@@ -5,8 +5,10 @@ import isBetween from "dayjs/plugin/isBetween";
 import { api } from "../services/api.js";
 import axios from "axios";
 import weekday from "dayjs/plugin/weekday.js";
+import isoWeek from "dayjs/plugin/isoWeek";
 
 dayjs.extend(weekday);
+dayjs.extend(isoWeek);
 
 // Extend dayjs with the isBetween plugin
 dayjs.extend(isBetween);
@@ -40,52 +42,28 @@ const asyncDispatchEvent = (dispatch) => async (action, getState) => {
       case "increase":
         try {
           const { category, timeChange } = action.payload;
-          const savedEvents = getState();
-
-          // Get all events for the current week instead of just filtered events
-          const today = dayjs();
-          const startOfWeek = dayjs().weekday(-7);
-          const endOfWeek = today.endOf("week").add(1);
+          const { savedEvents, workingHoursStart, workingHoursEnd } =
+            getState();
 
           // Get all events for the current week
+          const startOfWeek = dayjs().isoWeekday(1);
+          const endOfWeek = dayjs().isoWeekday(7);
+
           const eventsToSend = savedEvents.filter((event) => {
             const eventDay = dayjs(parseInt(event.day));
-            return eventDay.isBetween(startOfWeek, endOfWeek, null, "[]");
+            return eventDay.isBetween(startOfWeek, endOfWeek, "day", "[]");
           });
-
-          // Keep track of the events with the target category
-          const matchingEvents = eventsToSend.filter(
-            (event) => event.category === category
-          );
 
           const response = await axios.post("http://localhost:5000/api/algo", {
-            events: eventsToSend, // Send ALL events for the week
-            timeChange: timeChange,
-            category: category,
+            events: eventsToSend,
+            timeChange,
+            category,
+            workingHoursStart,
+            workingHoursEnd,
           });
 
-          // The response now contains both events and detailed metadata
           const result = response.data;
           const modifiedEvents = result.events;
-
-          // Log the summary message
-
-          if (result.increase && result.increase.success) {
-            // Log success with green color
-
-            // Log detailed results for each event
-            if (result.increase.results && result.increase.results.length > 0) {
-              result.increase.results.forEach((eventResult) => {
-                const changeDescription =
-                  eventResult.direction === "forward"
-                    ? `Extended end time from ${eventResult.originalEndTime} to ${eventResult.newEndTime}`
-                    : `Extended start time from ${eventResult.originalStartTime} to ${eventResult.newStartTime}`;
-              });
-              console.groupEnd();
-            }
-          } else {
-            // Log failure with red color
-          }
 
           // Update events in the database
           for (const event of modifiedEvents) {
@@ -156,8 +134,13 @@ export default function ContextWrapper(props) {
 
   const dispatchEvent = useMemo(() => {
     const dispatcher = asyncDispatchEvent(dispatch);
-    return (action) => dispatcher(action, () => savedEvents);
-  }, [dispatch, savedEvents]);
+    return (action) =>
+      dispatcher(action, () => ({
+        savedEvents,
+        workingHoursStart,
+        workingHoursEnd,
+      }));
+  }, [dispatch, savedEvents, workingHoursStart, workingHoursEnd]);
 
   const [loading, setLoading] = useState(true);
   const [categories] = useState([
