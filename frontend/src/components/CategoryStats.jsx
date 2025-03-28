@@ -1,8 +1,9 @@
 import React, { useContext, useMemo } from "react";
 import Context from "../context/Context";
 import dayjs from "dayjs";
+import { categoryColors } from "../utils/categoryColors";
 
-const CategoryStats = ({ view = "week" }) => {
+const CategoryStats = ({ view = "week", onCategoryClick }) => {
   const {
     savedEvents,
     monthIndex,
@@ -43,29 +44,15 @@ const CategoryStats = ({ view = "week" }) => {
         return [];
     }
 
-    // Modified filtering logic to include start and end dates
     const filteredEvents = savedEvents.filter((event) => {
       const eventDay = dayjs(event.day);
 
-      // Comment out or remove the current week exclusion
-      /*
-      const currentWeekStart = dayjs().startOf("week").add(1, "day");
-      const isCurrentWeek =
-        eventDay.isAfter(currentWeekStart) ||
-        eventDay.isSame(currentWeekStart, "day");
-
-      // Exclude events from current week
-      if (isCurrentWeek) return false;
-      */
-
-      // Rest of the filtering logic...
       if (view === "day") {
         return (
           eventDay.format("YYYY-MM-DD") === selectedDay.format("YYYY-MM-DD")
         );
       }
 
-      // Include events on start and end dates by using isSame or isAfter/isBefore
       return (
         (eventDay.isSame(startDate, "day") ||
           eventDay.isAfter(startDate, "day")) &&
@@ -79,13 +66,12 @@ const CategoryStats = ({ view = "week" }) => {
       workingHoursEnd
     );
 
-    // Calculate total working minutes for the period
     const totalMinutesInPeriod =
       view === "day"
         ? dailyWorkingMinutes
         : view === "week"
-        ? dailyWorkingMinutes * 7 // Use all 7 days
-        : dailyWorkingMinutes * endDate.diff(startDate, "day"); // Use all days in month
+        ? dailyWorkingMinutes * 7
+        : dailyWorkingMinutes * endDate.diff(startDate, "day");
 
     filteredEvents.forEach((event) => {
       const category = event.category || "None";
@@ -93,7 +79,6 @@ const CategoryStats = ({ view = "week" }) => {
         categoryStats[category] = { minutes: 0, percentage: 0 };
       }
 
-      // Calculate duration within working hours
       const [startHour, startMin] = event.timeStart.split(":").map(Number);
       const [endHour, endMin] = event.timeEnd.split(":").map(Number);
       const [workStartHour, workStartMin] = workingHoursStart
@@ -106,18 +91,15 @@ const CategoryStats = ({ view = "week" }) => {
       const workStartMinutes = workStartHour * 60 + workStartMin;
       const workEndMinutes = workEndHour * 60 + workEndMin;
 
-      // Clamp event time to working hours
       const clampedStartMinutes = Math.max(eventStartMinutes, workStartMinutes);
       const clampedEndMinutes = Math.min(eventEndMinutes, workEndMinutes);
 
-      // Only count minutes that fall within working hours
       if (clampedEndMinutes > clampedStartMinutes) {
         const duration = clampedEndMinutes - clampedStartMinutes;
         categoryStats[category].minutes += duration;
       }
     });
 
-    // Calculate percentages based on working hours
     Object.keys(categoryStats).forEach((category) => {
       categoryStats[category].percentage = (
         (categoryStats[category].minutes / totalMinutesInPeriod) *
@@ -138,7 +120,6 @@ const CategoryStats = ({ view = "week" }) => {
     workingHoursEnd,
   ]);
 
-  // Rest of the component remains the same
   if (stats.length === 0) {
     return <div className="p-2 text-gray-500">No events in this {view}</div>;
   }
@@ -146,21 +127,39 @@ const CategoryStats = ({ view = "week" }) => {
   return (
     <div className="p-2">
       <h3 className="font-medium mb-2">
-        {view.charAt(0).toUpperCase() + view.slice(1)}ly Stats
+        {view === "day"
+          ? "Daily Stats"
+          : view.charAt(0).toUpperCase() + view.slice(1) + "ly Stats"}
       </h3>
-      <div className="space-y-3">
+      <div className="space-y-1">
         {stats.map(([category, stats]) => (
-          <div key={category} className="space-y-1">
+          <div
+            key={category}
+            className="space-y-1 cursor-pointer hover:bg-gray-50 rounded-md p-1 transition-all"
+            onClick={() =>
+              view === "week" && onCategoryClick && onCategoryClick(category)
+            }
+            title={`Click to increase ${category} events by 15 minutes`}
+          >
             <div className="flex justify-between text-sm">
-              <span>{category}</span>
+              <span
+                style={{ color: categoryColors[category] }}
+                className="font-medium"
+              >
+                {category}
+              </span>
               <span>
                 {Math.floor(stats.minutes / 60)}h {stats.minutes % 60}m
               </span>
             </div>
             <div className="w-full bg-gray-100 rounded-full h-2">
               <div
-                className="bg-black rounded-full h-2 transition-all duration-300"
-                style={{ width: `${stats.percentage}%` }}
+                className="rounded-full h-2 transition-all duration-300"
+                style={{
+                  width: `${stats.percentage}%`,
+                  backgroundColor:
+                    categoryColors[category] || categoryColors.None,
+                }}
               />
             </div>
           </div>

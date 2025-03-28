@@ -17,9 +17,14 @@ body {
 }
 
 .modalTime::-webkit-calendar-picker-indicator {
-  width: 25px;
-  height: 25px;
-  margin: 0;
+  position: absolute;
+  width: 26%;
+  height: 20px;
+  margin: 0px;
+  padding: 5px 0px;
+  margin-left: -15px;
+  z-index: 30;
+  opacity: 0;
 }
 
 .modalTime {
@@ -27,5 +32,9 @@ body {
 }
 
 .workingHours::-webkit-calendar-picker-indicator {
-  display: none;
+  opacity: 0;
+  width: 11%;
+  position: absolute;
+  margin-left: -5px;
+  padding: 9px 0px;
 }

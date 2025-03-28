@@ -8,7 +8,7 @@ export default function CreateEventButton() {
   return (
     <button
       onClick={() => setShowEventModal(true)}
-      className="transition-all  hover:bg-gray-700 cursor-pointer border w-28 h-10 text-white bg-black rounded-md ml-4"
+      className="transition-all  hover:bg-gray-700 cursor-pointer w-28 h-8 text-white bg-black rounded-md ml-2"
     >
       <div className="flex items-center justify-center">
         <img src={plus} className="w-5 h-5" />

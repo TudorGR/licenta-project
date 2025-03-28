@@ -26,13 +26,14 @@
   cursor: pointer;
 }
 .blue-bg {
-  background-color: rgb(222, 240, 255);
+  background-color: rgb(215, 230, 245);
 }
 .green-bg {
   background-color: rgb(221, 255, 230);
 }
 .purple-bg {
-  background-color: rgb(240, 225, 255);
+  /* background-color: rgb(240, 225, 255); */
+  background-color: rgb(245, 215, 215);
 }
 .yellow-bg {
   background-color: rgb(255, 242, 204);
@@ -44,14 +45,17 @@
   border-top: 1px dashed gray;
 }
 .gray-border-axis {
-  border-top: 1px solid #edeef1;
-  border-left: 1px solid #edeef1;
+  border-top: 1px solid rgb(243, 243, 243);
+  border-left: 1px solid rgb(243, 243, 243);
 }
 .gray-border-bottom {
-  border-bottom: 1px solid #edeef1;
+  border-bottom: 1px solid rgb(243, 243, 243);
 }
 .backIcon {
   max-height: 100%;
   max-width: 100%;
-  opacity: 3%;
+  opacity: 2%;
+}
+.font-xxs {
+  font-size: 10px;
 }

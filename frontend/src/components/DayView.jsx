@@ -19,6 +19,7 @@ import eventsIcon from "../assets/event.svg";
 import pinIcon from "../assets/lock.svg";
 import deleteIcon from "../assets/delete_icon.svg";
 import ContextMenu from "./ContextMenu";
+import { categoryColors, lightCategoryColors } from "../utils/categoryColors";
 
 const TIME_SLOT_HEIGHT = 50;
 const TOTAL_HEIGHT = TIME_SLOT_HEIGHT * 24;
@@ -195,16 +196,6 @@ const DayView = () => {
     }
   };
 
-  const handleColorChange = async (eventId, newColor) => {
-    const eventToUpdate = savedEvents.find((e) => e.id === eventId);
-    if (eventToUpdate) {
-      await dispatchEvent({
-        type: "update",
-        payload: { ...eventToUpdate, label: newColor },
-      });
-    }
-  };
-
   const positionEvent = (startTime, endTime) => {
     const getTimeSlot = (time) => {
       const [hour, minute] = time.split(":");
@@ -282,173 +273,167 @@ const DayView = () => {
                     setShowEventModal(true);
                   }}
                   onContextMenu={(e) => handleContextMenu(e, event)}
-                  className="transition-all py-0.5 px-0.5 eventt absolute left-0 w-full cursor-pointer"
+                  className="transition-all pb-0.5 px-0.5 eventt absolute left-0 w-full cursor-pointer"
                   style={{ top, height }}
                 >
                   <div
-                    className={`h-full rounded-md  relative ${
-                      event.label === "blue"
-                        ? "blue-bg"
-                        : event.label === "gray"
-                        ? "gray-bg"
-                        : event.label === "green"
-                        ? "green-bg"
-                        : event.label === "purple"
-                        ? "purple-bg"
-                        : "yellow-bg"
-                    }`}
+                    className="h-full rounded-md relative"
+                    style={{
+                      backgroundColor:
+                        lightCategoryColors[event.category || "None"],
+                      height: "100%",
+                      position: "relative",
+                    }}
                   >
-                    {isSmallEvent ? (
-                      <div className="text-sm ml-1 overflow-hidden whitespace-nowrap flex justify-between items-center gap-1 h-full">
-                        <div className="flex items-center">
-                          <span className="truncate">{event.title}</span>
-                          <div className="ml-2 text-xs text-nowrap overflow-clip text-gray-600">
+                    <div
+                      className="w-full relative flex items-start h-full rounded-sm"
+                      style={{
+                        borderLeft: `3px solid ${
+                          categoryColors[event.category || "None"]
+                        }`,
+                      }}
+                    >
+                      {isSmallEvent ? (
+                        <div className="w-full text-xs ml-0.5 overflow-hidden whitespace-nowrap flex justify-between items-center gap-1 h-full">
+                          <div className="flex items-center">
+                            <span className="truncate">{event.title}</span>
+                            <div className="ml-1 font-xxs text-nowrap overflow-clip text-gray-600">
+                              {`${event.timeStart} - ${event.timeEnd}`}
+                            </div>
+                          </div>
+                          {event.locked && (
+                            <img
+                              src={pinIcon}
+                              className="w-3 h-3 opacity-50 mr-1"
+                              alt="Locked"
+                            />
+                          )}
+                        </div>
+                      ) : (
+                        <div className="relative w-full">
+                          {event.locked && (
+                            <img
+                              src={pinIcon}
+                              className="absolute top-5 right-0 w-3 h-3 opacity-50"
+                              alt="Locked"
+                            />
+                          )}
+
+                          {event.category === "Workout" && (
+                            <img
+                              src={workoutIcon}
+                              alt={event.category}
+                              className="absolute round top-1 right-0 w-3 h-3 opacity-50"
+                            />
+                          )}
+                          {event.category === "Meeting" && (
+                            <img
+                              src={meetingIcon}
+                              alt={event.category}
+                              className="absolute round top-1 right-0 w-3 h-3 opacity-50"
+                            />
+                          )}
+                          {event.category === "Study" && (
+                            <img
+                              src={studyIcon}
+                              alt={event.category}
+                              className="absolute round top-1 right-0 w-3 h-3 opacity-50"
+                            />
+                          )}
+                          {event.category === "Personal" && (
+                            <img
+                              src={personalIcon}
+                              alt={event.category}
+                              className="absolute round top-1 right-0 w-3 h-3 opacity-50"
+                            />
+                          )}
+                          {event.category === "Work" && (
+                            <img
+                              src={workIcon}
+                              alt={event.category}
+                              className="absolute round top-1 right-0 w-3 h-3 opacity-50"
+                            />
+                          )}
+                          {event.category === "Social" && (
+                            <img
+                              src={socialIcon}
+                              alt={event.category}
+                              className="absolute round top-1 right-0 w-3 h-3 opacity-50"
+                            />
+                          )}
+                          {event.category === "Family" && (
+                            <img
+                              src={familyIcon}
+                              alt={event.category}
+                              className="absolute round top-1 right-0 w-3 h-3 opacity-50"
+                            />
+                          )}
+                          {event.category === "Health" && (
+                            <img
+                              src={healthIcon}
+                              alt={event.category}
+                              className="absolute round top-1 right-0 w-3 h-3 opacity-50"
+                            />
+                          )}
+                          {event.category === "Hobby" && (
+                            <img
+                              src={hobbyIcon}
+                              alt={event.category}
+                              className="absolute round top-1 right-0 w-3 h-3 opacity-50"
+                            />
+                          )}
+                          {event.category === "Chores" && (
+                            <img
+                              src={choresIcon}
+                              alt={event.category}
+                              className="absolute round top-1 right-0 w-3 h-3 opacity-50"
+                            />
+                          )}
+                          {event.category === "Travel" && (
+                            <img
+                              src={travelIcon}
+                              alt={event.category}
+                              className="absolute round top-1 right-0 w-3 h-3 opacity-50"
+                            />
+                          )}
+                          {event.category === "Finance" && (
+                            <img
+                              src={financeIcon}
+                              alt={event.category}
+                              className="absolute round top-1 right-0 w-3 h-3 opacity-50"
+                            />
+                          )}
+                          {event.category === "Learning" && (
+                            <img
+                              src={learningIcon}
+                              alt={event.category}
+                              className="absolute round top-1 right-0 w-3 h-3 opacity-50"
+                            />
+                          )}
+                          {event.category === "Self-care" && (
+                            <img
+                              src={selfCareIcon}
+                              alt={event.category}
+                              className="absolute round top-1 right-0 w-3 h-3 opacity-50"
+                            />
+                          )}
+                          {event.category === "Events" && (
+                            <img
+                              src={eventsIcon}
+                              alt={event.category}
+                              className="absolute round top-1 right-0 w-3 h-3 opacity-50"
+                            />
+                          )}
+
+                          <div className="text-xs ml-1 mt-0.5 overflow-clip">
+                            {event.title}
+                          </div>
+                          <div className="ml-1 font-xxs text-nowrap overflow-clip text-gray-600">
                             {`${event.timeStart} - ${event.timeEnd}`}
                           </div>
                         </div>
-                        {event.locked && (
-                          <img
-                            src={pinIcon}
-                            className="w-3 h-3 opacity-50 mr-1"
-                            alt="Locked"
-                          />
-                        )}
-                      </div>
-                    ) : (
-                      <div className="relative">
-                        {event.locked && (
-                          <img
-                            src={pinIcon}
-                            className="absolute top-1 right-1 w-4 h-4 opacity-50"
-                            alt="Locked"
-                          />
-                        )}
-                        <div
-                          className={`border-l-2 absolute h-7 top-1.25 ${
-                            event.label === "blue"
-                              ? " border-blue-500"
-                              : event.label === "gray"
-                              ? "border-gray-500 "
-                              : event.label === "green"
-                              ? " border-green-500 "
-                              : event.label === "purple"
-                              ? " border-purple-500 "
-                              : " border-yellow-500 "
-                          }`}
-                        ></div>
-                        <div className="text-sm ml-2 overflow-clip">
-                          {event.title}
-                        </div>
-                        <div className="ml-2 text-xs text-nowrap overflow-clip text-gray-600">
-                          {`${event.timeStart} - ${event.timeEnd}`}
-                        </div>
-                      </div>
-                    )}
-                    {event.category === "Workout" && (
-                      <img
-                        src={workoutIcon}
-                        alt={event.category}
-                        className="absolute bottom-0 right-0 backIcon"
-                      />
-                    )}
-                    {event.category === "Meeting" && (
-                      <img
-                        src={meetingIcon}
-                        alt={event.category}
-                        className="absolute bottom-0 right-0 backIcon"
-                      />
-                    )}
-                    {event.category === "Study" && (
-                      <img
-                        src={studyIcon}
-                        alt={event.category}
-                        className="absolute bottom-0 right-0 backIcon"
-                      />
-                    )}
-                    {event.category === "Personal" && (
-                      <img
-                        src={personalIcon}
-                        alt={event.category}
-                        className="absolute bottom-0 right-0 backIcon"
-                      />
-                    )}
-                    {event.category === "Work" && (
-                      <img
-                        src={workIcon}
-                        alt={event.category}
-                        className="absolute bottom-0 right-0 backIcon"
-                      />
-                    )}
-                    {event.category === "Social" && (
-                      <img
-                        src={socialIcon}
-                        alt={event.category}
-                        className="absolute bottom-0 right-0 backIcon"
-                      />
-                    )}
-                    {event.category === "Family" && (
-                      <img
-                        src={familyIcon}
-                        alt={event.category}
-                        className="absolute bottom-0 right-0 backIcon"
-                      />
-                    )}
-                    {event.category === "Health" && (
-                      <img
-                        src={healthIcon}
-                        alt={event.category}
-                        className="absolute bottom-0 right-0 backIcon"
-                      />
-                    )}
-                    {event.category === "Hobby" && (
-                      <img
-                        src={hobbyIcon}
-                        alt={event.category}
-                        className="absolute bottom-0 right-0 backIcon"
-                      />
-                    )}
-                    {event.category === "Chores" && (
-                      <img
-                        src={choresIcon}
-                        alt={event.category}
-                        className="absolute bottom-0 right-0 backIcon"
-                      />
-                    )}
-                    {event.category === "Travel" && (
-                      <img
-                        src={travelIcon}
-                        alt={event.category}
-                        className="absolute bottom-0 right-0 backIcon"
-                      />
-                    )}
-                    {event.category === "Finance" && (
-                      <img
-                        src={financeIcon}
-                        alt={event.category}
-                        className="absolute bottom-0 right-0 backIcon"
-                      />
-                    )}
-                    {event.category === "Learning" && (
-                      <img
-                        src={learningIcon}
-                        alt={event.category}
-                        className="absolute bottom-0 right-0 backIcon"
-                      />
-                    )}
-                    {event.category === "Self-care" && (
-                      <img
-                        src={selfCareIcon}
-                        alt={event.category}
-                        className="absolute bottom-0 right-0 backIcon"
-                      />
-                    )}
-                    {event.category === "Events" && (
-                      <img
-                        src={eventsIcon}
-                        alt={event.category}
-                        className="absolute bottom-0 right-0 backIcon"
-                      />
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -486,15 +471,8 @@ const DayView = () => {
             }
             setContextMenu({ isOpen: false, x: 0, y: 0, eventId: null });
           }}
-          onColorChange={(newColor) => {
-            handleColorChange(contextMenu.eventId, newColor);
-            setContextMenu({ isOpen: false, x: 0, y: 0, eventId: null });
-          }}
           isLocked={
             savedEvents.find((e) => e.id === contextMenu.eventId)?.locked
-          }
-          currentColor={
-            savedEvents.find((e) => e.id === contextMenu.eventId)?.label
           }
         />
       )}

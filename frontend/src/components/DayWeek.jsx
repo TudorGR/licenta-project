@@ -20,28 +20,10 @@ import pinIcon from "../assets/lock.svg";
 import deleteIcon from "../assets/delete_icon.svg";
 import lockIcon from "../assets/lock.svg";
 import ContextMenu from "./ContextMenu";
+import { categoryColors, lightCategoryColors } from "../utils/categoryColors";
 
 const TIME_SLOT_HEIGHT = 50;
 const TOTAL_HEIGHT = TIME_SLOT_HEIGHT * 24;
-
-const categoryColors = {
-  Workout: "rgba(255, 87, 51, 0.7)",
-  Meeting: "rgba(52, 152, 219, 0.7)",
-  Study: "rgba(155, 89, 182, 0.7)",
-  Personal: "rgba(241, 196, 15, 0.7)",
-  Work: "rgba(46, 204, 113, 0.7)",
-  Social: "rgba(231, 76, 60, 0.7)",
-  Family: "rgba(230, 126, 34, 0.7)",
-  Health: "rgba(52, 231, 228, 0.7)",
-  Hobby: "rgba(155, 89, 182, 0.7)",
-  Chores: "rgba(149, 165, 166, 0.7)",
-  Travel: "rgba(41, 128, 185, 0.7)",
-  Finance: "rgba(39, 174, 96, 0.7)",
-  Learning: "rgba(142, 68, 173, 0.7)",
-  "Self-care": "rgba(211, 84, 0, 0.7)",
-  Events: "rgba(192, 57, 43, 0.7)",
-  None: "rgba(189, 195, 199, 0.7)",
-};
 
 const DayWeek = ({ day, index }) => {
   const timeGridRef = useRef(null);
@@ -62,6 +44,7 @@ const DayWeek = ({ day, index }) => {
     y: 0,
     eventId: null,
   });
+  const [hoveredEventId, setHoveredEventId] = useState(null);
   const {
     setSelectedDay,
     setShowEventModal,
@@ -74,6 +57,8 @@ const DayWeek = ({ day, index }) => {
     savedEvents,
     loading,
     showHeatmap,
+    workingHoursStart,
+    workingHoursEnd,
   } = useContext(Context);
 
   const handleLock = async (eventId) => {
@@ -84,16 +69,6 @@ const DayWeek = ({ day, index }) => {
       });
     } catch (error) {
       console.error("Error locking event:", error);
-    }
-  };
-
-  const handleColorChange = async (eventId, newColor) => {
-    const eventToUpdate = savedEvents.find((e) => e.id === eventId);
-    if (eventToUpdate) {
-      await dispatchEvent({
-        type: "update",
-        payload: { ...eventToUpdate, label: newColor },
-      });
     }
   };
 
@@ -222,7 +197,7 @@ const DayWeek = ({ day, index }) => {
       top = (startMinutes / 60) * TIME_SLOT_HEIGHT;
       height = ((endMinutes - startMinutes) / 60) * TIME_SLOT_HEIGHT;
     }
-    return { top: `${top}px`, height: `${height}px` };
+    return { top: `${top}px`, height: `${height - 1}px` };
   };
 
   const dayEvents = useMemo(() => {
@@ -304,6 +279,131 @@ const DayWeek = ({ day, index }) => {
     );
   };
 
+  const getTimeUntil = (event) => {
+    const now = dayjs();
+    const eventDay = dayjs(parseInt(event.day));
+    const eventStartTime = eventDay
+      .hour(parseInt(event.timeStart.split(":")[0]))
+      .minute(parseInt(event.timeStart.split(":")[1]));
+    const eventEndTime = eventDay
+      .hour(parseInt(event.timeEnd.split(":")[0]))
+      .minute(parseInt(event.timeEnd.split(":")[1]));
+
+    if (now.isBefore(eventStartTime)) {
+      // Event hasn't started yet
+      const diffMinutes = eventStartTime.diff(now, "minute");
+
+      if (diffMinutes < 60) {
+        // Less than an hour
+        return `${diffMinutes} min`;
+      } else if (diffMinutes < 60 * 24) {
+        // Less than a day
+        const hours = Math.floor(diffMinutes / 60);
+        const mins = diffMinutes % 60;
+        return `${hours}h${mins > 0 ? ` ${mins}m` : ""}`;
+      } else if (diffMinutes < 60 * 24 * 7) {
+        // Less than a week
+        const days = Math.floor(diffMinutes / (60 * 24));
+        const hours = Math.floor((diffMinutes % (60 * 24)) / 60);
+        return `${days}d${hours > 0 ? ` ${hours}h` : ""}`;
+      } else {
+        // More than a week
+        const weeks = Math.floor(diffMinutes / (60 * 24 * 7));
+        const days = Math.floor((diffMinutes % (60 * 24 * 7)) / (60 * 24));
+        return `${weeks}w${days > 0 ? ` ${days}d` : ""}`;
+      }
+    } else if (now.isAfter(eventEndTime)) {
+      // Event has ended
+      const diffMinutes = now.diff(eventEndTime, "minute");
+
+      if (diffMinutes < 60) {
+        return `${diffMinutes}m`;
+      } else if (diffMinutes < 60 * 24) {
+        const hours = Math.floor(diffMinutes / 60);
+        const mins = diffMinutes % 60;
+        return `${hours}h${mins > 0 ? ` ${mins}m` : ""}`;
+      } else if (diffMinutes < 60 * 24 * 7) {
+        const days = Math.floor(diffMinutes / (60 * 24));
+        const hours = Math.floor((diffMinutes % (60 * 24)) / 60);
+        return `${days}d${hours > 0 ? ` ${hours}h` : ""}`;
+      } else {
+        const weeks = Math.floor(diffMinutes / (60 * 24 * 7));
+        const days = Math.floor((diffMinutes % (60 * 24 * 7)) / (60 * 24));
+        return `${weeks}w${days > 0 ? ` ${days}d` : ""}`;
+      }
+    } else {
+      // Event is happening now
+      const diffMinutes = eventEndTime.diff(now, "minute");
+
+      if (diffMinutes < 60) {
+        return `Ends ${diffMinutes}m`;
+      } else if (diffMinutes < 60 * 24) {
+        const hours = Math.floor(diffMinutes / 60);
+        const mins = diffMinutes % 60;
+        return `Ends ${hours}h${mins > 0 ? ` ${mins}m` : ""}`;
+      } else if (diffMinutes < 60 * 24 * 7) {
+        const days = Math.floor(diffMinutes / (60 * 24));
+        const hours = Math.floor((diffMinutes % (60 * 24)) / 60);
+        return `Ends ${days}d${hours > 0 ? ` ${hours}h` : ""}`;
+      } else {
+        const weeks = Math.floor(diffMinutes / (60 * 24 * 7));
+        const days = Math.floor((diffMinutes % (60 * 24 * 7)) / (60 * 24));
+        return `Ends ${weeks}w${days > 0 ? ` ${days}d` : ""}`;
+      }
+    }
+  };
+
+  const getCategoryCounts = () => {
+    if (!dayEvents || dayEvents.length === 0) return [];
+
+    // Group events by category and track both count and duration
+    const categoryData = {};
+    let totalDuration = 0;
+
+    // Calculate total working hours in minutes
+    const getWorkingMinutes = (start, end) => {
+      const [startHour, startMin] = start.split(":").map(Number);
+      const [endHour, endMin] = end.split(":").map(Number);
+      return endHour * 60 + endMin - (startHour * 60 + startMin);
+    };
+
+    const workingMinutes = getWorkingMinutes(
+      workingHoursStart || "09:00",
+      workingHoursEnd || "17:00"
+    );
+
+    dayEvents.forEach((event) => {
+      const category = event.category || "None";
+      if (!categoryData[category]) {
+        categoryData[category] = { count: 0, duration: 0 };
+      }
+
+      // Calculate event duration in minutes
+      const startMinutes = getTimeSlot(event.timeStart);
+      const endMinutes = getTimeSlot(event.timeEnd);
+      const duration =
+        endMinutes > startMinutes
+          ? endMinutes - startMinutes
+          : 24 * 60 - startMinutes + endMinutes;
+
+      categoryData[category].count += 1;
+      categoryData[category].duration += duration;
+      totalDuration += duration;
+    });
+
+    // Convert to array for rendering
+    return Object.entries(categoryData)
+      .map(([category, { count, duration }]) => ({
+        category,
+        count,
+        duration,
+        percentage: totalDuration > 0 ? duration / totalDuration : 0,
+        workingHoursPercentage:
+          workingMinutes > 0 ? Math.min(duration / workingMinutes, 1) : 0, // Cap at 100%
+      }))
+      .sort((a, b) => b.duration - a.duration);
+  };
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -312,19 +412,60 @@ const DayWeek = ({ day, index }) => {
     <div className="calendar-day flex flex-col">
       <header className="sticky top-0 z-6">
         <div
-          className={`flex justify-center items-center gap-1.5 text-nowrap h-11 w-full border-gray-200 border-l mx-auto calendar-day-number text-sm  text-center ${
+          className={`relative flex justify-center items-center gap-1.5 text-nowrap h-11 w-full border-gray-200 border-l mx-auto calendar-day-number text-sm text-center ${
             getCurrentDay() ? "text-black" : "text-gray-500"
           }`}
         >
-          <p>{day.format("ddd")}</p>
-          <div
-            className={`flex items-center justify-center ${
-              getCurrentDay()
-                ? "bg-black rounded-full w-6 h-6 shadow-md text-white"
-                : ""
-            }`}
-          >
-            <p>{day.format("DD")}</p>
+          {/* Bar chart background - fills width based on number of categories */}
+          <div className="absolute inset-0 flex justify-center items-end w-full">
+            {getCategoryCounts().map(
+              (
+                { category, count, duration, workingHoursPercentage },
+                index,
+                array
+              ) => {
+                // Scale the height based on percentage of working hours
+                // Now using workingHoursPercentage instead of percentage
+                const barHeight = `${Math.min(
+                  workingHoursPercentage * 100,
+                  100
+                )}%`;
+                const barWidth = `${100 / array.length}%`;
+
+                return (
+                  <div
+                    key={`bar-${category}`}
+                    style={{
+                      backgroundColor:
+                        categoryColors[category] || categoryColors.None,
+                      height: barHeight,
+                      width: barWidth,
+                      opacity: 0.4,
+                      transition: "height 0.5s ease-in-out", // Smooth transition for height changes
+                    }}
+                    title={`${category}: ${count} events (${Math.round(
+                      duration / 60
+                    )} hours, ${Math.round(
+                      workingHoursPercentage * 100
+                    )}% of working hours)`}
+                  />
+                );
+              }
+            )}
+          </div>
+
+          {/* Text content (on top of bars) */}
+          <div className="z-10 flex flex-col items-center text-black">
+            <p>{day.format("ddd")}</p>
+            <div
+              className={`flex items-center justify-center ${
+                getCurrentDay()
+                  ? "bg-black rounded-full w-6 h-6 shadow-md text-white"
+                  : ""
+              }`}
+            >
+              <p>{day.format("DD")}</p>
+            </div>
           </div>
         </div>
       </header>
@@ -405,7 +546,7 @@ const DayWeek = ({ day, index }) => {
                       height: eventPosition.height,
                       left: 0,
                       width: "100%",
-                      padding: "1px",
+                      padding: "0px 4px 0px 0px",
                       boxSizing: "border-box",
                       cursor: "pointer",
                       borderRadius: "6px",
@@ -420,177 +561,179 @@ const DayWeek = ({ day, index }) => {
                       setSelectedEvent(event);
                       setShowEventModal(true);
                     }}
+                    onMouseEnter={() => setHoveredEventId(event.id)}
+                    onMouseLeave={() => setHoveredEventId(null)}
                     onContextMenu={(e) => handleContextMenu(e, event)}
                   >
                     <div
+                      className="relative rounded-sm pr-0.5 py-0"
                       style={{
+                        backgroundColor:
+                          lightCategoryColors[event.category || "None"],
                         height: "100%",
+                        position: "relative",
                       }}
-                      className={`relative rounded-md pr-0.5 ${
-                        isSmallEvent ? "py-0" : "py-0.5"
-                      } ${
-                        event.label === "blue"
-                          ? " blue-bg"
-                          : event.label === "gray"
-                          ? "gray-bg "
-                          : event.label === "green"
-                          ? " green-bg "
-                          : event.label === "purple"
-                          ? " purple-bg "
-                          : " yellow-bg "
-                      }`}
                     >
-                      {isSmallEvent ? (
-                        <div className="text-sm ml-1 overflow-hidden whitespace-nowrap flex justify-between items-center gap-1 h-full">
-                          <div className="flex items-center">
-                            <span className="truncate">{event.title}</span>
-                            <div className="ml-2 text-xs text-nowrap overflow-clip text-gray-600">
+                      <div
+                        className=" relative flex items-start h-full rounded-sm"
+                        style={{
+                          borderLeft: `3px solid ${
+                            categoryColors[event.category || "None"]
+                          }`,
+                        }}
+                      >
+                        {isSmallEvent ? (
+                          <div className="text-xs ml-0.5 overflow-hidden whitespace-nowrap flex justify-between items-center gap-1 h-full">
+                            <div className="flex items-center">
+                              <span className="truncate">{event.title}</span>
+                              <div className="ml-1 mt-1 font-xxs text-nowrap overflow-clip text-gray-600">
+                                {`${timeStart} - ${timeEnd}`}
+                              </div>
+                            </div>
+                            {event.locked && (
+                              <img
+                                src={lockIcon}
+                                className="w-2 h-2 opacity-50 mr-1"
+                                alt="Locked"
+                                style={{ marginLeft: "auto" }} // Ensure it stays at the far right
+                              />
+                            )}
+                          </div>
+                        ) : (
+                          <div className="absolute w-full">
+                            {event.locked && (
+                              <img
+                                src={lockIcon}
+                                className="absolute round top-5 right-0 w-3 h-3 opacity-50"
+                                alt="Locked"
+                              />
+                            )}
+
+                            {category === "Workout" && (
+                              <img
+                                src={workoutIcon}
+                                alt={category}
+                                className="absolute round top-1 right-0 w-3 h-3 opacity-50"
+                              />
+                            )}
+                            {category === "Meeting" && (
+                              <img
+                                src={meetingIcon}
+                                alt={category}
+                                className="absolute round top-1 right-0 w-3 h-3 opacity-50"
+                              />
+                            )}
+                            {category === "Study" && (
+                              <img
+                                src={studyIcon}
+                                alt={category}
+                                className="absolute round top-1 right-0 w-3 h-3 opacity-50"
+                              />
+                            )}
+                            {category === "Personal" && (
+                              <img
+                                src={personalIcon}
+                                alt={category}
+                                className="absolute round top-1 right-0 w-3 h-3 opacity-50"
+                              />
+                            )}
+                            {category === "Work" && (
+                              <img
+                                src={workIcon}
+                                alt={category}
+                                className="absolute round top-1 right-0 w-3 h-3 opacity-50"
+                              />
+                            )}
+                            {category === "Social" && (
+                              <img
+                                src={socialIcon}
+                                alt={category}
+                                className="absolute round top-1 right-0 w-3 h-3 opacity-50"
+                              />
+                            )}
+                            {category === "Family" && (
+                              <img
+                                src={familyIcon}
+                                alt={category}
+                                className="absolute round top-1 right-0 w-3 h-3 opacity-50"
+                              />
+                            )}
+                            {category === "Health" && (
+                              <img
+                                src={healthIcon}
+                                alt={category}
+                                className="absolute round top-1 right-0 w-3 h-3 opacity-50"
+                              />
+                            )}
+                            {category === "Hobby" && (
+                              <img
+                                src={hobbyIcon}
+                                alt={category}
+                                className="absolute round top-1 right-0 w-3 h-3 opacity-50"
+                              />
+                            )}
+                            {category === "Chores" && (
+                              <img
+                                src={choresIcon}
+                                alt={category}
+                                className="absolute round top-1 right-0 w-3 h-3 opacity-50"
+                              />
+                            )}
+                            {category === "Travel" && (
+                              <img
+                                src={travelIcon}
+                                alt={category}
+                                className="absolute round top-1 right-0 w-3 h-3 opacity-50"
+                              />
+                            )}
+                            {category === "Finance" && (
+                              <img
+                                src={financeIcon}
+                                alt={category}
+                                className="absolute round top-1 right-0 w-3 h-3 opacity-50"
+                              />
+                            )}
+                            {category === "Learning" && (
+                              <img
+                                src={learningIcon}
+                                alt={category}
+                                className="absolute round top-1 right-0 w-3 h-3 opacity-50"
+                              />
+                            )}
+                            {category === "Self-care" && (
+                              <img
+                                src={selfCareIcon}
+                                alt={category}
+                                className="absolute round top-1 right-0 w-3 h-3 opacity-50"
+                              />
+                            )}
+                            {category === "Events" && (
+                              <img
+                                src={eventsIcon}
+                                alt={category}
+                                className="absolute round top-1 right-0 w-3 h-3 opacity-50"
+                              />
+                            )}
+
+                            <div className="w-[80%] text-xs ml-1 mt-0.5 overflow-clip truncate">
+                              {event.title}
+                            </div>
+                            <div className="w-[80%] truncate ml-1 font-xxs text-nowrap overflow-clip text-gray-600">
                               {`${timeStart} - ${timeEnd}`}
                             </div>
                           </div>
-                          {event.locked && (
-                            <img
-                              src={lockIcon}
-                              className="w-3 h-3 opacity-50 mr-1"
-                              alt="Locked"
-                            />
-                          )}
+                        )}
+                        {/* Time until/since indicator with fade effect */}
+                        <div
+                          className={`absolute bottom-0 left-0 w-full text-black text-xs px-1 py-0.5 z-10 transition-opacity ${
+                            hoveredEventId === event.id && !isSmallEvent
+                              ? "opacity-100"
+                              : "opacity-0"
+                          }`}
+                        >
+                          {getTimeUntil(event)}
                         </div>
-                      ) : (
-                        <div className="relative">
-                          {event.locked && (
-                            <img
-                              src={lockIcon}
-                              className="absolute top-1 right-1 w-4 h-4 opacity-50"
-                              alt="Locked"
-                            />
-                          )}
-                          <div
-                            className={`border-l-2 absolute h-6 top-1.5 ${
-                              event.label === "blue"
-                                ? " border-blue-300"
-                                : event.label === "gray"
-                                ? "border-gray-300 "
-                                : event.label === "green"
-                                ? " border-green-300 "
-                                : event.label === "purple"
-                                ? " border-purple-300 "
-                                : " border-yellow-300 "
-                            }`}
-                          ></div>
-                          <div className=" text-sm ml-2 overflow-clip">
-                            {event.title}
-                          </div>
-                          <div className="ml-2 text-xs text-nowrap overflow-clip text-gray-600">
-                            {`${timeStart} - ${timeEnd}`}
-                          </div>
-                        </div>
-                      )}
-                      {category === "Workout" && (
-                        <img
-                          src={workoutIcon}
-                          alt={category}
-                          className="absolute bottom-0 right-0 backIcon"
-                        />
-                      )}
-                      {category === "Meeting" && (
-                        <img
-                          src={meetingIcon}
-                          alt={category}
-                          className="absolute bottom-0 right-0 backIcon"
-                        />
-                      )}
-                      {category === "Study" && (
-                        <img
-                          src={studyIcon}
-                          alt={category}
-                          className="absolute bottom-0 right-0 backIcon"
-                        />
-                      )}
-                      {category === "Personal" && (
-                        <img
-                          src={personalIcon}
-                          alt={category}
-                          className="absolute bottom-0 right-0 backIcon"
-                        />
-                      )}
-                      {category === "Work" && (
-                        <img
-                          src={workIcon}
-                          alt={category}
-                          className="absolute bottom-0 right-0 backIcon"
-                        />
-                      )}
-                      {category === "Social" && (
-                        <img
-                          src={socialIcon}
-                          alt={category}
-                          className="absolute bottom-0 right-0 backIcon"
-                        />
-                      )}
-                      {category === "Family" && (
-                        <img
-                          src={familyIcon}
-                          alt={category}
-                          className="absolute bottom-0 right-0 backIcon"
-                        />
-                      )}
-                      {category === "Health" && (
-                        <img
-                          src={healthIcon}
-                          alt={category}
-                          className="absolute bottom-0 right-0 backIcon"
-                        />
-                      )}
-                      {category === "Hobby" && (
-                        <img
-                          src={hobbyIcon}
-                          alt={category}
-                          className="absolute bottom-0 right-0 backIcon"
-                        />
-                      )}
-                      {category === "Chores" && (
-                        <img
-                          src={choresIcon}
-                          alt={category}
-                          className="absolute bottom-0 right-0 backIcon"
-                        />
-                      )}
-                      {category === "Travel" && (
-                        <img
-                          src={travelIcon}
-                          alt={category}
-                          className="absolute bottom-0 right-0 backIcon"
-                        />
-                      )}
-                      {category === "Finance" && (
-                        <img
-                          src={financeIcon}
-                          alt={category}
-                          className="absolute bottom-0 right-0 backIcon"
-                        />
-                      )}
-                      {category === "Learning" && (
-                        <img
-                          src={learningIcon}
-                          alt={category}
-                          className="absolute bottom-0 right-0 backIcon"
-                        />
-                      )}
-                      {category === "Self-care" && (
-                        <img
-                          src={selfCareIcon}
-                          alt={category}
-                          className="absolute bottom-0 right-0 backIcon"
-                        />
-                      )}
-                      {category === "Events" && (
-                        <img
-                          src={eventsIcon}
-                          alt={category}
-                          className="absolute bottom-0 right-0 backIcon"
-                        />
-                      )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -616,15 +759,8 @@ const DayWeek = ({ day, index }) => {
             }
             setContextMenu({ isOpen: false, x: 0, y: 0, eventId: null });
           }}
-          onColorChange={(newColor) => {
-            handleColorChange(contextMenu.eventId, newColor);
-            setContextMenu({ isOpen: false, x: 0, y: 0, eventId: null });
-          }}
           isLocked={
             savedEvents.find((e) => e.id === contextMenu.eventId)?.locked
-          }
-          currentColor={
-            savedEvents.find((e) => e.id === contextMenu.eventId)?.label
           }
         />
       )}

@@ -131,54 +131,38 @@ const CalendarHeader = ({ onOpenAIModal }) => {
     );
   };
 
-  const getHeaderWidth = () => {
-    if (isWeekView) {
-      const firstDayOfMonth = dayjs(new Date(dayjs().year(), monthIndex, 1));
-      const weekStart = firstDayOfMonth
-        .startOf("week")
-        .add(1, "day")
-        .add(selectedWeek, "week");
-      const weekEnd = weekStart.add(6, "day");
-
-      return weekStart.month() !== weekEnd.month() ? "w-72" : "w-54";
-    }
-    return "w-54";
-  };
-
   return (
-    <header className="px-4 py-2 flex justify-between items-center border-gray-200 border-b">
+    <header className="px-2 py-2 flex justify-between items-center border-gray-200 border-b">
       <div className="flex">
-        <div
-          className={`flex items-center justify-between ${getHeaderWidth()}`}
-        >
-          <button
-            className="transition-all  cursor-pointer hover:bg-gray-100 rounded-full border-gray-200 border-1 p-1.5"
-            onClick={handlePrev}
-          >
-            <img src={left} className="w-6" />
-          </button>
-          <div className="flex items-center">{getHeaderText()}</div>
-          <button
-            className="transition-all  cursor-pointer hover:bg-gray-100 rounded-full border-gray-200 border-1 p-1.5"
-            onClick={handleNext}
-          >
-            <img src={right} className="w-6" />
-          </button>
-        </div>
         <button
           onClick={handleToday}
-          className="transition-all  hover:bg-gray-100 cursor-pointer border w-28 h-10 border-gray-200 rounded-md ml-4"
+          className="transition-all  hover:bg-gray-100 cursor-pointer border w-20 h-8 border-gray-200 rounded-md mr-2"
         >
           Today
         </button>
+        <div className={`flex items-center justify-between`}>
+          <button
+            className="transition-all  cursor-pointer  p-1.5"
+            onClick={handlePrev}
+          >
+            <img src={left} className="w-5" />
+          </button>
+          <button
+            className="transition-all  cursor-pointer  p-1.5"
+            onClick={handleNext}
+          >
+            <img src={right} className="w-5" />
+          </button>
+          <div className="ml-2 flex items-center">{getHeaderText()}</div>
+        </div>
       </div>
       <div className="flex">
         <button
           onClick={onOpenAIModal}
-          className="px-2 transition-all hover:bg-gray-700 cursor-pointer border h-10 text-white bg-black rounded-md ml-4 flex items-center justify-center gap-2"
+          className="px-2 transition-all hover:bg-gray-700 cursor-pointer h-8 text-white bg-black rounded-md ml-2 flex items-center justify-center gap-2"
         >
           <span className="text-nowrap">Quick Add</span>
-          <kbd className="text-xs bg-gray-700 px-2 py-0.5 rounded">
+          <kbd className="text-xs bg-gray-700 px-1 py-0.5 rounded">
             Ctrl+Space
           </kbd>
         </button>

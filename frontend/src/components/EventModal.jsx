@@ -24,8 +24,8 @@ import financeIcon from "../assets/finance.svg";
 import learningIcon from "../assets/learning.svg";
 import selfCareIcon from "../assets/self-care.svg";
 import eventsIcon from "../assets/event.svg";
+import { categoryColors } from "../utils/categoryColors";
 
-const colors = ["gray", "blue", "green", "purple", "yellow"];
 const recurringOptions = ["None", "Daily", "Weekly", "Monthly"];
 
 const categoryIcons = {
@@ -75,9 +75,6 @@ export default function EventModal() {
   );
 
   const [smallCalendar, setSmallCalendar] = useState(false);
-  const [color, setColor] = useState(
-    selectedEvent ? colors.find((col) => col === selectedEvent.label) : "gray"
-  );
   const [error, setError] = useState(false);
   const inputRef = useRef(0);
 
@@ -122,7 +119,6 @@ export default function EventModal() {
       const baseEvent = {
         title,
         description,
-        label: color,
         timeStart: finalStartTime,
         timeEnd: finalEndTime,
         category: selectedCategory || "None",
@@ -369,7 +365,7 @@ export default function EventModal() {
       {smallCalendar && <SmallCalendar />}
       <form
         name="eventModal"
-        className="bg-white shadow-2xl w-[500px] rounded-md"
+        className="bg-white shadow-2xl w-[450px] rounded-md"
       >
         <header className="border-b-1 border-gray-200 px-4 py-4 flex justify-between items-center">
           <div className="flex flex-col">
@@ -390,7 +386,7 @@ export default function EventModal() {
               className="cursor-pointer  ml-4 mr-2"
               type="button"
             >
-              <img src={closeIcon} className="w-6" />
+              <img src={closeIcon} className="w-4" />
             </button>
           </div>
         </header>
@@ -405,7 +401,7 @@ export default function EventModal() {
                   error
                     ? "border-red-500 focus:border-red-500"
                     : "border-gray-200"
-                } border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-md`}
+                } border-1 py-1 px-4 outline-0 pt-3text-xl  w-full rounded-md`}
                 placeholder={
                   suggestions.length > 0
                     ? `Suggestion: ${suggestions[currentSuggestionIndex].suggestedTitle}`
@@ -417,11 +413,11 @@ export default function EventModal() {
               />
               {suggestions.length > 0 && (
                 <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2 text-gray-400 select-none">
-                  <kbd className="px-2 py-1 bg-gray-100 rounded-md text-sm border border-gray-300">
+                  <kbd className="px-2 py-0 bg-gray-100 rounded-md text-sm border border-gray-300">
                     ↑↓
                   </kbd>
                   <span className="text-sm">navigate</span>
-                  <kbd className="px-2 py-1 bg-gray-100 rounded-md text-sm border border-gray-300">
+                  <kbd className="px-2 py-0 bg-gray-100 rounded-md text-sm border border-gray-300">
                     Tab
                   </kbd>
                   <span className="text-sm">select</span>
@@ -432,24 +428,23 @@ export default function EventModal() {
               onClick={() => {
                 setSmallCalendar(true);
               }}
-              className="cursor-pointer py-2 px-4 flex border-1 border-gray-200 rounded-md"
+              className="cursor-pointer py-1 px-2 flex border-1 border-gray-200 rounded-md"
             >
-              <img src={calendar} className="w-6 mr-4" />
+              <img src={calendar} className="w-4 mr-2" />
               <p>{selectedDay.format("dddd, MMMM DD")}</p>
             </div>
             <div className="flex gap-2 items-center">
               <input
                 type="time"
                 name="startTime"
-                className="modalTime border-gray-200 border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-md"
+                className="h-8 modalTime border-gray-200 border-1 py-1 px-4 outline-0   w-full rounded-md"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
               />
-              <p>{"-"}</p>
               <input
                 type="time"
                 name="endTime"
-                className="modalTime border-gray-200 border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-md"
+                className="h-8 modalTime border-gray-200 border-1 py-1 px-4 outline-0 w-full rounded-md"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
               />
@@ -460,12 +455,12 @@ export default function EventModal() {
                   {!selectedCategory && !categoryIcons[selectedCategory] && (
                     <img
                       src={categoryIcon}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 w-6 h-6"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
                       alt="category"
                     />
                   )}
                   <div
-                    className={`border-gray-200 border-1 py-2 ${
+                    className={`border-gray-200 border-1 py-1 ${
                       !selectedCategory && !categoryIcons[selectedCategory]
                         ? "pl-9"
                         : "pl-4"
@@ -488,7 +483,7 @@ export default function EventModal() {
                       {categories.map((category) => (
                         <div
                           key={category}
-                          className={`flex items-center gap-2 px-4 py-2 hover:bg-gray-100 cursor-pointer ${
+                          className={`flex items-center gap-2 px-2 py-1 hover:bg-gray-100 cursor-pointer ${
                             category === selectedCategory ? "bg-gray-50" : ""
                           }`}
                           onClick={() => {
@@ -511,17 +506,17 @@ export default function EventModal() {
                 </div>
               </div>
               <div className="flex-1">
-                <div className="relative">
+                <div className=" relative">
                   <img
                     src={recurringIcon}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 w-6 h-6"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
                     alt="recurring"
                   />
                   <select
                     name="recurring"
                     value={recurring}
                     onChange={(e) => setRecurring(e.target.value)}
-                    className="border-gray-200 border-1 py-2 pl-9 pr-4 outline-0 w-full rounded-md "
+                    className=" border-gray-200 border-1 py-1.25 pl-9 pr-2 outline-0 w-full rounded-md "
                   >
                     <option value="" disabled hidden>
                       Add recurring
@@ -535,8 +530,8 @@ export default function EventModal() {
                 </div>
               </div>
             </div>
-            <div className="flex border-gray-200 border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-md">
-              <img src={locationIcon} className="w-6 mr-4" />
+            <div className="flex border-gray-200 border-1 py-1 px-2 outline-0 pt-3text-xl w-full rounded-md">
+              <img src={locationIcon} className="w-4 mr-2" />
               <input
                 type="text"
                 name="location"
@@ -555,7 +550,7 @@ export default function EventModal() {
             <input
               type="text"
               name="description"
-              className="border-gray-200 border-1 py-2 px-4 outline-0 pt-3text-xl pb-2 w-full rounded-md"
+              className="border-gray-200 border-1 py-1 px-4 outline-0 pt-3text-xl w-full rounded-md"
               placeholder="Add Description..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -563,30 +558,7 @@ export default function EventModal() {
             />
           </div>
         </div>
-        <footer className="flex justify-between items-center border-t-1 border-gray-200 px-4 py-4">
-          <div className="flex gap-x-2">
-            {colors.map((col, index) => (
-              <span
-                key={index}
-                onClick={() => setColor(col)}
-                className={`${
-                  col === "blue"
-                    ? "blue-bg border-2 border-blue-500"
-                    : col === "gray"
-                    ? "gray-bg border-2 border-gray-500"
-                    : col === "green"
-                    ? "green-bg border-2 border-green-500"
-                    : col === "purple"
-                    ? "purple-bg border-2 border-purple-500"
-                    : "yellow-bg  border-2 border-yellow-500"
-                } w-5 h-5 rounded-full flex items-center justify-center cursor-pointer`}
-              >
-                {col === color && (
-                  <span className="bg-white w-4 h-4 rounded-full flex items-center justify-center"></span>
-                )}
-              </span>
-            ))}
-          </div>
+        <footer className="flex justify-end items-center border-t-1 border-gray-200 px-4 py-4">
           <div className="flex">
             {selectedEvent ? (
               <button
@@ -594,10 +566,10 @@ export default function EventModal() {
                   setShowEventModal(false);
                   dispatchEvent({ type: "delete", payload: selectedEvent });
                 }}
-                className="transition-all border-gray-200 rounded-md mr-4 hover:bg-gray-100 border w-10 h-10 cursor-pointer"
+                className="transition-all border-gray-200 rounded-md mr-2 hover:bg-gray-100 border w-8 h-8 cursor-pointer"
                 type="button"
               >
-                <img src={deleteIcon} className="w-6 mx-auto" />
+                <img src={deleteIcon} className="w-4 mx-auto" />
               </button>
             ) : (
               ""
@@ -606,7 +578,7 @@ export default function EventModal() {
               onClick={() => {
                 setShowEventModal(false);
               }}
-              className="transition-all  hover:bg-gray-100 cursor-pointer border w-28 h-10 border-gray-200 rounded-md mr-4"
+              className="transition-all  hover:bg-gray-100 cursor-pointer border w-28 h-8 border-gray-200 rounded-md mr-2"
               type="button"
             >
               Cancel
@@ -614,7 +586,7 @@ export default function EventModal() {
             <button
               type="submit"
               onClick={handleSubmit}
-              className="transition-all  flex items-center justify-center hover:bg-gray-700 text-white bg-black cursor-pointer border w-28 h-10 border-gray-200 rounded-md"
+              className="transition-all  flex items-center justify-center hover:bg-gray-700 text-white bg-black cursor-pointer border w-28 h-8 border-gray-200 rounded-md"
             >
               <img src={saveIcon} className="w-5 mr-2" />
               <p>Save</p>

@@ -5,6 +5,7 @@ import pinIcon from "../assets/lock.svg";
 import deleteIcon from "../assets/delete_icon.svg";
 import lockIcon from "../assets/lock.svg";
 import ContextMenu from "./ContextMenu";
+import { lightCategoryColors } from "../utils/categoryColors";
 
 const Day = ({ day, index }) => {
   const [dayEvents, setDayEvents] = useState([]);
@@ -62,16 +63,6 @@ const Day = ({ day, index }) => {
     }
   };
 
-  const handleColorChange = async (eventId, newColor) => {
-    const eventToUpdate = savedEvents.find((e) => e.id === eventId);
-    if (eventToUpdate) {
-      await dispatchEvent({
-        type: "update",
-        payload: { ...eventToUpdate, label: newColor },
-      });
-    }
-  };
-
   useEffect(() => {
     const handleGlobalClick = (e) => {
       if (!e.target.closest(".context-menu")) {
@@ -113,28 +104,12 @@ const Day = ({ day, index }) => {
             key={idx}
             onClick={() => setSelectedEvent(event)}
             onContextMenu={(e) => handleContextMenu(e, event)}
-            className={`${
-              event.label === "blue"
-                ? "blue-bg text-black"
-                : event.label === "gray"
-                ? "gray-bg text-black"
-                : event.label === "green"
-                ? "green-bg text-black"
-                : event.label === "purple"
-                ? "purple-bg text-black"
-                : "yellow-bg text-black"
-            } px-1 mr-3 text-sm rounded mb-1 truncate`}
+            className="px-1 mr-3 text-sm rounded mb-1 truncate text-black"
+            style={{
+              backgroundColor: lightCategoryColors[event.category || "None"],
+            }}
           >
-            <div className="relative">
-              {event.locked && (
-                <img
-                  src={lockIcon}
-                  className="absolute top-1 right-1 w-4 h-4 opacity-50"
-                  alt="Locked"
-                />
-              )}
-              {event.title}
-            </div>
+            <div className="relative text-xs">{event.title}</div>
           </div>
         ))}
         {dayEvents.length > 4 && index !== 0 ? (
@@ -162,15 +137,8 @@ const Day = ({ day, index }) => {
             }
             setContextMenu({ isOpen: false, x: 0, y: 0, eventId: null });
           }}
-          onColorChange={(newColor) => {
-            handleColorChange(contextMenu.eventId, newColor);
-            setContextMenu({ isOpen: false, x: 0, y: 0, eventId: null });
-          }}
           isLocked={
             savedEvents.find((e) => e.id === contextMenu.eventId)?.locked
-          }
-          currentColor={
-            savedEvents.find((e) => e.id === contextMenu.eventId)?.label
           }
         />
       )}
