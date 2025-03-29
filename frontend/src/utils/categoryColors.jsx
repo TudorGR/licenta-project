@@ -36,3 +36,23 @@ export const lightCategoryColors = {
   Events: "#F8BBD0", // Light Pink
   None: "#EEEEEE", // Light Gray
 };
+
+// Darker versions for specific use cases
+export const darkCategoryColors = {
+  Work: "#BF360C", // Darker Orange
+  Meeting: "#1B5E20", // Darker Green
+  Study: "#0D47A1", // Darker Blue
+  Personal: "#4A148C", // Darker Purple
+  Social: "#880E4F", // Darker Pink
+  Family: "#FF6F00", // Darker Amber
+  Health: "#006064", // Darker Cyan
+  Workout: "#3E2723", // Darker Deep Orange
+  Hobby: "#311B92", // Darker Deep Purple
+  Chores: "#3E2723", // Darker Brown
+  Travel: "#004D40", // Darker Teal
+  Finance: "#1A237E", // Darker Indigo
+  Learning: "#01579B", // Darker Blue
+  "Self-care": "#33691E", // Darker Green
+  Events: "#880E4F", // Darker Pink
+  None: "#424242", // Darker Gray
+};

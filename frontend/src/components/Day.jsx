@@ -5,7 +5,10 @@ import pinIcon from "../assets/lock.svg";
 import deleteIcon from "../assets/delete_icon.svg";
 import lockIcon from "../assets/lock.svg";
 import ContextMenu from "./ContextMenu";
-import { lightCategoryColors } from "../utils/categoryColors";
+import {
+  lightCategoryColors,
+  darkCategoryColors,
+} from "../utils/categoryColors";
 
 const Day = ({ day, index }) => {
   const [dayEvents, setDayEvents] = useState([]);
@@ -109,7 +112,14 @@ const Day = ({ day, index }) => {
               backgroundColor: lightCategoryColors[event.category || "None"],
             }}
           >
-            <div className="relative text-xs">{event.title}</div>
+            <div
+              style={{
+                color: darkCategoryColors[event.category || "None"],
+              }}
+              className="font-medium relative text-xs"
+            >
+              {event.title}
+            </div>
           </div>
         ))}
         {dayEvents.length > 4 && index !== 0 ? (

@@ -20,7 +20,11 @@ import pinIcon from "../assets/lock.svg";
 import deleteIcon from "../assets/delete_icon.svg";
 import lockIcon from "../assets/lock.svg";
 import ContextMenu from "./ContextMenu";
-import { categoryColors, lightCategoryColors } from "../utils/categoryColors";
+import {
+  categoryColors,
+  lightCategoryColors,
+  darkCategoryColors,
+} from "../utils/categoryColors";
 
 const TIME_SLOT_HEIGHT = 50;
 const TOTAL_HEIGHT = TIME_SLOT_HEIGHT * 24;
@@ -543,13 +547,19 @@ const DayWeek = ({ day, index }) => {
         </div>
       </header>
       <div
-        className="time-grid relative "
+        className="time-grid relative"
         style={{ height: "600px" }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={() => setIsDragging(false)}
       >
+        <div
+          className={`absolute top-0 w-full z-3 ${
+            day.day() === 6 || day.day() === 0 ? "bg-black/3" : ""
+          }`}
+          style={{ height: `${TOTAL_HEIGHT}px` }}
+        ></div>
         <div
           className="gray-border-axis"
           style={{ height: `${TOTAL_HEIGHT}px`, position: "relative" }}
@@ -569,7 +579,7 @@ const DayWeek = ({ day, index }) => {
           ))}
           {isDragging && dragStart && dragEnd && (
             <div
-              className="z-2 border-1 border-gray-500 min-h-3 opacity-50 absolute left-0 w-full rounded-md bg-gray-200"
+              className="z-2 border-1 border-gray-500 min-h-3 opacity-50 absolute left-0 w-full rounded-sm bg-gray-200"
               style={{
                 ...positionEvent(dragStart, dragEnd),
                 pointerEvents: "none",
@@ -578,21 +588,21 @@ const DayWeek = ({ day, index }) => {
           )}
           {getCurrentDay() ? (
             <div
-              className="absolute left-0 w-full bg-red-400"
+              className="absolute left-0 w-full bg-blue-500"
               style={{
                 top: `${currentTimePosition}px`,
                 height: "2px",
                 zIndex: 13,
               }}
             >
-              <div className="absolute -left-1 -top-0.75 w-2 h-2 rounded-full bg-red-400" />
+              <div className="absolute -left-1 -top-0.75 w-2 h-2 rounded-full bg-blue-500" />
             </div>
           ) : (
             <div
-              className="absolute left-0 w-full gray-border"
+              className="absolute left-0 w-full bg-blue-500 opacity-30"
               style={{
                 top: `${currentTimePosition}px`,
-                height: "1px",
+                height: "2px",
                 zIndex: 11,
               }}
             ></div>
@@ -641,7 +651,7 @@ const DayWeek = ({ day, index }) => {
                     onContextMenu={(e) => handleContextMenu(e, event)}
                   >
                     <div
-                      className="relative rounded-sm pr-0.5 py-0"
+                      className="relative rounded-sm pr-0.5 py-0 overflow-hidden"
                       style={{
                         backgroundColor:
                           lightCategoryColors[event.category || "None"],
@@ -650,7 +660,7 @@ const DayWeek = ({ day, index }) => {
                       }}
                     >
                       <div
-                        className=" relative flex items-start h-full rounded-sm"
+                        className=" relative flex items-start h-full"
                         style={{
                           borderLeft: `3px solid ${
                             categoryColors[event.category || "None"]
@@ -660,8 +670,24 @@ const DayWeek = ({ day, index }) => {
                         {isSmallEvent ? (
                           <div className="text-xs ml-0.5 overflow-hidden whitespace-nowrap flex justify-between items-center gap-1 h-full">
                             <div className="flex items-center">
-                              <span className="truncate">{event.title}</span>
-                              <div className="ml-1 mt-1 font-xxs text-nowrap overflow-clip text-gray-600">
+                              <span
+                                style={{
+                                  color: `${
+                                    darkCategoryColors[event.category || "None"]
+                                  }`,
+                                }}
+                                className="truncate font-medium ml-0.5"
+                              >
+                                {event.title}
+                              </span>
+                              <div
+                                style={{
+                                  color: `${
+                                    darkCategoryColors[event.category || "None"]
+                                  }`,
+                                }}
+                                className="opacity-80 font-medium ml-1 text-xs text-nowrap overflow-clip text-gray-600"
+                              >
                                 {`${timeStart} - ${timeEnd}`}
                               </div>
                             </div>
@@ -790,10 +816,24 @@ const DayWeek = ({ day, index }) => {
                               />
                             )}
 
-                            <div className="w-[80%] text-xs ml-1 mt-0.5 overflow-clip truncate">
+                            <div
+                              style={{
+                                color: `${
+                                  darkCategoryColors[event.category || "None"]
+                                }`,
+                              }}
+                              className="w-[80%] text-xs font-medium ml-1 mt-0.5 overflow-clip truncate"
+                            >
                               {event.title}
                             </div>
-                            <div className="w-[80%] truncate ml-1 font-xxs text-nowrap overflow-clip text-gray-600">
+                            <div
+                              style={{
+                                color: `${
+                                  darkCategoryColors[event.category || "None"]
+                                }`,
+                              }}
+                              className="opacity-80  w-[80%] font-medium truncate ml-1 text-xs text-nowrap overflow-clip text-gray-600"
+                            >
                               {`${timeStart} - ${timeEnd}`}
                             </div>
                           </div>
@@ -802,9 +842,14 @@ const DayWeek = ({ day, index }) => {
                       {/* Time until/since indicator */}
                       {eventDuration > 60 && (
                         <div
-                          className={`absolute bottom-2 left-1 w-full text-black font-xxs px-1 py-0.5 z-10 transition-opacity ${
+                          style={{
+                            color: `${
+                              darkCategoryColors[event.category || "None"]
+                            }`,
+                          }}
+                          className={`font-medium absolute bottom-2 left-1 w-full text-black text-xs px-1 py-0.5 z-10 transition-opacity ${
                             hoveredEventId === event.id
-                              ? "opacity-100"
+                              ? "opacity-80"
                               : "opacity-0"
                           }`}
                         >
@@ -815,7 +860,7 @@ const DayWeek = ({ day, index }) => {
                         <div
                           className={`transition-all ${
                             hoveredEventId === event.id
-                              ? "opacity-100"
+                              ? "opacity-90"
                               : "opacity-0"
                           }`}
                         >

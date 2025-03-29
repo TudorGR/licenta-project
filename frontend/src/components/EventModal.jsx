@@ -367,30 +367,25 @@ export default function EventModal() {
         name="eventModal"
         className="bg-white shadow-2xl w-[450px] rounded-md"
       >
-        <header className="border-b-1 border-gray-200 px-4 py-4 flex justify-between items-center">
+        <header className=" px-3 pt-2 flex justify-between items-center">
           <div className="flex flex-col">
-            <h1 className="font-medium text-xl">
+            <h1 className="font-medium text-lg">
               {selectedEvent ? "Update Event" : "Add Event"}
             </h1>
-            <p>
-              {selectedEvent
-                ? "Fill in the data below to update the event"
-                : "Fill in the data below to add an event"}
-            </p>
           </div>
-          <div>
+          <div className="flex items-center">
             <button
               onClick={() => {
                 setShowEventModal(false);
               }}
-              className="cursor-pointer  ml-4 mr-2"
+              className="cursor-pointer  ml-4"
               type="button"
             >
-              <img src={closeIcon} className="w-4" />
+              <img src={closeIcon} className="w-5" />
             </button>
           </div>
         </header>
-        <div className="px-4 py-4">
+        <div className="px-2 py-2">
           <div className="grid grid-cols-1/5 items-end gap-y-2">
             <div className="relative">
               <input
@@ -401,7 +396,7 @@ export default function EventModal() {
                   error
                     ? "border-red-500 focus:border-red-500"
                     : "border-gray-200"
-                } border-1 py-1 px-4 outline-0 pt-3text-xl  w-full rounded-md`}
+                } border-1 py-1 px-2 outline-0 pt-3text-xl  w-full rounded-md`}
                 placeholder={
                   suggestions.length > 0
                     ? `Suggestion: ${suggestions[currentSuggestionIndex].suggestedTitle}`
@@ -437,14 +432,14 @@ export default function EventModal() {
               <input
                 type="time"
                 name="startTime"
-                className="h-8 modalTime border-gray-200 border-1 py-1 px-4 outline-0   w-full rounded-md"
+                className="h-8 modalTime border-gray-200 border-1 py-1 px-2 outline-0   w-full rounded-md"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
               />
               <input
                 type="time"
                 name="endTime"
-                className="h-8 modalTime border-gray-200 border-1 py-1 px-4 outline-0 w-full rounded-md"
+                className="h-8 modalTime border-gray-200 border-1 py-1 px-2 outline-0 w-full rounded-md"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
               />
@@ -550,7 +545,7 @@ export default function EventModal() {
             <input
               type="text"
               name="description"
-              className="border-gray-200 border-1 py-1 px-4 outline-0 pt-3text-xl w-full rounded-md"
+              className="border-gray-200 border-1 py-1 px-2 outline-0  w-full rounded-md"
               placeholder="Add Description..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -558,7 +553,7 @@ export default function EventModal() {
             />
           </div>
         </div>
-        <footer className="flex justify-end items-center border-t-1 border-gray-200 px-4 py-4">
+        <footer className="flex justify-end items-center px-2 pb-2">
           <div className="flex">
             {selectedEvent ? (
               <button

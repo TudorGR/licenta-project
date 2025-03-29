@@ -54,20 +54,20 @@ function AIInputModal({ isOpen, onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black/40 bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg w-[500px] shadow-xl">
-        <div className="flex justify-between items-center p-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium">Quick Add Event</h2>
+      <div className="bg-white rounded-lg w-[450px] shadow-xl">
+        <div className="flex justify-between items-center px-3 pb-0 pt-2">
+          <h2 className="text-lg font-medium text-black">Quick Add Event</h2>
           <button className="cursor-pointer " onClick={onClose}>
-            <img src={closeIcon} className="w-6" />
+            <img src={closeIcon} className="w-5" />
           </button>
         </div>
-        <div className="p-4">
+        <div className="p-2">
           <input
             name="AIInput"
             autoFocus
             type="text"
             autoComplete="off"
-            className="w-full border border-gray-200 p-3 rounded-md outline-0"
+            className="w-full border border-gray-200 py-1 px-2 rounded-md outline-0"
             placeholder="Type your event (e.g. Meeting tomorrow at 3pm)"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
@@ -80,17 +80,17 @@ function AIInputModal({ isOpen, onClose }) {
             }}
           />
         </div>
-        <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
+        <div className="p-2 pt-0  flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="cursor-pointer transition-all px-4 py-2 border border-gray-200 rounded-md hover:bg-gray-100"
+            className="cursor-pointer transition-all w-28 px-2 py-1 border border-gray-200 rounded-md hover:bg-gray-100"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className={`cursor-pointer  transition-all px-4 py-2 rounded-md ${
+            className={`cursor-pointer  transition-all px-4 py-1 rounded-md ${
               loading ? "bg-gray-400" : "bg-black text-white hover:bg-gray-700"
             }`}
           >

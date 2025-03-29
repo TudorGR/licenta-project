@@ -19,7 +19,11 @@ import eventsIcon from "../assets/event.svg";
 import pinIcon from "../assets/lock.svg";
 import deleteIcon from "../assets/delete_icon.svg";
 import ContextMenu from "./ContextMenu";
-import { categoryColors, lightCategoryColors } from "../utils/categoryColors";
+import {
+  categoryColors,
+  lightCategoryColors,
+  darkCategoryColors,
+} from "../utils/categoryColors";
 
 const TIME_SLOT_HEIGHT = 50;
 const TOTAL_HEIGHT = TIME_SLOT_HEIGHT * 24;
@@ -396,7 +400,7 @@ const DayView = () => {
 
             {isDragging && dragStart && dragEnd && (
               <div
-                className="eventt border-1 border-gray-500 min-h-3 opacity-50 absolute left-0 w-full rounded-md bg-gray-200"
+                className="eventt border-1 border-gray-500 min-h-3 opacity-50 absolute left-0 w-full rounded-sm bg-gray-200"
                 style={positionEvent(dragStart, dragEnd)}
               />
             )}
@@ -429,7 +433,7 @@ const DayView = () => {
                   style={{ top, height }}
                 >
                   <div
-                    className="h-full rounded-md relative"
+                    className="h-full rounded-sm relative overflow-hidden"
                     style={{
                       backgroundColor:
                         lightCategoryColors[event.category || "None"],
@@ -438,9 +442,9 @@ const DayView = () => {
                     }}
                   >
                     <div
-                      className="w-full relative flex items-start h-full rounded-sm"
+                      className="w-full relative flex items-start h-full"
                       style={{
-                        borderLeft: `3px solid ${
+                        borderLeft: `4px solid ${
                           categoryColors[event.category || "None"]
                         }`,
                       }}
@@ -448,8 +452,24 @@ const DayView = () => {
                       {isSmallEvent ? (
                         <div className="w-full text-xs ml-0.5 overflow-hidden whitespace-nowrap flex justify-between items-center gap-1 h-full">
                           <div className="flex items-center">
-                            <span className="truncate">{event.title}</span>
-                            <div className="ml-1 font-xxs text-nowrap overflow-clip text-gray-600">
+                            <span
+                              style={{
+                                color: `${
+                                  darkCategoryColors[event.category || "None"]
+                                }`,
+                              }}
+                              className="truncate font-medium ml-0.5"
+                            >
+                              {event.title}
+                            </span>
+                            <div
+                              style={{
+                                color: `${
+                                  darkCategoryColors[event.category || "None"]
+                                }`,
+                              }}
+                              className="opacity-80 ml-1 text-xs font-medium text-nowrap overflow-clip text-gray-600"
+                            >
                               {`${event.timeStart} - ${event.timeEnd}`}
                             </div>
                           </div>
@@ -577,10 +597,24 @@ const DayView = () => {
                             />
                           )}
 
-                          <div className="text-xs ml-1 mt-0.5 overflow-clip">
+                          <div
+                            style={{
+                              color: `${
+                                darkCategoryColors[event.category || "None"]
+                              }`,
+                            }}
+                            className="text-xs font-medium ml-1 mt-0.5 overflow-clip"
+                          >
                             {event.title}
                           </div>
-                          <div className="ml-1 font-xxs text-nowrap overflow-clip text-gray-600">
+                          <div
+                            style={{
+                              color: `${
+                                darkCategoryColors[event.category || "None"]
+                              }`,
+                            }}
+                            className="opacity-80 ml-1 text-xs font-medium text-nowrap overflow-clip text-gray-600"
+                          >
                             {`${event.timeStart} - ${event.timeEnd}`}
                           </div>
                         </div>
@@ -589,10 +623,13 @@ const DayView = () => {
                   </div>
                   {eventDuration > 60 && (
                     <div
-                      className={`absolute bottom-2 left-1 w-full text-black font-xxs px-1 py-0.5 z-10 transition-opacity ${
-                        hoveredEventId === event.id
-                          ? "opacity-100"
-                          : "opacity-0"
+                      style={{
+                        color: `${
+                          darkCategoryColors[event.category || "None"]
+                        }`,
+                      }}
+                      className={`absolute font-medium bottom-2 left-1 w-full text-black text-xs px-1 py-0.5 z-10 transition-opacity ${
+                        hoveredEventId === event.id ? "opacity-80" : "opacity-0"
                       }`}
                     >
                       {getTimeUntil(event)}
@@ -602,9 +639,7 @@ const DayView = () => {
                   {eventDuration > 60 && (
                     <div
                       className={`transition-all ${
-                        hoveredEventId === event.id
-                          ? "opacity-100"
-                          : "opacity-0"
+                        hoveredEventId === event.id ? "opacity-90" : "opacity-0"
                       }`}
                     >
                       {renderBoxplot(event)}
@@ -616,14 +651,14 @@ const DayView = () => {
 
             {selectedDay.format("DD-MM-YY") === dayjs().format("DD-MM-YY") && (
               <div
-                className="absolute left-0 w-full bg-red-400"
+                className="absolute left-0 w-full bg-blue-500"
                 style={{
                   top: `${currentTimePosition}px`,
                   height: "2px",
                   zIndex: 13,
                 }}
               >
-                <div className="absolute -left-1 -top-0.75 w-2 h-2 rounded-full bg-red-400" />
+                <div className="absolute -left-1 -top-0.75 w-2 h-2 rounded-full bg-blue-500" />
               </div>
             )}
           </div>

@@ -49,7 +49,7 @@ const Week = ({ month, weekIndex }) => {
             </div>
           ))}
           <div
-            className="absolute text-sm rounded-xl bg-gray-200 text-gray-500"
+            className="absolute text-sm rounded-xl bg-blue-500 text-white"
             style={{
               top: `${calculateTimePosition()}px`,
               transform: "translateY(-55%)",
