@@ -6,13 +6,8 @@ const sequelize = new Sequelize({
   logging: false,
 });
 
-sequelize
-  .authenticate()
-  .then(() => {
-    console.log("Database connection successful");
-  })
-  .catch((err) => {
-    console.error("Database connection error:", err);
-  });
+sequelize.authenticate().catch((err) => {
+  console.error("Database connection error:", err);
+});
 
 export default sequelize;

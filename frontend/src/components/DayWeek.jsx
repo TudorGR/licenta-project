@@ -295,41 +295,41 @@ const DayWeek = ({ day, index }) => {
 
       if (diffMinutes < 60) {
         // Less than an hour
-        return `${diffMinutes} min`;
+        return `${diffMinutes}m until`;
       } else if (diffMinutes < 60 * 24) {
         // Less than a day
         const hours = Math.floor(diffMinutes / 60);
         const mins = diffMinutes % 60;
-        return `${hours}h${mins > 0 ? ` ${mins}m` : ""}`;
+        return `${hours}h${mins > 0 ? ` ${mins}m` : ""} until`;
       } else if (diffMinutes < 60 * 24 * 7) {
         // Less than a week
         const days = Math.floor(diffMinutes / (60 * 24));
         const hours = Math.floor((diffMinutes % (60 * 24)) / 60);
-        return `${days}d${hours > 0 ? ` ${hours}h` : ""}`;
+        return `${days}d${hours > 0 ? ` ${hours}h` : ""} until`;
       } else {
         // More than a week
         const weeks = Math.floor(diffMinutes / (60 * 24 * 7));
         const days = Math.floor((diffMinutes % (60 * 24 * 7)) / (60 * 24));
-        return `${weeks}w${days > 0 ? ` ${days}d` : ""}`;
+        return `${weeks}w${days > 0 ? ` ${days}d` : ""} until`;
       }
     } else if (now.isAfter(eventEndTime)) {
       // Event has ended
       const diffMinutes = now.diff(eventEndTime, "minute");
 
       if (diffMinutes < 60) {
-        return `${diffMinutes}m`;
+        return `${diffMinutes}m since`;
       } else if (diffMinutes < 60 * 24) {
         const hours = Math.floor(diffMinutes / 60);
         const mins = diffMinutes % 60;
-        return `${hours}h${mins > 0 ? ` ${mins}m` : ""}`;
+        return `${hours}h${mins > 0 ? ` ${mins}m` : ""} since`;
       } else if (diffMinutes < 60 * 24 * 7) {
         const days = Math.floor(diffMinutes / (60 * 24));
         const hours = Math.floor((diffMinutes % (60 * 24)) / 60);
-        return `${days}d${hours > 0 ? ` ${hours}h` : ""}`;
+        return `${days}d${hours > 0 ? ` ${hours}h` : ""} since`;
       } else {
         const weeks = Math.floor(diffMinutes / (60 * 24 * 7));
         const days = Math.floor((diffMinutes % (60 * 24 * 7)) / (60 * 24));
-        return `${weeks}w${days > 0 ? ` ${days}d` : ""}`;
+        return `${weeks}w${days > 0 ? ` ${days}d` : ""} since`;
       }
     } else {
       // Event is happening now
@@ -379,16 +379,11 @@ const DayWeek = ({ day, index }) => {
       }
 
       // Calculate event duration in minutes
-      const startMinutes = getTimeSlot(event.timeStart);
-      const endMinutes = getTimeSlot(event.timeEnd);
-      const duration =
-        endMinutes > startMinutes
-          ? endMinutes - startMinutes
-          : 24 * 60 - startMinutes + endMinutes;
-
+      const eventDuration =
+        getTimeSlot(event.timeEnd) - getTimeSlot(event.timeStart);
       categoryData[category].count += 1;
-      categoryData[category].duration += duration;
-      totalDuration += duration;
+      categoryData[category].duration += eventDuration;
+      totalDuration += eventDuration;
     });
 
     // Convert to array for rendering
@@ -402,6 +397,84 @@ const DayWeek = ({ day, index }) => {
           workingMinutes > 0 ? Math.min(duration / workingMinutes, 1) : 0, // Cap at 100%
       }))
       .sort((a, b) => b.duration - a.duration);
+  };
+
+  const calculateBoxplotData = (category) => {
+    const oneMonthAgo = day.subtract(1, "month").format("YYYY-MM-DD");
+    const currentDate = day.format("YYYY-MM-DD");
+
+    const categoryEvents = savedEvents.filter((event) => {
+      const eventDate = dayjs(event.day).format("YYYY-MM-DD");
+      return (
+        event.category === category &&
+        eventDate >= oneMonthAgo &&
+        eventDate < currentDate
+      );
+    });
+
+    const durations = categoryEvents.map((event) => {
+      const startMinutes = getTimeSlot(event.timeStart);
+      const endMinutes = getTimeSlot(event.timeEnd);
+      return endMinutes - startMinutes;
+    });
+
+    if (durations.length === 0) return null;
+
+    durations.sort((a, b) => a - b);
+    const q1 = durations[Math.floor(durations.length / 4)];
+    const median = durations[Math.floor(durations.length / 2)];
+    const q3 = durations[Math.floor((durations.length * 3) / 4)];
+    const min = durations[0];
+    const max = durations[durations.length - 1];
+
+    return { min, q1, median, q3, max };
+  };
+
+  const renderBoxplot = (event) => {
+    const boxplotData = calculateBoxplotData(event.category);
+    if (!boxplotData) return null;
+
+    const eventDuration =
+      getTimeSlot(event.timeEnd) - getTimeSlot(event.timeStart);
+
+    const scale = (value) => {
+      if (value < boxplotData.min) return 0;
+      if (value > boxplotData.max) return 100;
+      return (
+        ((value - boxplotData.min) / (boxplotData.max - boxplotData.min)) * 100
+      );
+    };
+
+    return (
+      <div className="relative ml-1 h-4 mt-[-8px] overflow-x-clip">
+        {/* Boxplot background */}
+        <div className="absolute left-0 right-0 h-1 bg-gray-200 rounded"></div>
+        {/* Interquartile range (Q1 to Q3) */}
+        <div
+          className="absolute h-1 bg-gray-400 rounded"
+          style={{
+            left: `${scale(boxplotData.q1)}%`,
+            right: `${100 - scale(boxplotData.q3)}%`,
+          }}
+        ></div>
+        {/* Median line */}
+        <div
+          className="absolute h-1 bg-gray-600 rounded"
+          style={{
+            left: `${scale(boxplotData.median)}%`,
+            width: "2px",
+          }}
+        ></div>
+        <div
+          className="absolute h-2 w-2 bg-blue-500 rounded-full"
+          style={{
+            left: `${scale(eventDuration) > 88 ? 88 : scale(eventDuration)}%`,
+            transform: "translateX(-50%)",
+            transform: "translateY(-20%)",
+          }}
+        ></div>
+      </div>
+    );
   };
 
   if (loading) {
@@ -532,6 +605,8 @@ const DayWeek = ({ day, index }) => {
                 const { timeStart, timeEnd, category, id } = event; // Extract id
                 const eventPosition = positionEvent(timeStart, timeEnd);
                 const isSmallEvent = parseInt(eventPosition.height) < 30; // Changed from 50 to 25
+                const eventDuration =
+                  getTimeSlot(event.timeEnd) - getTimeSlot(event.timeStart);
 
                 return (
                   <div
@@ -723,17 +798,30 @@ const DayWeek = ({ day, index }) => {
                             </div>
                           </div>
                         )}
-                        {/* Time until/since indicator with fade effect */}
+                      </div>
+                      {/* Time until/since indicator */}
+                      {eventDuration > 60 && (
                         <div
-                          className={`absolute bottom-0 left-0 w-full text-black text-xs px-1 py-0.5 z-10 transition-opacity ${
-                            hoveredEventId === event.id && !isSmallEvent
+                          className={`absolute bottom-2 left-1 w-full text-black font-xxs px-1 py-0.5 z-10 transition-opacity ${
+                            hoveredEventId === event.id
                               ? "opacity-100"
                               : "opacity-0"
                           }`}
                         >
                           {getTimeUntil(event)}
                         </div>
-                      </div>
+                      )}
+                      {eventDuration > 60 && (
+                        <div
+                          className={`transition-all ${
+                            hoveredEventId === event.id
+                              ? "opacity-100"
+                              : "opacity-0"
+                          }`}
+                        >
+                          {renderBoxplot(event)}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

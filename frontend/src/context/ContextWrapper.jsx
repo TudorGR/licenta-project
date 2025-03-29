@@ -128,7 +128,6 @@ export default function ContextWrapper(props) {
   });
   const [workingHoursStart, setWorkingHoursStart] = useState("07:00");
   const [workingHoursEnd, setWorkingHoursEnd] = useState("19:00");
-  const [learnedParameters, setLearnedParameters] = useState(null);
 
   const [savedEvents, dispatch] = useReducer(savedEventsReducer, []);
 
@@ -195,30 +194,6 @@ export default function ContextWrapper(props) {
     }
   }, [showEventModal]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await axios.get(
-          "http://localhost:5000/api/algo/learn"
-        );
-
-        if (response.data && response.data.success && response.data.data) {
-          setLearnedParameters(response.data.data);
-        } else {
-          console.warn(
-            "No learned parameters received or invalid format",
-            response.data
-          );
-          setLearnedParameters({});
-        }
-      } catch (error) {
-        console.error("Failed to fetch learned parameters:", error);
-        setLearnedParameters({});
-      }
-    };
-    fetchData();
-  }, [savedEvents]); // Re-run when events change
-
   return (
     <Context.Provider
       value={{
@@ -258,7 +233,6 @@ export default function ContextWrapper(props) {
         workingHoursEnd,
         setWorkingHoursStart,
         setWorkingHoursEnd,
-        learnedParameters,
       }}
     >
       {props.children}

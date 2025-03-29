@@ -53,67 +53,19 @@ const Sidebar = () => {
   };
 
   const adjustEvents = (category, minutes = 15) => {
-    const startOfWeek = dayjs().isoWeekday(1);
-    const endOfWeek = dayjs().isoWeekday(7);
-
-    const weekEvents = savedEvents.filter((event) => {
-      const eventDay = dayjs(parseInt(event.day));
-      return (
-        eventDay.isBetween(startOfWeek, endOfWeek, "day", "[]") &&
-        event.category === category
-      );
+    dispatchEvent({
+      type: "increase",
+      payload: {
+        timeChange: minutes,
+        category,
+      },
     });
-
-    weekEvents.sort((a, b) => {
-      const dayA = dayjs(parseInt(a.day));
-      const dayB = dayjs(parseInt(b.day));
-      if (dayA.isSame(dayB, "day")) {
-        return a.timeStart.localeCompare(b.timeStart);
-      }
-      return dayA.diff(dayB);
-    });
-
-    if (weekEvents.length > 0) {
-      const lastEvent = weekEvents[weekEvents.length - 1];
-
-      const [hours, mins] = lastEvent.timeEnd.split(":").map(Number);
-      const totalMinutes = hours * 60 + mins + minutes;
-      const newHours = Math.floor(totalMinutes / 60);
-      const newMinutes = totalMinutes % 60;
-
-      const newEndTime = `${newHours.toString().padStart(2, "0")}:${newMinutes
-        .toString()
-        .padStart(2, "0")}`;
-
-      dispatchEvent({
-        type: "update",
-        payload: {
-          ...lastEvent,
-          timeEnd: newEndTime,
-        },
-      });
-    }
-  };
-
-  const isCurrentWeekSelected = () => {
-    if (!isWeekView) return false;
-
-    const today = dayjs();
-    const currentMonthIndex = today.month();
-
-    if (monthIndex !== currentMonthIndex) return false;
-
-    const firstDayOfMonth = today.startOf("month");
-    const firstDayOfWeek = firstDayOfMonth.startOf("week").add(1, "day");
-    const currentWeekIndex = Math.floor(today.diff(firstDayOfWeek, "day") / 7);
-
-    return selectedWeek === Math.max(0, currentWeekIndex);
   };
 
   return (
     <aside className=" w-62 border-gray-200 border-r flex flex-col items-center gap-2">
       <h1 className="text-center my-3 font-bold text-2xl">
-        Calendar<span className="text-gray-500">IQ</span>
+        Calendar<span className="text-blue-500">IQ</span>
       </h1>
       <button
         onClick={() => {

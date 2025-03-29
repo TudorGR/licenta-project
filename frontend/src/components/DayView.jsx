@@ -47,6 +47,11 @@ const DayView = () => {
     return (minutes / 60) * TIME_SLOT_HEIGHT;
   };
 
+  const getTimeSlot = (time) => {
+    const [hour, minute] = time.split(":");
+    return parseInt(hour) * 60 + parseInt(minute);
+  };
+
   const [dayEvents, setDayEvents] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState(null);
@@ -60,6 +65,7 @@ const DayView = () => {
     y: 0,
     eventId: null,
   });
+  const [hoveredEventId, setHoveredEventId] = useState(null);
 
   useEffect(() => {
     const events = savedEvents.filter(
@@ -197,11 +203,6 @@ const DayView = () => {
   };
 
   const positionEvent = (startTime, endTime) => {
-    const getTimeSlot = (time) => {
-      const [hour, minute] = time.split(":");
-      return parseInt(hour) * 60 + parseInt(minute);
-    };
-
     const startMinutes = getTimeSlot(startTime);
     const endMinutes = getTimeSlot(endTime);
     let top;
@@ -215,6 +216,153 @@ const DayView = () => {
       height = ((endMinutes - startMinutes) / 60) * TIME_SLOT_HEIGHT;
     }
     return { top: `${top}px`, height: `${height}px` };
+  };
+
+  const getTimeUntil = (event) => {
+    const now = dayjs();
+    const eventDay = dayjs(parseInt(event.day));
+    const eventStartTime = eventDay
+      .hour(parseInt(event.timeStart.split(":")[0]))
+      .minute(parseInt(event.timeStart.split(":")[1]));
+    const eventEndTime = eventDay
+      .hour(parseInt(event.timeEnd.split(":")[0]))
+      .minute(parseInt(event.timeEnd.split(":")[1]));
+
+    if (now.isBefore(eventStartTime)) {
+      // Event hasn't started yet
+      const diffMinutes = eventStartTime.diff(now, "minute");
+
+      if (diffMinutes < 60) {
+        return `${diffMinutes}m until`;
+      } else if (diffMinutes < 60 * 24) {
+        const hours = Math.floor(diffMinutes / 60);
+        const mins = diffMinutes % 60;
+        return `${hours}h${mins > 0 ? ` ${mins}m` : ""} until`;
+      } else if (diffMinutes < 60 * 24 * 7) {
+        const days = Math.floor(diffMinutes / (60 * 24));
+        const hours = Math.floor((diffMinutes % (60 * 24)) / 60);
+        return `${days}d${hours > 0 ? ` ${hours}h` : ""} until`;
+      } else {
+        const weeks = Math.floor(diffMinutes / (60 * 24 * 7));
+        const days = Math.floor((diffMinutes % (60 * 24 * 7)) / (60 * 24));
+        return `${weeks}w${days > 0 ? ` ${days}d` : ""} until`;
+      }
+    } else if (now.isAfter(eventEndTime)) {
+      // Event has ended
+      const diffMinutes = now.diff(eventEndTime, "minute");
+
+      if (diffMinutes < 60) {
+        return `${diffMinutes}m since`;
+      } else if (diffMinutes < 60 * 24) {
+        const hours = Math.floor(diffMinutes / 60);
+        const mins = diffMinutes % 60;
+        return `${hours}h${mins > 0 ? ` ${mins}m` : ""} since`;
+      } else if (diffMinutes < 60 * 24 * 7) {
+        const days = Math.floor(diffMinutes / (60 * 24));
+        const hours = Math.floor((diffMinutes % (60 * 24)) / 60);
+        return `${days}d${hours > 0 ? ` ${hours}h` : ""} since`;
+      } else {
+        const weeks = Math.floor(diffMinutes / (60 * 24 * 7));
+        const days = Math.floor((diffMinutes % (60 * 24 * 7)) / (60 * 24));
+        return `${weeks}w${days > 0 ? ` ${days}d` : ""} since`;
+      }
+    } else {
+      // Event is happening now
+      const diffMinutes = eventEndTime.diff(now, "minute");
+
+      if (diffMinutes < 60) {
+        return `Ends ${diffMinutes}m`;
+      } else if (diffMinutes < 60 * 24) {
+        const hours = Math.floor(diffMinutes / 60);
+        const mins = diffMinutes % 60;
+        return `Ends ${hours}h${mins > 0 ? ` ${mins}m` : ""}`;
+      } else if (diffMinutes < 60 * 24 * 7) {
+        const days = Math.floor(diffMinutes / (60 * 24));
+        const hours = Math.floor((diffMinutes % (60 * 24)) / 60);
+        return `Ends ${days}d${hours > 0 ? ` ${hours}h` : ""}`;
+      } else {
+        const weeks = Math.floor(diffMinutes / (60 * 24 * 7));
+        const days = Math.floor((diffMinutes % (60 * 24 * 7)) / (60 * 24));
+        return `Ends ${weeks}w${days > 0 ? ` ${days}d` : ""}`;
+      }
+    }
+  };
+
+  const calculateBoxplotData = (category) => {
+    const oneMonthAgo = selectedDay.subtract(1, "month").format("YYYY-MM-DD");
+    const currentDate = selectedDay.format("YYYY-MM-DD");
+
+    const categoryEvents = savedEvents.filter((event) => {
+      const eventDate = dayjs(event.day).format("YYYY-MM-DD");
+      return (
+        event.category === category &&
+        eventDate >= oneMonthAgo &&
+        eventDate < currentDate
+      );
+    });
+
+    const durations = categoryEvents.map((event) => {
+      const startMinutes = getTimeSlot(event.timeStart);
+      const endMinutes = getTimeSlot(event.timeEnd);
+      return endMinutes - startMinutes;
+    });
+
+    if (durations.length === 0) return null;
+
+    durations.sort((a, b) => a - b);
+    const q1 = durations[Math.floor(durations.length / 4)];
+    const median = durations[Math.floor(durations.length / 2)];
+    const q3 = durations[Math.floor((durations.length * 3) / 4)];
+    const min = durations[0];
+    const max = durations[durations.length - 1];
+
+    return { min, q1, median, q3, max };
+  };
+
+  const renderBoxplot = (event) => {
+    const boxplotData = calculateBoxplotData(event.category);
+    if (!boxplotData) return null;
+
+    const eventDuration =
+      getTimeSlot(event.timeEnd) - getTimeSlot(event.timeStart);
+
+    const scale = (value) => {
+      if (value < boxplotData.min) return 0;
+      if (value > boxplotData.max) return 100;
+      return (
+        ((value - boxplotData.min) / (boxplotData.max - boxplotData.min)) * 100
+      );
+    };
+
+    return (
+      <div className="relative ml-1 h-4 mt-[-8px] overflow-x-clip">
+        {/* Boxplot background */}
+        <div className="absolute left-0 right-0 h-1 bg-gray-200 rounded"></div>
+        {/* Interquartile range (Q1 to Q3) */}
+        <div
+          className="absolute h-1 bg-gray-400 rounded"
+          style={{
+            left: `${scale(boxplotData.q1)}%`,
+            right: `${100 - scale(boxplotData.q3)}%`,
+          }}
+        ></div>
+        {/* Median line */}
+        <div
+          className="absolute h-1 bg-gray-600 rounded"
+          style={{
+            left: `${scale(boxplotData.median)}%`,
+            width: "2px",
+          }}
+        ></div>
+        <div
+          className="absolute h-2 w-2 bg-blue-500 rounded-full"
+          style={{
+            left: `${scale(eventDuration) > 88 ? 88 : scale(eventDuration)}%`,
+            transform: "translateY(-20%)",
+          }}
+        ></div>
+      </div>
+    );
   };
 
   return (
@@ -259,6 +407,8 @@ const DayView = () => {
                 event.timeEnd
               );
               const isSmallEvent = parseInt(height) < 50;
+              const eventDuration =
+                getTimeSlot(event.timeEnd) - getTimeSlot(event.timeStart);
 
               return (
                 <div
@@ -273,6 +423,8 @@ const DayView = () => {
                     setShowEventModal(true);
                   }}
                   onContextMenu={(e) => handleContextMenu(e, event)}
+                  onMouseEnter={() => setHoveredEventId(event.id)}
+                  onMouseLeave={() => setHoveredEventId(null)}
                   className="transition-all pb-0.5 px-0.5 eventt absolute left-0 w-full cursor-pointer"
                   style={{ top, height }}
                 >
@@ -435,6 +587,29 @@ const DayView = () => {
                       )}
                     </div>
                   </div>
+                  {eventDuration > 60 && (
+                    <div
+                      className={`absolute bottom-2 left-1 w-full text-black font-xxs px-1 py-0.5 z-10 transition-opacity ${
+                        hoveredEventId === event.id
+                          ? "opacity-100"
+                          : "opacity-0"
+                      }`}
+                    >
+                      {getTimeUntil(event)}
+                    </div>
+                  )}
+
+                  {eventDuration > 60 && (
+                    <div
+                      className={`transition-all ${
+                        hoveredEventId === event.id
+                          ? "opacity-100"
+                          : "opacity-0"
+                      }`}
+                    >
+                      {renderBoxplot(event)}
+                    </div>
+                  )}
                 </div>
               );
             })}

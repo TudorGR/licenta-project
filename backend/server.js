@@ -12,9 +12,7 @@ app.use(express.json());
 app.use(cors());
 
 // Initialize database
-sequelize.sync().then(() => {
-  console.log("Database connected");
-});
+sequelize.sync();
 
 // Routes
 app.use("/api/events", eventRoutes);
@@ -88,4 +86,4 @@ app.post("/api/parse-event", async (req, res) => {
   }
 });
 
-app.listen(5000, () => console.log("Server running on port 5000"));
+app.listen(5000);
