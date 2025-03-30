@@ -10,6 +10,7 @@ import downIcon from "../assets/chevron-down.svg";
 import weekday from "dayjs/plugin/weekday.js";
 import isoWeek from "dayjs/plugin/isoWeek";
 import { categoryColors } from "../utils/categoryColors";
+import SmallCalendar from "./SmallCalendar";
 
 dayjs.extend(weekday);
 dayjs.extend(isoWeek);
@@ -63,10 +64,14 @@ const Sidebar = () => {
   };
 
   return (
-    <aside className=" w-62 border-gray-200 border-r flex flex-col items-center gap-2">
+    <aside className="shrink-0 w-70 border-gray-200 border-r flex flex-col items-center gap-2">
       <h1 className="text-center my-3 font-bold text-2xl">
         Calendar<span className="text-blue-500">IQ</span>
       </h1>
+
+      {/* Small Calendar */}
+      <SmallCalendar />
+
       <button
         onClick={() => {
           setIsMonthView(true);
@@ -74,20 +79,20 @@ const Sidebar = () => {
           setIsWeekView(false);
           setIsDayView(false);
         }}
-        className={`transition-all cursor-pointer border w-[90%] h-8 border-gray-200 rounded-md ${
+        className={`transition-all cursor-pointer border w-[90%] h-8 border-gray-200 rounded-sm ${
           isMonthView ? "bg-black text-white" : "bg-white hover:bg-gray-100"
         }`}
       >
         Month
       </button>
-      <div className="w-[90%] flex">
+      <div className="w-[90%] flex gap-2">
         <button
           onClick={() => {
             setIsMonthView(false);
             setIsWeekView(true);
             setIsDayView(false);
           }}
-          className={`mr-1 flex-1 transition-all cursor-pointer border h-8 border-gray-200 rounded-md ${
+          className={`flex-1 transition-all cursor-pointer border h-8 border-gray-200 rounded-sm ${
             isWeekView ? "bg-black text-white" : "bg-white hover:bg-gray-100"
           }`}
         >
@@ -98,12 +103,12 @@ const Sidebar = () => {
           <>
             <button
               onClick={() => setShowHeatmap(!showHeatmap)}
-              className={`transition-all cursor-pointer h-8 w-8 border-gray-200 rounded-md`}
+              className={`transition-all cursor-pointer h-8 w-8 border-1 border-gray-200 rounded-sm`}
             >
               <img
                 src={heatmapIcon}
-                className={`transition-all opacity-50 object-contain rounded-md ${
-                  showHeatmap ? "opacity-100" : ""
+                className={`transition-all opacity-50 object-contain rounded-xs ${
+                  showHeatmap ? "opacity-100" : "hover:opacity-100"
                 }`}
               />
             </button>
@@ -111,7 +116,7 @@ const Sidebar = () => {
         )}
       </div>
       {showHeatmap && (
-        <div className="w-[90%] border border-gray-200 rounded-md overflow-hidden">
+        <div className="w-[90%] border border-gray-200 rounded-sm overflow-hidden">
           <button
             onClick={() => setDropdown(!dropdown)}
             className="outline-0 text-sm font-medium h-8 w-full text-center cursor-pointer hover:bg-gray-100 transition-all flex items-center justify-center gap-2"
@@ -141,7 +146,7 @@ const Sidebar = () => {
             {categories.map((category) => (
               <label
                 key={category}
-                className="flex items-center gap-3 text-sm px-2 py-1 hover:bg-gray-50 rounded-md cursor-pointer"
+                className="flex items-center gap-3 text-sm px-2 py-1 hover:bg-gray-50 rounded-sm cursor-pointer"
               >
                 <div className="relative flex items-center">
                   <input
@@ -180,7 +185,7 @@ const Sidebar = () => {
           setIsDayView(true);
           setShowHeatmap(false);
         }}
-        className={`transition-all cursor-pointer border w-[90%] h-8 border-gray-200 rounded-md ${
+        className={`transition-all cursor-pointer border w-[90%] h-8 border-gray-200 rounded-sm ${
           isDayView ? "bg-black text-white" : "bg-white hover:bg-gray-100"
         }`}
       >
@@ -189,28 +194,28 @@ const Sidebar = () => {
 
       {(isWeekView || isMonthView || isDayView) && (
         <>
-          <div className="w-[90%] border border-gray-200 rounded-md">
+          <div className="w-[90%] rounded-sm">
             <CategoryStats
               view={isWeekView ? "week" : isMonthView ? "month" : "day"}
               onCategoryClick={isWeekView ? adjustEvents : null}
             />
           </div>
 
-          <div className="w-[90%] border border-gray-200 rounded-md p-2 overflow-clip">
+          <div className="w-[90%] rounded-sm p-0 overflow-clip">
             <h3 className="font-medium mb-2">Working Hours</h3>
             <div className="flex gap-2 items-center">
               <input
                 type="time"
                 value={workingHoursStart}
                 onChange={(e) => setWorkingHoursStart(e.target.value)}
-                className="border-gray-200 border-1 outline-0 w-full rounded-md p-1 workingHours"
+                className="border-gray-200 border-1 outline-0 w-full rounded-sm p-1 workingHours"
               />
               <span>-</span>
               <input
                 type="time"
                 value={workingHoursEnd}
                 onChange={(e) => setWorkingHoursEnd(e.target.value)}
-                className="border-gray-200 border-1 outline-0 w-full rounded-md p-1 workingHours"
+                className="border-gray-200 border-1 outline-0 w-full rounded-sm p-1 workingHours"
               />
             </div>
           </div>

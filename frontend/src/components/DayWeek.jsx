@@ -556,7 +556,7 @@ const DayWeek = ({ day, index }) => {
       >
         <div
           className={`absolute top-0 w-full z-3 ${
-            day.day() === 6 || day.day() === 0 ? "bg-black/3" : ""
+            day.day() === 6 || day.day() === 0 ? "bg-black/2" : ""
           }`}
           style={{ height: `${TOTAL_HEIGHT}px` }}
         ></div>

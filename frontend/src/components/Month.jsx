@@ -8,7 +8,9 @@ const Month = ({ month }) => {
         return (
           <React.Fragment key={index}>
             {row.map((day, i) => {
-              return <Day day={day} key={i} index={index} />;
+              return (
+                <Day day={day} key={i} index={index} showMiniDayView={true} />
+              );
             })}
           </React.Fragment>
         );

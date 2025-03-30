@@ -16,6 +16,16 @@ body {
   user-select: none;
 }
 
+.modalDay::-webkit-calendar-picker-indicator {
+  /* background-color: red; */
+  position: absolute;
+  width: 100%;
+  left: 0;
+  height: 50%;
+  padding: 10px 0px 10px 8px;
+  z-index: 7;
+}
+
 .modalTime::-webkit-calendar-picker-indicator {
   position: absolute;
   width: 26%;

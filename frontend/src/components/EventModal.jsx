@@ -3,7 +3,6 @@ import Context from "../context/Context";
 import closeIcon from "../assets/close_icon.svg";
 import deleteIcon from "../assets/delete_icon.svg";
 import calendar from "../assets/calendar.svg";
-import SmallCalendar from "./SmallCalendar";
 import dayjs from "dayjs";
 import saveIcon from "../assets/save.svg";
 import recurringIcon from "../assets/recurring.svg";
@@ -52,6 +51,7 @@ export default function EventModal() {
     savedEvents,
     setShowEventModal,
     selectedDay,
+    setSelectedDay,
     dispatchEvent,
     selectedEvent,
     setSelectedEvent,
@@ -73,21 +73,20 @@ export default function EventModal() {
   const [location, setLocation] = useState(
     selectedEvent ? selectedEvent.location : ""
   );
-
-  const [smallCalendar, setSmallCalendar] = useState(false);
   const [error, setError] = useState(false);
   const inputRef = useRef(0);
-
   const [suggestions, setSuggestions] = useState([]);
   const [currentSuggestionIndex, setCurrentSuggestionIndex] = useState(0);
-
-  // Add state for dropdown
   const [isSelectOpen, setIsSelectOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(
+    selectedDay
+      ? selectedDay.format("YYYY-MM-DD")
+      : dayjs().format("YYYY-MM-DD")
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validate minimum duration
     const getMinutes = (timeStr) => {
       const [hours, minutes] = timeStr.split(":").map(Number);
       return hours * 60 + minutes;
@@ -98,7 +97,6 @@ export default function EventModal() {
     const duration = getMinutes(endTime) - getMinutes(startTime);
 
     if (duration < 15) {
-      // Add minutes to end time to make it 15 minutes duration
       const startMinutes = getMinutes(startTime);
       const newEndMinutes = startMinutes + 15;
       const newEndHours = Math.floor(newEndMinutes / 60);
@@ -122,14 +120,13 @@ export default function EventModal() {
         timeStart: finalStartTime,
         timeEnd: finalEndTime,
         category: selectedCategory || "None",
-        location, // Add this
+        location,
       };
 
       if (recurring === "None" || recurring === "") {
-        // Single event
         const event = {
           ...baseEvent,
-          day: selectedDay.valueOf(),
+          day: dayjs(selectedDate).valueOf(),
           id: selectedEvent ? selectedEvent.id : undefined,
         };
 
@@ -139,22 +136,21 @@ export default function EventModal() {
           await dispatchEvent({ type: "push", payload: event });
         }
       } else {
-        // Recurring events
         const events = [];
         for (let i = 0; i < 5; i++) {
           let eventDate;
           switch (recurring) {
             case "Daily":
-              eventDate = dayjs(selectedDay).add(i, "day");
+              eventDate = dayjs(selectedDate).add(i, "day");
               break;
             case "Weekly":
-              eventDate = dayjs(selectedDay).add(i, "week");
+              eventDate = dayjs(selectedDate).add(i, "week");
               break;
             case "Monthly":
-              eventDate = dayjs(selectedDay).add(i, "month");
+              eventDate = dayjs(selectedDate).add(i, "month");
               break;
             default:
-              eventDate = selectedDay;
+              eventDate = dayjs(selectedDate);
           }
 
           const event = {
@@ -176,10 +172,6 @@ export default function EventModal() {
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
-
-  useEffect(() => {
-    setSmallCalendar(false);
-  }, [selectedDay]);
 
   useEffect(() => {
     setTimeStart(startTime);
@@ -219,7 +211,6 @@ export default function EventModal() {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Handle Escape key
       if (e.key === "Escape") {
         setShowEventModal(false);
         return;
@@ -262,7 +253,7 @@ export default function EventModal() {
 
   useEffect(() => {
     const getPastEvents = () => {
-      if (!savedEvents || !selectedDay || !timeStart || !timeEnd) return;
+      if (!savedEvents || !selectedDate || !timeStart || !timeEnd) return;
 
       const getMinutes = (timeStr) => {
         const [hours, minutes] = timeStr.split(":").map(Number);
@@ -272,8 +263,8 @@ export default function EventModal() {
       const selectedStartMinutes = getMinutes(timeStart);
       const selectedEndMinutes = getMinutes(timeEnd);
 
-      const weekDay = selectedDay.day();
-      const currentDate = selectedDay.format("YYYY-MM-DD");
+      const weekDay = dayjs(selectedDate).day();
+      const currentDate = dayjs(selectedDate).format("YYYY-MM-DD");
       const oneMonthAgo = dayjs(currentDate)
         .subtract(1, "month")
         .format("YYYY-MM-DD");
@@ -308,13 +299,11 @@ export default function EventModal() {
 
       const categoryFrequency = Object.entries(eventsByCategory)
         .map(([category, events]) => {
-          // Find the most common title pattern
           const titleCounts = events.reduce((acc, event) => {
             acc[event.title] = (acc[event.title] || 0) + 1;
             return acc;
           }, {});
 
-          // Find the most common location pattern
           const locationCounts = events.reduce((acc, event) => {
             if (event.location) {
               acc[event.location] = (acc[event.location] || 0) + 1;
@@ -322,7 +311,6 @@ export default function EventModal() {
             return acc;
           }, {});
 
-          // Get the most frequent title and location
           const mostCommonTitle = Object.entries(titleCounts).sort(
             (a, b) => b[1] - a[1]
           )[0]?.[0];
@@ -347,7 +335,7 @@ export default function EventModal() {
     };
 
     getPastEvents();
-  }, [savedEvents, selectedDay, timeStart, timeEnd]);
+  }, [savedEvents, selectedDate, timeStart, timeEnd]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -360,9 +348,14 @@ export default function EventModal() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const handleDateChange = (e) => {
+    const newDate = dayjs(e.target.value);
+    setSelectedDate(e.target.value);
+    setSelectedDay(newDate);
+  };
+
   return (
     <div className="fixed inset-0 bg-black/40 bg-opacity-50 flex justify-center items-center z-20">
-      {smallCalendar && <SmallCalendar />}
       <form
         name="eventModal"
         className="bg-white shadow-2xl w-[450px] rounded-md"
@@ -419,14 +412,17 @@ export default function EventModal() {
                 </div>
               )}
             </div>
-            <div
-              onClick={() => {
-                setSmallCalendar(true);
-              }}
-              className="cursor-pointer py-1 px-2 flex border-1 border-gray-200 rounded-md"
-            >
-              <img src={calendar} className="w-4 mr-2" />
-              <p>{selectedDay.format("dddd, MMMM DD")}</p>
+            <div className="relative">
+              <input
+                type="date"
+                name="eventDate"
+                value={selectedDate}
+                onChange={handleDateChange}
+                className="modalDay relative border-gray-200 border-1 py-1 pl-8 pr-2 outline-0 w-full rounded-md cursor-pointer"
+              />
+              <p className="absolute right-2 top-1.25 text-sm text-gray-500 mt-1 ml-2 z-6">
+                {dayjs(selectedDate).format("dddd, MMMM DD")}
+              </p>
             </div>
             <div className="flex gap-2 items-center">
               <input
@@ -583,7 +579,7 @@ export default function EventModal() {
               onClick={handleSubmit}
               className="transition-all  flex items-center justify-center hover:bg-gray-700 text-white bg-black cursor-pointer border w-28 h-8 border-gray-200 rounded-md"
             >
-              <img src={saveIcon} className="w-5 mr-2" />
+              <img src={saveIcon} className="w-4 mr-2" />
               <p>Save</p>
             </button>
           </div>
