@@ -21,11 +21,13 @@ const CalendarHeader = ({ onOpenAIModal }) => {
   const getCurrentWeekIndex = () => {
     const today = dayjs();
     const firstDayOfMonth = today.startOf("month");
-
     const firstDayOfWeek = firstDayOfMonth.startOf("week").add(1, "day");
-
     const weekIndex = Math.floor(today.diff(firstDayOfWeek, "day") / 7);
-    return Math.max(0, weekIndex);
+
+    // Clamp the weekIndex to the valid range for the current month
+    const lastDayOfMonth = firstDayOfMonth.endOf("month");
+    const totalWeeksInMonth = Math.ceil(lastDayOfMonth.date() / 7);
+    return Math.min(Math.max(0, weekIndex), totalWeeksInMonth - 1);
   };
 
   const handlePrev = () => {
