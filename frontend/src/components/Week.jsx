@@ -26,7 +26,7 @@ const Week = ({ month, weekIndex }) => {
 
   return (
     <div ref={timeGridRef} className="w-full overflow-y-auto">
-      <div className="bg-gray-100 h-11 fixed z-5 w-full border border-t-0 border-l-0 border-r-0 border-b-gray-200"></div>
+      {/* <div className="bg-gray-100 h-11 fixed z-5  border border-t-0 border-l-0 border-r-0 border-b-gray-200"></div> */}
       <div
         className="grid border-b w-full"
         style={{ gridTemplateColumns: "60px repeat(7, 1fr)" }}
@@ -35,7 +35,7 @@ const Week = ({ month, weekIndex }) => {
           {Array.from({ length: 24 }, (_, i) => (
             <div
               key={i}
-              className="absolute text-sm text-gray-500"
+              className="absolute text-xs text-gray-300"
               style={{
                 top: `${i * TIME_SLOT_HEIGHT}px`,
                 transform: "translateY(-55%)",
@@ -48,8 +48,9 @@ const Week = ({ month, weekIndex }) => {
               {`${i.toString().padStart(2, "0")}:00`}
             </div>
           ))}
+          <div className="sticky top-0 mt-[-48px] w-full h-[45px] border-b-1 border-b-gray-100 bg-white"></div>
           <div
-            className="absolute text-sm rounded-xl bg-blue-500 text-white"
+            className="absolute text-xs rounded-xl bg-blue-500 text-white"
             style={{
               top: `${calculateTimePosition()}px`,
               transform: "translateY(-55%)",

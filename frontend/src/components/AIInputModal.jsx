@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useContext, useEffect, useRef } from "react";
 import axios from "axios";
 import Context from "../context/Context";
 import dayjs from "dayjs";
@@ -8,12 +8,32 @@ function AIInputModal({ isOpen, onClose }) {
   const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(false);
   const { dispatchEvent } = useContext(Context);
+  const modalContentRef = useRef(null);
 
   useEffect(() => {
     if (isOpen) {
       setInputText("");
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (
+        modalContentRef.current &&
+        !modalContentRef.current.contains(e.target)
+      ) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen, onClose]);
 
   const handleSubmit = async () => {
     if (!inputText) return;
@@ -53,21 +73,24 @@ function AIInputModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/40 bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg w-[450px] shadow-xl">
-        <div className="flex justify-between items-center px-3 pb-0 pt-2">
-          <h2 className="text-lg font-medium text-black">Quick Add Event</h2>
+    <div className="fixed inset-0 bg-black/5 bg-opacity-50 flex items-center justify-center z-50">
+      <div
+        ref={modalContentRef}
+        className="bg-white rounded-3xl w-[400px] shadow-xl"
+      >
+        <div className="flex h-14 justify-between items-center px-4 pb-0">
+          <h2 className="text-lg  text-black">Quick Add Event</h2>
           <button className="cursor-pointer " onClick={onClose}>
             <img src={closeIcon} className="w-5" />
           </button>
         </div>
-        <div className="p-2">
+        <div className="h-12">
           <input
             name="AIInput"
             autoFocus
             type="text"
             autoComplete="off"
-            className="w-full border border-gray-200 py-1 px-2 rounded-md outline-0"
+            className="w-full h-full border-y-1 border-gray-100 py-1 px-4 outline-0"
             placeholder="Type your event (e.g. Meeting tomorrow at 3pm)"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
@@ -80,18 +103,18 @@ function AIInputModal({ isOpen, onClose }) {
             }}
           />
         </div>
-        <div className="p-2 pt-0  flex justify-end gap-2">
+        <div className=" pt-0 h-14 flex justify-end items-center gap-2">
           <button
             onClick={onClose}
-            className="cursor-pointer transition-all w-28 px-2 py-1 border border-gray-200 rounded-md hover:bg-gray-100"
+            className="shadow-custom active:bg-gray-50 cursor-pointer transition-all h-10 px-2 border border-gray-200 rounded-full "
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className={`cursor-pointer  transition-all px-4 py-1 rounded-md ${
-              loading ? "bg-gray-400" : "bg-black text-white hover:bg-gray-700"
+            className={`shadow-custom active:bg-gray-700 cursor-pointer  transition-all h-10 px-4 rounded-full mr-4 ${
+              loading ? "bg-gray-400" : "bg-black text-white "
             }`}
           >
             {loading ? "Processing..." : "Add Event"}

@@ -403,93 +403,15 @@ const DayWeek = ({ day, index }) => {
       .sort((a, b) => b.duration - a.duration);
   };
 
-  const calculateBoxplotData = (category) => {
-    const oneMonthAgo = day.subtract(1, "month").format("YYYY-MM-DD");
-    const currentDate = day.format("YYYY-MM-DD");
-
-    const categoryEvents = savedEvents.filter((event) => {
-      const eventDate = dayjs(event.day).format("YYYY-MM-DD");
-      return (
-        event.category === category &&
-        eventDate >= oneMonthAgo &&
-        eventDate < currentDate
-      );
-    });
-
-    const durations = categoryEvents.map((event) => {
-      const startMinutes = getTimeSlot(event.timeStart);
-      const endMinutes = getTimeSlot(event.timeEnd);
-      return endMinutes - startMinutes;
-    });
-
-    if (durations.length === 0) return null;
-
-    durations.sort((a, b) => a - b);
-    const q1 = durations[Math.floor(durations.length / 4)];
-    const median = durations[Math.floor(durations.length / 2)];
-    const q3 = durations[Math.floor((durations.length * 3) / 4)];
-    const min = durations[0];
-    const max = durations[durations.length - 1];
-
-    return { min, q1, median, q3, max };
-  };
-
-  const renderBoxplot = (event) => {
-    const boxplotData = calculateBoxplotData(event.category);
-    if (!boxplotData) return null;
-
-    const eventDuration =
-      getTimeSlot(event.timeEnd) - getTimeSlot(event.timeStart);
-
-    const scale = (value) => {
-      if (value < boxplotData.min) return 0;
-      if (value > boxplotData.max) return 100;
-      return (
-        ((value - boxplotData.min) / (boxplotData.max - boxplotData.min)) * 100
-      );
-    };
-
-    return (
-      <div className="relative ml-1 h-4 mt-[-8px] overflow-x-clip">
-        {/* Boxplot background */}
-        <div className="absolute left-0 right-0 h-1 bg-gray-200 rounded"></div>
-        {/* Interquartile range (Q1 to Q3) */}
-        <div
-          className="absolute h-1 bg-gray-400 rounded"
-          style={{
-            left: `${scale(boxplotData.q1)}%`,
-            right: `${100 - scale(boxplotData.q3)}%`,
-          }}
-        ></div>
-        {/* Median line */}
-        <div
-          className="absolute h-1 bg-gray-600 rounded"
-          style={{
-            left: `${scale(boxplotData.median)}%`,
-            width: "2px",
-          }}
-        ></div>
-        <div
-          className="absolute h-2 w-2 bg-blue-500 rounded-full"
-          style={{
-            left: `${scale(eventDuration) > 88 ? 88 : scale(eventDuration)}%`,
-            transform: "translateX(-50%)",
-            transform: "translateY(-20%)",
-          }}
-        ></div>
-      </div>
-    );
-  };
-
   if (loading) {
     return <div>Loading...</div>;
   }
 
   return (
     <div className="calendar-day flex flex-col">
-      <header className="sticky top-0 z-6">
+      <header className="sticky top-0 z-15 bg-white border-b border-gray-100">
         <div
-          className={`relative flex justify-center items-center gap-1.5 text-nowrap h-11 w-full border-gray-200 border-l mx-auto calendar-day-number text-sm text-center ${
+          className={`relative flex justify-center items-center gap-1.5 text-nowrap h-11 w-full border-gray-100 border-l mx-auto text-sm text-center ${
             getCurrentDay() ? "text-black" : "text-gray-500"
           }`}
         >
@@ -532,12 +454,12 @@ const DayWeek = ({ day, index }) => {
           </div>
 
           {/* Text content (on top of bars) */}
-          <div className="z-10 flex flex-col items-center text-black">
+          <div className="z-10 flex flex-row gap-1 items-center text-xs text-gray-500">
             <p>{day.format("ddd")}</p>
             <div
               className={`flex items-center justify-center ${
                 getCurrentDay()
-                  ? "bg-black rounded-full w-6 h-6 shadow-md text-white"
+                  ? "bg-gray-300 rounded-full w-6 h-6 shadow-custom text-white"
                   : ""
               }`}
             >
@@ -547,8 +469,8 @@ const DayWeek = ({ day, index }) => {
         </div>
       </header>
       <div
-        className="time-grid relative"
-        style={{ height: "600px" }}
+        className="time-grid relative mb-12"
+        style={{ height: "1200px" }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -556,18 +478,18 @@ const DayWeek = ({ day, index }) => {
       >
         <div
           className={`absolute top-0 w-full z-3 ${
-            day.day() === 6 || day.day() === 0 ? "bg-black/2" : ""
+            day.day() === 6 || day.day() === 0 ? "bg-black/1" : ""
           }`}
           style={{ height: `${TOTAL_HEIGHT}px` }}
         ></div>
         <div
-          className="gray-border-axis"
+          className="gray-border-axis "
           style={{ height: `${TOTAL_HEIGHT}px`, position: "relative" }}
         >
           {Array.from({ length: 24 }, (_, i) => (
             <div
               key={`timeslot-${i}`}
-              className=" time-slot gray-border-bottom"
+              className=" time-slot gray-border-bottom "
               style={{
                 position: "absolute",
                 top: `${i * TIME_SLOT_HEIGHT}px`,
@@ -847,24 +769,13 @@ const DayWeek = ({ day, index }) => {
                               darkCategoryColors[event.category || "None"]
                             }`,
                           }}
-                          className={`font-medium absolute bottom-2 left-1 w-full text-black text-xs px-1 py-0.5 z-10 transition-opacity ${
+                          className={`font-medium absolute bottom-0 left-1 w-full text-black text-xs px-1 py-0.5 z-10 transition-opacity ${
                             hoveredEventId === event.id
                               ? "opacity-80"
                               : "opacity-0"
                           }`}
                         >
                           {getTimeUntil(event)}
-                        </div>
-                      )}
-                      {eventDuration > 60 && (
-                        <div
-                          className={`transition-all ${
-                            hoveredEventId === event.id
-                              ? "opacity-90"
-                              : "opacity-0"
-                          }`}
-                        >
-                          {renderBoxplot(event)}
                         </div>
                       )}
                     </div>

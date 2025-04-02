@@ -5,6 +5,7 @@ import axios from "axios";
 import sequelize from "./config/database.js";
 import eventRoutes from "./routes/events.js";
 import algoRoutes from "./routes/algo.js";
+import suggestionRoutes from "./routes/suggestions.js";
 
 dotenv.config();
 const app = express();
@@ -17,6 +18,7 @@ sequelize.sync();
 // Routes
 app.use("/api/events", eventRoutes);
 app.use("/api/algo", algoRoutes);
+app.use("/api/suggestions", suggestionRoutes);
 
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${process.env.GEMINI_API_KEY}`;
 

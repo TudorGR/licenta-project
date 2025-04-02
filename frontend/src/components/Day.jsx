@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState, useRef } from "react";
 import Context from "../context/Context";
 import pinIcon from "../assets/lock.svg";
 import deleteIcon from "../assets/delete_icon.svg";
@@ -93,6 +93,8 @@ const Day = ({ day, index, showMiniDayView = false }) => {
     eventId: null,
   });
 
+  const dayRef = useRef(null);
+
   function getCurrentDay() {
     return day.format("DD-MM-YY") === dayjs().format("DD-MM-YY");
   }
@@ -148,11 +150,13 @@ const Day = ({ day, index, showMiniDayView = false }) => {
       endMinute > 0 ? endHour + 1 : endHour
     );
 
-    const top =
-      (visibleStartHour - WORKING_HOURS_START) * MINI_TIME_SLOT_HEIGHT;
-    const height = (visibleEndHour - visibleStartHour) * MINI_TIME_SLOT_HEIGHT;
+    const totalHours = WORKING_HOURS_END - WORKING_HOURS_START;
+    const top = ((visibleStartHour - WORKING_HOURS_START) / totalHours) * 100;
+    const heightValue =
+      ((visibleEndHour - visibleStartHour) / totalHours) * 100;
+    const height = Math.max(heightValue, 2); // Minimum height percentage
 
-    return { top, height: Math.max(height, 2) }; // Minimum height of 2px
+    return { top, height };
   };
 
   useEffect(() => {
@@ -170,8 +174,9 @@ const Day = ({ day, index, showMiniDayView = false }) => {
 
   return (
     <div
-      className={`calendar-day border border-r-gray-200 border-b-gray-200 border-l-0 border-t-0 flex flex-col ${
-        day.day() === 6 || day.day() === 0 ? "bg-black/2" : ""
+      ref={dayRef}
+      className={`overflow-clip calendar-day border border-r-gray-100 border-b-gray-100 border-l-0 border-t-0 flex flex-col h-full ${
+        day.day() === 6 || day.day() === 0 ? "bg-black/1" : ""
       }`}
     >
       <header className="flex flex-col items-center">
@@ -230,34 +235,14 @@ const Day = ({ day, index, showMiniDayView = false }) => {
         {/* Right column - mini day view */}
         {showMiniDayView && (
           <div
-            className="w-2/5 relative cursor-pointer"
+            className="w-2/5 relative cursor-pointer h-full min-h-[100px]"
             onClick={() => {
               setSelectedDay(day);
               setTimeStart("08:00");
               setTimeEnd("09:00");
               setShowEventModal(true);
             }}
-            style={{ height: MINI_VIEW_HEIGHT }}
           >
-            {/* Hour markers with more visibility */}
-            {/* {[...Array(TOTAL_HOURS + 1)].map((_, i) => (
-              <div
-                key={`hour-${i}`}
-                className="absolute w-full border-t border-gray-200"
-                style={{
-                  top: i * MINI_TIME_SLOT_HEIGHT,
-                  height: "1px",
-                  zIndex: 1,
-                }}
-              >
-                {i < TOTAL_HOURS && (
-                  <span className="absolute -left-1 -top-1 text-[5px] text-gray-300">
-                    {i + WORKING_HOURS_START}
-                  </span>
-                )}
-              </div>
-            ))} */}
-
             {/* Events with improved layout */}
             {eventLayout.map(({ event, column, totalColumns }, idx) => {
               const { top, height } = positionEvent(
@@ -265,6 +250,10 @@ const Day = ({ day, index, showMiniDayView = false }) => {
                 event.timeEnd
               );
               const columnWidth = 100 / totalColumns;
+
+              // Use percentage for top position instead of fixed pixels
+              const topPercent = top;
+              const heightPercent = height;
 
               return (
                 <div
@@ -277,12 +266,11 @@ const Day = ({ day, index, showMiniDayView = false }) => {
                   onContextMenu={(e) => handleContextMenu(e, event)}
                   className="absolute rounded-sm border border-white overflow-hidden"
                   style={{
-                    top: `${top}px`,
-                    height: `${height}px`,
+                    top: `${topPercent}%`,
+                    height: `${heightPercent}%`,
                     left: `${column * columnWidth}%`,
                     width: `${columnWidth - 2}%`,
                     backgroundColor: categoryColors[event.category || "None"],
-                    // opacity: 0.8,
                     zIndex: 2,
                   }}
                 ></div>

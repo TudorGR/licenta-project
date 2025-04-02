@@ -77,25 +77,25 @@ export default function SmallCalendar() {
   };
 
   return (
-    <div className="bg-white rounded-md p-0 w-[90%]">
+    <div className="bg-white rounded-sm p-0 w-[90%]">
       <header className="flex justify-between">
-        <p className="font-medium">
+        <p className="text-sm my-auto">
           {dayjs(new Date(dayjs().year(), currentMonthIndex)).format(
             "MMMM YYYY"
           )}
         </p>
-        <div>
+        <div className="flex flex-row gap-1">
           <button
-            className="cursor-pointer"
+            className="transition-all  cursor-pointer  w-10 h-10 shadow-custom rounded-full active:bg-gray-50 border-1 border-gray-100"
             onClick={() => setCurrentMonthIndex(currentMonthIndex - 1)}
           >
-            <img src={left} className="w-6" />
+            <img src={left} className="w-5 mx-auto" />
           </button>
           <button
-            className="cursor-pointer"
+            className="transition-all  cursor-pointer  w-10 h-10 shadow-custom rounded-full active:bg-gray-50 border-1 border-gray-100"
             onClick={() => setCurrentMonthIndex(currentMonthIndex + 1)}
           >
-            <img src={right} className="w-6" />
+            <img src={right} className="w-5 mx-auto" />
           </button>
         </div>
       </header>

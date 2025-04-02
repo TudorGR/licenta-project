@@ -386,13 +386,13 @@ const DayView = () => {
             {Array.from({ length: 24 }, (_, i) => (
               <div
                 key={i}
-                className="border-gray-200 border-l absolute w-full gray-border-bottom"
+                className=" border-gray-100 border-l absolute w-full gray-border-bottom"
                 style={{
                   top: `${i * TIME_SLOT_HEIGHT}px`,
                   height: `${TIME_SLOT_HEIGHT}px`,
                 }}
               >
-                <div className="pl-1.5 absolute -left-14 -top-2.5 text-sm text-gray-500">
+                <div className="pl-1.5  absolute -left-13 -top-2 text-xs text-gray-300">
                   {`${i.toString().padStart(2, "0")}:00`}
                 </div>
               </div>

@@ -121,12 +121,12 @@ const CategoryStats = ({ view = "week", onCategoryClick }) => {
   ]);
 
   if (stats.length === 0) {
-    return <div className="p-0 text-gray-400">No events in this {view}</div>;
+    return <></>;
   }
 
   return (
     <div className="p-0">
-      <h3 className="font-medium mb-2">
+      <h3 className="mb-2 ml-4">
         {view === "day"
           ? "Daily Stats"
           : view.charAt(0).toUpperCase() + view.slice(1) + "ly Stats"}
@@ -135,26 +135,20 @@ const CategoryStats = ({ view = "week", onCategoryClick }) => {
         {stats.map(([category, stats]) => (
           <div
             key={category}
-            className="space-y-1 cursor-pointer hover:bg-gray-50 rounded-md py-1 transition-all"
-            onClick={() =>
-              view === "week" && onCategoryClick && onCategoryClick(category)
-            }
-            title={`Click to increase ${category} events by 15 minutes`}
+            className="space-y-1  py-1"
+            title={`Category: ${category}`}
           >
-            <div className="flex justify-between text-sm">
-              <span
-                style={{ color: categoryColors[category] }}
-                className="font-medium"
-              >
+            <div className="flex justify-between text-sm ml-4">
+              <span style={{ color: categoryColors[category] }}>
                 {category}
               </span>
-              <span>
+              <span className="text-gray-500 mr-4">
                 {Math.floor(stats.minutes / 60)}h {stats.minutes % 60}m
               </span>
             </div>
-            <div className="w-full bg-gray-100 rounded-full h-1">
+            <div className="w-full bg-gray-100  h-1">
               <div
-                className="rounded-full h-1 transition-all duration-300"
+                className=" h-1 transition-all duration-300"
                 style={{
                   width: `${stats.percentage}%`,
                   backgroundColor:

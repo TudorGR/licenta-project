@@ -52,7 +52,7 @@ const CategoryAnalysis = () => {
           >
             <h4 className="font-medium text-gray-800">{category}</h4>
 
-            <div className="text-sm bg-gray-50 p-3 rounded-md">
+            <div className="text-sm bg-gray-50 p-3 rounded-sm">
               <p className="font-medium text-gray-700">
                 {selectedDay.format("dddd")} Patterns:
               </p>
@@ -73,7 +73,7 @@ const CategoryAnalysis = () => {
               </div>
             </div>
 
-            <div className="text-sm bg-gray-50 p-3 rounded-md">
+            <div className="text-sm bg-gray-50 p-3 rounded-sm">
               <p className="font-medium text-gray-700">Weekly Patterns:</p>
               <div className="mt-2">
                 <p className="text-gray-600">Common times:</p>

@@ -64,41 +64,15 @@ const Sidebar = () => {
   };
 
   return (
-    <aside className="shrink-0 w-70 border-gray-200 border-r flex flex-col items-center gap-2">
-      <h1 className="text-center my-3 font-bold text-2xl">
+    <aside className="pt-2 shrink-0 w-70 border-gray-100 border-r flex flex-col items-center gap-2">
+      {/* <h1 className="text-center my-3 font-bold text-2xl">
         Calendar<span className="text-blue-500">IQ</span>
-      </h1>
+      </h1> */}
 
       {/* Small Calendar */}
       <SmallCalendar />
 
-      <button
-        onClick={() => {
-          setIsMonthView(true);
-          setShowHeatmap(false);
-          setIsWeekView(false);
-          setIsDayView(false);
-        }}
-        className={`transition-all cursor-pointer border w-[90%] h-8 border-gray-200 rounded-sm ${
-          isMonthView ? "bg-black text-white" : "bg-white hover:bg-gray-100"
-        }`}
-      >
-        Month
-      </button>
-      <div className="w-[90%] flex gap-2">
-        <button
-          onClick={() => {
-            setIsMonthView(false);
-            setIsWeekView(true);
-            setIsDayView(false);
-          }}
-          className={`flex-1 transition-all cursor-pointer border h-8 border-gray-200 rounded-sm ${
-            isWeekView ? "bg-black text-white" : "bg-white hover:bg-gray-100"
-          }`}
-        >
-          Week
-        </button>
-
+      <div className="flex gap-2">
         {isWeekView && (
           <>
             <button
@@ -116,7 +90,7 @@ const Sidebar = () => {
         )}
       </div>
       {showHeatmap && (
-        <div className="w-[90%] border border-gray-200 rounded-sm overflow-hidden">
+        <div className="w-full border border-gray-200 rounded-sm overflow-hidden">
           <button
             onClick={() => setDropdown(!dropdown)}
             className="outline-0 text-sm font-medium h-8 w-full text-center cursor-pointer hover:bg-gray-100 transition-all flex items-center justify-center gap-2"
@@ -178,44 +152,31 @@ const Sidebar = () => {
           </div>
         </div>
       )}
-      <button
-        onClick={() => {
-          setIsMonthView(false);
-          setIsWeekView(false);
-          setIsDayView(true);
-          setShowHeatmap(false);
-        }}
-        className={`transition-all cursor-pointer border w-[90%] h-8 border-gray-200 rounded-sm ${
-          isDayView ? "bg-black text-white" : "bg-white hover:bg-gray-100"
-        }`}
-      >
-        Day
-      </button>
 
       {(isWeekView || isMonthView || isDayView) && (
         <>
-          <div className="w-[90%] rounded-sm">
+          <div className="rounded-sm w-full">
             <CategoryStats
               view={isWeekView ? "week" : isMonthView ? "month" : "day"}
               onCategoryClick={isWeekView ? adjustEvents : null}
             />
           </div>
 
-          <div className="w-[90%] rounded-sm p-0 overflow-clip">
-            <h3 className="font-medium mb-2">Working Hours</h3>
-            <div className="flex gap-2 items-center">
+          <div className="w-full rounded-sm p-0 overflow-clip">
+            <h3 className="mb-2 mx-4">Working Hours</h3>
+            <div className="flex items-center border-y-1 border-gray-100">
               <input
                 type="time"
                 value={workingHoursStart}
                 onChange={(e) => setWorkingHoursStart(e.target.value)}
-                className="border-gray-200 border-1 outline-0 w-full rounded-sm p-1 workingHours"
+                className="h-12 relative text-gray-500 text-sm outline-0 w-full  px-2 workingHours"
               />
-              <span>-</span>
+              <span className="h-12 border-r-1 border-gray-100"></span>
               <input
                 type="time"
                 value={workingHoursEnd}
                 onChange={(e) => setWorkingHoursEnd(e.target.value)}
-                className="border-gray-200 border-1 outline-0 w-full rounded-sm p-1 workingHours"
+                className="h-12 relative text-gray-500 text-sm outline-0 w-full px-2  workingHours"
               />
             </div>
           </div>

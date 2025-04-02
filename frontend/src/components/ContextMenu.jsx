@@ -5,7 +5,7 @@ import deleteIcon from "../assets/delete_icon.svg";
 const ContextMenu = ({ x, y, onLock, onDelete, isLocked }) => {
   return (
     <div
-      className="fixed bg-white shadow-lg rounded-md py-1 z-50 min-w-24 border border-gray-200 context-menu"
+      className="fixed bg-white shadow-lg rounded-sm py-1 z-50 min-w-24 border border-gray-200 context-menu"
       style={{ left: x, top: y }}
     >
       <button

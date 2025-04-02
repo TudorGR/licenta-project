@@ -16,9 +16,6 @@ const CalendarHeader = ({ onOpenAIModal }) => {
     isDayView,
     selectedDay,
     isWeekView,
-    setIsMonthView,
-    setIsWeekView,
-    setIsDayView,
   } = useContext(Context);
 
   const getCurrentWeekIndex = () => {
@@ -85,9 +82,9 @@ const CalendarHeader = ({ onOpenAIModal }) => {
     if (isDayView) {
       return (
         <>
-          <h2 className="text-sm">{selectedDay.format("DD, MMMM")}</h2>
-          <h2 className="text-sm text-gray-400">
-            {selectedDay.format(", YYYY")}
+          <h2 className="text-base">{selectedDay.format("DD, MMMM")}</h2>
+          <h2 className="text-base text-gray-400">
+            {selectedDay.format(", YY")}
           </h2>
         </>
       );
@@ -104,10 +101,10 @@ const CalendarHeader = ({ onOpenAIModal }) => {
       if (weekStart.month() !== weekEnd.month()) {
         return (
           <>
-            <h2 className="text-sm">
+            <h2 className="text-base">
               {weekStart.format("MMMM")}-{weekEnd.format("MMMM")}
             </h2>
-            <h2 className="text-sm text-gray-400">
+            <h2 className="text-base text-gray-400">
               , {weekStart.format("YYYY")}
             </h2>
           </>
@@ -116,8 +113,8 @@ const CalendarHeader = ({ onOpenAIModal }) => {
 
       return (
         <>
-          <h2 className="text-sm">{weekStart.format("MMMM")}</h2>
-          <h2 className="text-sm text-gray-400">
+          <h2 className="text-base">{weekStart.format("MMMM")}</h2>
+          <h2 className="text-base text-gray-400">
             , {weekStart.format("YYYY")}
           </h2>
         </>
@@ -126,10 +123,10 @@ const CalendarHeader = ({ onOpenAIModal }) => {
 
     return (
       <>
-        <h2 className="text-sm">
+        <h2 className="text-base">
           {dayjs(new Date(dayjs().year(), monthIndex)).format("MMMM")}
         </h2>
-        <h2 className="text-sm text-gray-400">
+        <h2 className="text-base text-gray-400">
           , {dayjs(new Date(dayjs().year(), monthIndex)).format("YYYY")}
         </h2>
       </>
@@ -137,67 +134,19 @@ const CalendarHeader = ({ onOpenAIModal }) => {
   };
 
   return (
-    <header className="px-2 py-2 flex justify-between items-center border-gray-100 border-b">
+    <header className="pb-2 flex justify-between items-center ">
+      <h1 className="text-2xl">Calendar</h1>
       <div className="flex">
         <button
-          onClick={handleToday}
-          className="transition-all shadow-custom text-sm cursor-pointer border-1 w-20 h-10 border-gray-100 rounded-full mr-2 active:bg-gray-50"
+          onClick={onOpenAIModal}
+          className="px-4 transition-all shadow-custom active:bg-gray-700 cursor-pointer h-10 text-white bg-black rounded-full ml-2 flex items-center justify-center gap-2"
         >
-          Today
+          <span className="text-nowrap">Quick Add</span>
+          <kbd className="text-xs bg-white text-black px-2 py-0.5 rounded-full">
+            Ctrl+Space
+          </kbd>
         </button>
-        <div className={`flex items-center justify-between gap-1`}>
-          <button
-            className="transition-all  cursor-pointer  w-10 h-10 shadow-custom rounded-full active:bg-gray-50 border-1 border-gray-100"
-            onClick={handlePrev}
-          >
-            <img src={left} className="w-5 mx-auto" />
-          </button>
-          <button
-            className="transition-all  cursor-pointer w-10 h-10 shadow-custom rounded-full active:bg-gray-50 border-1 border-gray-100"
-            onClick={handleNext}
-          >
-            <img src={right} className="w-5 mx-auto" />
-          </button>
-          <div className="ml-2 flex items-center">{getHeaderText()}</div>
-        </div>
-      </div>
-      <div className="flex items-center rounded-full shadow-custom">
-        <button
-          onClick={() => {
-            setIsMonthView(true);
-            setIsWeekView(false);
-            setIsDayView(false);
-          }}
-          className={`active:bg-gray-50 text-sm transition-all border-1 border-gray-100 cursor-pointer h-10 px-4 rounded-l-full ${
-            isMonthView ? "text-black " : "text-gray-400"
-          }`}
-        >
-          Month
-        </button>
-        <button
-          onClick={() => {
-            setIsMonthView(false);
-            setIsWeekView(true);
-            setIsDayView(false);
-          }}
-          className={`active:bg-gray-50 text-sm transition-all border-1 border-gray-100 border-x-0 cursor-pointer h-10 px-4 ${
-            isWeekView ? "text-black " : "text-gray-400"
-          }`}
-        >
-          Week
-        </button>
-        <button
-          onClick={() => {
-            setIsMonthView(false);
-            setIsWeekView(false);
-            setIsDayView(true);
-          }}
-          className={`active:bg-gray-50 text-sm transition-all border-1 border-gray-100 cursor-pointer h-10 px-4 rounded-r-full ${
-            isDayView ? "text-black " : "text-gray-400"
-          }`}
-        >
-          Day
-        </button>
+        <CreateEventButton />
       </div>
     </header>
   );
