@@ -72,77 +72,16 @@ const CalendarHeader = ({ onOpenAIModal }) => {
     }
   };
 
-  const handleToday = () => {
-    setMonthIndex(dayjs().month());
-    setSelectedWeek(getCurrentWeekIndex());
-    setSelectedDay(dayjs());
-  };
-
-  const getHeaderText = () => {
-    if (isDayView) {
-      return (
-        <>
-          <h2 className="text-base">{selectedDay.format("DD, MMMM")}</h2>
-          <h2 className="text-base text-gray-400">
-            {selectedDay.format(", YY")}
-          </h2>
-        </>
-      );
-    }
-
-    if (isWeekView) {
-      const firstDayOfMonth = dayjs(new Date(dayjs().year(), monthIndex, 1));
-      const weekStart = firstDayOfMonth
-        .startOf("week")
-        .add(1, "day")
-        .add(selectedWeek, "week");
-      const weekEnd = weekStart.add(6, "day");
-
-      if (weekStart.month() !== weekEnd.month()) {
-        return (
-          <>
-            <h2 className="text-base">
-              {weekStart.format("MMMM")}-{weekEnd.format("MMMM")}
-            </h2>
-            <h2 className="text-base text-gray-400">
-              , {weekStart.format("YYYY")}
-            </h2>
-          </>
-        );
-      }
-
-      return (
-        <>
-          <h2 className="text-base">{weekStart.format("MMMM")}</h2>
-          <h2 className="text-base text-gray-400">
-            , {weekStart.format("YYYY")}
-          </h2>
-        </>
-      );
-    }
-
-    return (
-      <>
-        <h2 className="text-base">
-          {dayjs(new Date(dayjs().year(), monthIndex)).format("MMMM")}
-        </h2>
-        <h2 className="text-base text-gray-400">
-          , {dayjs(new Date(dayjs().year(), monthIndex)).format("YYYY")}
-        </h2>
-      </>
-    );
-  };
-
   return (
     <header className="pb-2 flex justify-between items-center ">
-      <h1 className="text-2xl">Calendar</h1>
+      <h1 className="text-4xl font-bold text-white">CalendarIQ</h1>
       <div className="flex">
         <button
           onClick={onOpenAIModal}
-          className="px-4 transition-all shadow-custom active:bg-gray-700 cursor-pointer h-10 text-white bg-black rounded-full ml-2 flex items-center justify-center gap-2"
+          className="px-4 transition-all shadow-custom active:bg-gray-700 cursor-pointer h-10 text-black bg-white rounded-full ml-2 flex items-center justify-center gap-2"
         >
           <span className="text-nowrap">Quick Add</span>
-          <kbd className="text-xs bg-white text-black px-2 py-0.5 rounded-full">
+          <kbd className="text-xs bg-black text-white px-2 py-0.5 rounded-full">
             Ctrl+Space
           </kbd>
         </button>

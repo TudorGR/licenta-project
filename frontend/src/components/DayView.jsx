@@ -29,6 +29,12 @@ const TIME_SLOT_HEIGHT = 50;
 const TOTAL_HEIGHT = TIME_SLOT_HEIGHT * 24;
 
 const DayView = () => {
+  const [currentTimeString, setCurrentTimeString] = useState("");
+  const [justDragged, setJustDragged] = useState(false);
+  const [mouseDownPos, setMouseDownPos] = useState(null);
+  const [hasMoved, setHasMoved] = useState(false);
+  const [selectedEventForClick, setSelectedEventForClick] = useState(null);
+
   const timeGridRef = useRef(null);
   const {
     selectedDay,
@@ -70,6 +76,10 @@ const DayView = () => {
     eventId: null,
   });
   const [hoveredEventId, setHoveredEventId] = useState(null);
+  const [isDraggingEvent, setIsDraggingEvent] = useState(false);
+  const [draggedEvent, setDraggedEvent] = useState(null);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [initialY, setInitialY] = useState(0);
 
   useEffect(() => {
     const events = savedEvents.filter(
@@ -87,7 +97,9 @@ const DayView = () => {
 
   useEffect(() => {
     const updateTimePosition = () => {
+      const now = dayjs();
       setCurrentTimePosition(calculateTimePosition());
+      setCurrentTimeString(now.format("HH:mm"));
     };
 
     updateTimePosition();
@@ -104,6 +116,17 @@ const DayView = () => {
 
     window.addEventListener("mousedown", handleGlobalClick);
     return () => window.removeEventListener("mousedown", handleGlobalClick);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      setIsDragging(false);
+      setIsDraggingEvent(false);
+      setDraggedEvent(null);
+      setMouseDownPos(null);
+      setHasMoved(false);
+      setSelectedEventForClick(null);
+    };
   }, []);
 
   const getTimeFromMousePosition = (mouseY, gridElement) => {
@@ -136,47 +159,117 @@ const DayView = () => {
   };
 
   const handleMouseMove = (e) => {
-    if (!isDragging) return;
-    e.preventDefault();
-    const gridElement = e.currentTarget;
-    const currentTime = getTimeFromMousePosition(e.clientY, gridElement);
-    setDragEnd(currentTime);
+    if (isDragging) {
+      e.preventDefault();
+      const gridElement = e.currentTarget;
+      const currentTime = getTimeFromMousePosition(e.clientY, gridElement);
+      setDragEnd(currentTime);
+    } else if (isDraggingEvent && draggedEvent) {
+      e.preventDefault();
+
+      if (
+        mouseDownPos &&
+        (Math.abs(e.clientX - mouseDownPos.x) > 3 ||
+          Math.abs(e.clientY - mouseDownPos.y) > 3)
+      ) {
+        setHasMoved(true);
+      }
+
+      const gridElement = e.currentTarget;
+      const rect = gridElement.getBoundingClientRect();
+      const relativeY = e.clientY - rect.top;
+
+      const adjustedY = relativeY - dragOffset;
+      const newTimeSlot = Math.floor((adjustedY / TIME_SLOT_HEIGHT) * 60);
+      const hours = Math.floor(newTimeSlot / 60);
+      const mins = Math.round((newTimeSlot % 60) / 15) * 15;
+
+      const newTime = `${hours.toString().padStart(2, "0")}:${mins
+        .toString()
+        .padStart(2, "0")}`;
+
+      const eventDuration =
+        getTimeSlot(draggedEvent.timeEnd) - getTimeSlot(draggedEvent.timeStart);
+
+      const totalMins = hours * 60 + mins + eventDuration;
+      const endHours = Math.floor(totalMins / 60);
+      const endMins = totalMins % 60;
+      const newEndTime = `${endHours.toString().padStart(2, "0")}:${endMins
+        .toString()
+        .padStart(2, "0")}`;
+
+      setDraggedEvent({
+        ...draggedEvent,
+        timeStart: newTime,
+        timeEnd: newEndTime,
+      });
+    }
   };
 
   const handleMouseUp = (e) => {
-    if (!isDragging) {
-      return;
+    if (isDragging) {
+      e.preventDefault();
+      setIsDragging(false);
+
+      const getMinutes = (timeStr) => {
+        const [hours, minutes] = timeStr.split(":").map(Number);
+        return hours * 60 + minutes;
+      };
+
+      let [startTime, endTime] = [dragStart, dragEnd].sort();
+
+      const duration = getMinutes(endTime) - getMinutes(startTime);
+
+      if (duration < 15) {
+        const [hours, minutes] = startTime.split(":").map(Number);
+        const totalMinutes = hours * 60 + minutes + 15;
+        const newHours = Math.floor(totalMinutes / 60);
+        const newMinutes = totalMinutes % 60;
+        endTime = `${newHours.toString().padStart(2, "0")}:${newMinutes
+          .toString()
+          .padStart(2, "0")}`;
+      }
+
+      setTimeStart(startTime);
+      setTimeEnd(endTime);
+      setSelectedEvent(null);
+      setShowEventModal(true);
+    } else if (isDraggingEvent && draggedEvent) {
+      e.preventDefault();
+
+      if (hasMoved) {
+        const updatedEvent = {
+          ...draggedEvent,
+          timeStart: draggedEvent.timeStart,
+          timeEnd: draggedEvent.timeEnd,
+        };
+
+        dispatchEvent({
+          type: "update",
+          payload: updatedEvent,
+        });
+      } else {
+        setTimeStart(draggedEvent.timeStart);
+        setTimeEnd(draggedEvent.timeEnd);
+        setSelectedDay(dayjs(draggedEvent.day));
+        setSelectedEvent(draggedEvent);
+        setShowEventModal(true);
+      }
+
+      setIsDraggingEvent(false);
+      setDraggedEvent(null);
+      setMouseDownPos(null);
+      setHasMoved(false);
+    } else if (mouseDownPos && !hasMoved && selectedEventForClick) {
+      setTimeStart(selectedEventForClick.timeStart);
+      setTimeEnd(selectedEventForClick.timeEnd);
+      setSelectedDay(dayjs(selectedEventForClick.day));
+      setSelectedEvent(selectedEventForClick);
+      setShowEventModal(true);
+
+      setSelectedEventForClick(null);
+      setMouseDownPos(null);
     }
-
-    e.preventDefault();
-    setIsDragging(false);
-
-    // Convert times to minutes for comparison
-    const getMinutes = (timeStr) => {
-      const [hours, minutes] = timeStr.split(":").map(Number);
-      return hours * 60 + minutes;
-    };
-
-    let [startTime, endTime] = [dragStart, dragEnd].sort();
-
-    // Calculate duration in minutes
-    const duration = getMinutes(endTime) - getMinutes(startTime);
-
-    // If duration is less than 15 minutes, extend the end time
-    if (duration < 15) {
-      const [hours, minutes] = startTime.split(":").map(Number);
-      const totalMinutes = hours * 60 + minutes + 15;
-      const newHours = Math.floor(totalMinutes / 60);
-      const newMinutes = totalMinutes % 60;
-      endTime = `${newHours.toString().padStart(2, "0")}:${newMinutes
-        .toString()
-        .padStart(2, "0")}`;
-    }
-
-    setTimeStart(startTime);
-    setTimeEnd(endTime);
-    setSelectedEvent(null);
-    setShowEventModal(true);
   };
 
   const handleContextMenu = (e, event) => {
@@ -233,7 +326,6 @@ const DayView = () => {
       .minute(parseInt(event.timeEnd.split(":")[1]));
 
     if (now.isBefore(eventStartTime)) {
-      // Event hasn't started yet
       const diffMinutes = eventStartTime.diff(now, "minute");
 
       if (diffMinutes < 60) {
@@ -252,7 +344,6 @@ const DayView = () => {
         return `${weeks}w${days > 0 ? ` ${days}d` : ""} until`;
       }
     } else if (now.isAfter(eventEndTime)) {
-      // Event has ended
       const diffMinutes = now.diff(eventEndTime, "minute");
 
       if (diffMinutes < 60) {
@@ -271,7 +362,6 @@ const DayView = () => {
         return `${weeks}w${days > 0 ? ` ${days}d` : ""} since`;
       }
     } else {
-      // Event is happening now
       const diffMinutes = eventEndTime.diff(now, "minute");
 
       if (diffMinutes < 60) {
@@ -292,81 +382,28 @@ const DayView = () => {
     }
   };
 
-  const calculateBoxplotData = (category) => {
-    const oneMonthAgo = selectedDay.subtract(1, "month").format("YYYY-MM-DD");
-    const currentDate = selectedDay.format("YYYY-MM-DD");
+  const handleEventMouseDown = (e, event) => {
+    if (e.button !== 0) return;
 
-    const categoryEvents = savedEvents.filter((event) => {
-      const eventDate = dayjs(event.day).format("YYYY-MM-DD");
-      return (
-        event.category === category &&
-        eventDate >= oneMonthAgo &&
-        eventDate < currentDate
-      );
-    });
+    e.stopPropagation();
 
-    const durations = categoryEvents.map((event) => {
-      const startMinutes = getTimeSlot(event.timeStart);
-      const endMinutes = getTimeSlot(event.timeEnd);
-      return endMinutes - startMinutes;
-    });
+    setMouseDownPos({ x: e.clientX, y: e.clientY });
+    setHasMoved(false);
 
-    if (durations.length === 0) return null;
+    setSelectedEventForClick(event);
 
-    durations.sort((a, b) => a - b);
-    const q1 = durations[Math.floor(durations.length / 4)];
-    const median = durations[Math.floor(durations.length / 2)];
-    const q3 = durations[Math.floor((durations.length * 3) / 4)];
-    const min = durations[0];
-    const max = durations[durations.length - 1];
+    if (event.locked) return;
 
-    return { min, q1, median, q3, max };
-  };
+    const gridElement = e.currentTarget.closest(".relative");
+    const rect = gridElement.getBoundingClientRect();
+    const relativeY = e.clientY - rect.top;
 
-  const renderBoxplot = (event) => {
-    const boxplotData = calculateBoxplotData(event.category);
-    if (!boxplotData) return null;
+    setIsDraggingEvent(true);
+    setDraggedEvent(event);
+    setInitialY(relativeY);
 
-    const eventDuration =
-      getTimeSlot(event.timeEnd) - getTimeSlot(event.timeStart);
-
-    const scale = (value) => {
-      if (value < boxplotData.min) return 0;
-      if (value > boxplotData.max) return 100;
-      return (
-        ((value - boxplotData.min) / (boxplotData.max - boxplotData.min)) * 100
-      );
-    };
-
-    return (
-      <div className="relative ml-1 h-4 mt-[-8px] overflow-x-clip">
-        {/* Boxplot background */}
-        <div className="absolute left-0 right-0 h-1 bg-gray-200 rounded"></div>
-        {/* Interquartile range (Q1 to Q3) */}
-        <div
-          className="absolute h-1 bg-gray-400 rounded"
-          style={{
-            left: `${scale(boxplotData.q1)}%`,
-            right: `${100 - scale(boxplotData.q3)}%`,
-          }}
-        ></div>
-        {/* Median line */}
-        <div
-          className="absolute h-1 bg-gray-600 rounded"
-          style={{
-            left: `${scale(boxplotData.median)}%`,
-            width: "2px",
-          }}
-        ></div>
-        <div
-          className="absolute h-2 w-2 bg-blue-500 rounded-full"
-          style={{
-            left: `${scale(eventDuration) > 88 ? 88 : scale(eventDuration)}%`,
-            transform: "translateY(-20%)",
-          }}
-        ></div>
-      </div>
-    );
+    const eventTop = (getTimeSlot(event.timeStart) / 60) * TIME_SLOT_HEIGHT;
+    setDragOffset(relativeY - eventTop);
   };
 
   return (
@@ -405,6 +442,58 @@ const DayView = () => {
               />
             )}
 
+            {isDraggingEvent && draggedEvent && (
+              <div
+                className="absolute left-0 w-full z-20 pointer-events-none"
+                style={positionEvent(
+                  draggedEvent.timeStart,
+                  draggedEvent.timeEnd
+                )}
+              >
+                <div
+                  className="relative rounded-sm h-full shadow-lg"
+                  style={{
+                    backgroundColor:
+                      lightCategoryColors[draggedEvent.category || "None"],
+                    opacity: 0.7,
+                    border: `1px dashed ${
+                      categoryColors[draggedEvent.category || "None"]
+                    }`,
+                  }}
+                >
+                  <div
+                    className="relative flex items-start h-full"
+                    style={{
+                      borderLeft: `3px ${
+                        categoryColors[draggedEvent.category || "None"]
+                      } "solid"`,
+                    }}
+                  >
+                    <div className="text-xs ml-1 overflow-hidden whitespace-nowrap mt-1">
+                      <span
+                        style={{
+                          color:
+                            darkCategoryColors[draggedEvent.category || "None"],
+                        }}
+                        className="font-medium"
+                      >
+                        {draggedEvent.title}
+                      </span>
+                      <div
+                        style={{
+                          color:
+                            darkCategoryColors[draggedEvent.category || "None"],
+                        }}
+                        className="opacity-80 font-medium text-xs"
+                      >
+                        {`${draggedEvent.timeStart} - ${draggedEvent.timeEnd}`}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {dayEvents.map((event) => {
               const { top, height } = positionEvent(
                 event.timeStart,
@@ -417,19 +506,15 @@ const DayView = () => {
               return (
                 <div
                   key={event.id}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setTimeStart(event.timeStart);
-                    setTimeEnd(event.timeEnd);
-                    setSelectedDay(dayjs(event.day));
-                    setSelectedEvent(event);
-                    setShowEventModal(true);
-                  }}
+                  onMouseDown={(e) => handleEventMouseDown(e, event)}
                   onContextMenu={(e) => handleContextMenu(e, event)}
                   onMouseEnter={() => setHoveredEventId(event.id)}
                   onMouseLeave={() => setHoveredEventId(null)}
-                  className="transition-all pb-0.5 px-0.5 eventt absolute left-0 w-full cursor-pointer"
+                  className={`pb-0.5 px-0.5 eventt absolute left-0 w-full cursor-pointer ${
+                    draggedEvent && draggedEvent.id === event.id
+                      ? "opacity-75 shadow-lg"
+                      : ""
+                  }`}
                   style={{ top, height }}
                 >
                   <div
@@ -444,7 +529,7 @@ const DayView = () => {
                     <div
                       className="w-full relative flex items-start h-full"
                       style={{
-                        borderLeft: `4px solid ${
+                        borderLeft: `4px ${event.locked ? "dashed" : "solid"} ${
                           categoryColors[event.category || "None"]
                         }`,
                       }}
@@ -628,21 +713,11 @@ const DayView = () => {
                           darkCategoryColors[event.category || "None"]
                         }`,
                       }}
-                      className={`absolute font-medium bottom-2 left-1 w-full text-black text-xs px-1 py-0.5 z-10 transition-opacity ${
+                      className={`absolute font-medium bottom-1 left-2 w-full text-black text-xs px-0.5 py-0.5 z-10 transition-opacity ${
                         hoveredEventId === event.id ? "opacity-80" : "opacity-0"
                       }`}
                     >
                       {getTimeUntil(event)}
-                    </div>
-                  )}
-
-                  {eventDuration > 60 && (
-                    <div
-                      className={`transition-all ${
-                        hoveredEventId === event.id ? "opacity-90" : "opacity-0"
-                      }`}
-                    >
-                      {renderBoxplot(event)}
                     </div>
                   )}
                 </div>
@@ -658,7 +733,9 @@ const DayView = () => {
                   zIndex: 13,
                 }}
               >
-                <div className="absolute -left-1 -top-0.75 w-2 h-2 rounded-full bg-blue-500" />
+                <div className="absolute -left-15 -top-1.5 text-xs text-white px-[15.5px] bg-blue-500 rounded-full">
+                  {currentTimeString}
+                </div>
               </div>
             )}
           </div>

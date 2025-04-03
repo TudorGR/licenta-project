@@ -73,11 +73,8 @@ function AIInputModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/5 bg-opacity-50 flex items-center justify-center z-50">
-      <div
-        ref={modalContentRef}
-        className="bg-white rounded-3xl w-[400px] shadow-xl"
-      >
+    <div className="fixed inset-0 bg-black/10 bg-opacity-50 flex items-center justify-center z-50">
+      <div ref={modalContentRef} className="bg-white rounded-3xl w-[400px]">
         <div className="flex h-14 justify-between items-center px-4 pb-0">
           <h2 className="text-lg  text-black">Quick Add Event</h2>
           <button className="cursor-pointer " onClick={onClose}>

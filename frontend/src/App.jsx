@@ -51,13 +51,13 @@ function App() {
           onClose={() => setIsAIModalOpen(false)}
         />
       )}
-      <div className="pb-8 px-8 pt-8 h-screen bg-gray-100 flex flex-col">
+      <div className="p-2 h-screen bg-black flex flex-col">
         <CalendarMainHeader
           onOpenAIModal={() => setIsAIModalOpen(true)}
           onToggleSuggestions={() => setShowSuggestions(!showSuggestions)}
           showSuggestions={showSuggestions}
         />
-        <div className="h-[90%] overflow-clip flex bg-white rounded-xl">
+        <div className="h-[calc(100vh-65px)] overflow-clip flex bg-white rounded-xl">
           <Sidebar />
           <div className="flex flex-col flex-1 h-full ">
             <CalendarHeader

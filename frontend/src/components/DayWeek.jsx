@@ -29,7 +29,17 @@ import {
 const TIME_SLOT_HEIGHT = 50;
 const TOTAL_HEIGHT = TIME_SLOT_HEIGHT * 24;
 
-const DayWeek = ({ day, index }) => {
+const DayWeek = ({
+  day,
+  index,
+  dayIndex,
+  isDraggingAcrossDays,
+  draggedEvent,
+  currentDragDayIndex,
+  onStartEventDrag,
+  onEventDrag,
+  onEventDragEnd,
+}) => {
   const timeGridRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState(null);
@@ -57,13 +67,18 @@ const DayWeek = ({ day, index }) => {
     setTimeEnd,
     selectedEvent,
     selectedHeatmapCategories,
-    dispatchEvent, // Get dispatchEvent from context
+    dispatchEvent,
     savedEvents,
     loading,
     showHeatmap,
     workingHoursStart,
     workingHoursEnd,
   } = useContext(Context);
+
+  const [isDraggingEvent, setIsDraggingEvent] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [mouseDownPos, setMouseDownPos] = useState(null);
+  const [hasMoved, setHasMoved] = useState(false);
 
   const handleLock = async (eventId) => {
     try {
@@ -109,28 +124,54 @@ const DayWeek = ({ day, index }) => {
   };
 
   const handleMouseMove = (e) => {
-    if (!isDragging) return;
+    if (isDragging) {
+      const gridElement = e.currentTarget;
+      const currentTime = getTimeFromMousePosition(e.clientY, gridElement);
+      setDragEnd(currentTime);
+    } else if (
+      isDraggingAcrossDays &&
+      draggedEvent &&
+      currentDragDayIndex === dayIndex
+    ) {
+      const gridElement = e.currentTarget;
+      const timeString = getTimeFromMousePosition(e.clientY, gridElement);
 
-    const gridElement = e.currentTarget;
-    const currentTime = getTimeFromMousePosition(e.clientY, gridElement);
-    setDragEnd(currentTime);
+      onEventDrag(e, timeString, dayIndex);
+
+      if (
+        mouseDownPos &&
+        (Math.abs(e.clientX - mouseDownPos.x) > 3 ||
+          Math.abs(e.clientY - mouseDownPos.y) > 3)
+      ) {
+        setHasMoved(true);
+      }
+    }
   };
 
   const handleMouseUp = (e) => {
-    if (!isDragging) {
-      return;
+    if (isDragging) {
+      setIsDragging(false);
+      setSelectedDay(day);
+      const [startTime, endTime] = [dragStart, dragEnd].sort();
+      setTimeStart(startTime);
+      setTimeEnd(endTime);
+      setSelectedEvent(null);
+      setShowEventModal(true);
+    } else if (isDraggingAcrossDays) {
+      if (hasMoved) {
+        onEventDragEnd();
+      } else {
+        setTimeStart(draggedEvent.timeStart);
+        setTimeEnd(draggedEvent.timeEnd);
+        setSelectedDay(day);
+        setSelectedEvent(draggedEvent);
+        setShowEventModal(true);
+      }
+
+      setIsDraggingEvent(false);
+      setMouseDownPos(null);
+      setHasMoved(false);
     }
-
-    setIsDragging(false);
-    setSelectedDay(day);
-
-    const [startTime, endTime] = [dragStart, dragEnd].sort();
-
-    setTimeStart(startTime);
-    setTimeEnd(endTime);
-
-    setSelectedEvent(null);
-    setShowEventModal(true);
   };
 
   const handleContextMenu = (e, event) => {
@@ -149,11 +190,32 @@ const DayWeek = ({ day, index }) => {
     }, 0);
   };
 
-  useEffect(() => {
-    return () => {
-      setIsDragging(false);
+  const handleEventMouseDown = (e, event) => {
+    if (e.button !== 0) return;
+
+    e.stopPropagation();
+
+    if (event.locked) return;
+
+    setMouseDownPos({ x: e.clientX, y: e.clientY });
+    setHasMoved(false);
+
+    const gridElement = e.currentTarget.closest(".time-grid");
+    const rect = gridElement.getBoundingClientRect();
+    const relativeY = e.clientY - rect.top;
+    const relativeX = e.clientX - rect.left;
+
+    const eventTop = (getTimeSlot(event.timeStart) / 60) * TIME_SLOT_HEIGHT;
+    const offset = {
+      x: relativeX,
+      y: relativeY - eventTop,
     };
-  }, []);
+
+    onStartEventDrag(event, offset, dayIndex);
+
+    setIsDraggingEvent(true);
+    setDragOffset(relativeY - eventTop);
+  };
 
   useEffect(() => {
     const updateTimePosition = () => {
@@ -223,7 +285,7 @@ const DayWeek = ({ day, index }) => {
 
     const currentDate = day.format("YYYY-MM-DD");
     const oneMonthAgo = day.subtract(1, "month").format("YYYY-MM-DD");
-    const currentWeekStart = dayjs().startOf("week").add(1, "day"); // Monday of current week
+    const currentWeekStart = dayjs().startOf("week").add(1, "day");
 
     const timeSlotsByCategory = {};
 
@@ -294,30 +356,24 @@ const DayWeek = ({ day, index }) => {
       .minute(parseInt(event.timeEnd.split(":")[1]));
 
     if (now.isBefore(eventStartTime)) {
-      // Event hasn't started yet
       const diffMinutes = eventStartTime.diff(now, "minute");
 
       if (diffMinutes < 60) {
-        // Less than an hour
         return `${diffMinutes}m until`;
       } else if (diffMinutes < 60 * 24) {
-        // Less than a day
         const hours = Math.floor(diffMinutes / 60);
         const mins = diffMinutes % 60;
         return `${hours}h${mins > 0 ? ` ${mins}m` : ""} until`;
       } else if (diffMinutes < 60 * 24 * 7) {
-        // Less than a week
         const days = Math.floor(diffMinutes / (60 * 24));
         const hours = Math.floor((diffMinutes % (60 * 24)) / 60);
         return `${days}d${hours > 0 ? ` ${hours}h` : ""} until`;
       } else {
-        // More than a week
         const weeks = Math.floor(diffMinutes / (60 * 24 * 7));
         const days = Math.floor((diffMinutes % (60 * 24 * 7)) / (60 * 24));
         return `${weeks}w${days > 0 ? ` ${days}d` : ""} until`;
       }
     } else if (now.isAfter(eventEndTime)) {
-      // Event has ended
       const diffMinutes = now.diff(eventEndTime, "minute");
 
       if (diffMinutes < 60) {
@@ -336,7 +392,6 @@ const DayWeek = ({ day, index }) => {
         return `${weeks}w${days > 0 ? ` ${days}d` : ""} since`;
       }
     } else {
-      // Event is happening now
       const diffMinutes = eventEndTime.diff(now, "minute");
 
       if (diffMinutes < 60) {
@@ -360,11 +415,9 @@ const DayWeek = ({ day, index }) => {
   const getCategoryCounts = () => {
     if (!dayEvents || dayEvents.length === 0) return [];
 
-    // Group events by category and track both count and duration
     const categoryData = {};
     let totalDuration = 0;
 
-    // Calculate total working hours in minutes
     const getWorkingMinutes = (start, end) => {
       const [startHour, startMin] = start.split(":").map(Number);
       const [endHour, endMin] = end.split(":").map(Number);
@@ -382,7 +435,6 @@ const DayWeek = ({ day, index }) => {
         categoryData[category] = { count: 0, duration: 0 };
       }
 
-      // Calculate event duration in minutes
       const eventDuration =
         getTimeSlot(event.timeEnd) - getTimeSlot(event.timeStart);
       categoryData[category].count += 1;
@@ -390,7 +442,6 @@ const DayWeek = ({ day, index }) => {
       totalDuration += eventDuration;
     });
 
-    // Convert to array for rendering
     return Object.entries(categoryData)
       .map(([category, { count, duration }]) => ({
         category,
@@ -398,7 +449,7 @@ const DayWeek = ({ day, index }) => {
         duration,
         percentage: totalDuration > 0 ? duration / totalDuration : 0,
         workingHoursPercentage:
-          workingMinutes > 0 ? Math.min(duration / workingMinutes, 1) : 0, // Cap at 100%
+          workingMinutes > 0 ? Math.min(duration / workingMinutes, 1) : 0,
       }))
       .sort((a, b) => b.duration - a.duration);
   };
@@ -415,7 +466,6 @@ const DayWeek = ({ day, index }) => {
             getCurrentDay() ? "text-black" : "text-gray-500"
           }`}
         >
-          {/* Bar chart background - fills width based on number of categories */}
           <div className="absolute inset-0 flex justify-center items-end w-full">
             {getCategoryCounts().map(
               (
@@ -423,8 +473,6 @@ const DayWeek = ({ day, index }) => {
                 index,
                 array
               ) => {
-                // Scale the height based on percentage of working hours
-                // Now using workingHoursPercentage instead of percentage
                 const barHeight = `${Math.min(
                   workingHoursPercentage * 100,
                   100
@@ -440,7 +488,7 @@ const DayWeek = ({ day, index }) => {
                       height: barHeight,
                       width: barWidth,
                       opacity: 0.4,
-                      transition: "height 0.5s ease-in-out", // Smooth transition for height changes
+                      transition: "height 0.5s ease-in-out",
                     }}
                     title={`${category}: ${count} events (${Math.round(
                       duration / 60
@@ -453,13 +501,12 @@ const DayWeek = ({ day, index }) => {
             )}
           </div>
 
-          {/* Text content (on top of bars) */}
           <div className="z-10 flex flex-row gap-1 items-center text-xs text-gray-500">
             <p>{day.format("ddd")}</p>
             <div
               className={`flex items-center justify-center ${
                 getCurrentDay()
-                  ? "bg-gray-300 rounded-full w-6 h-6 shadow-custom text-white"
+                  ? "bg-black rounded-full w-6 h-6 shadow-custom text-white"
                   : ""
               }`}
             >
@@ -469,12 +516,20 @@ const DayWeek = ({ day, index }) => {
         </div>
       </header>
       <div
-        className="time-grid relative mb-12"
+        className={`time-grid relative mb-12 ${
+          isDraggingAcrossDays && currentDragDayIndex === dayIndex
+            ? "bg-blue-50"
+            : ""
+        }`}
         style={{ height: "1200px" }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onMouseLeave={() => setIsDragging(false)}
+        onMouseLeave={() => {
+          if (!isDraggingAcrossDays) {
+            setIsDragging(false);
+          }
+        }}
       >
         <div
           className={`absolute top-0 w-full z-3 ${
@@ -508,35 +563,39 @@ const DayWeek = ({ day, index }) => {
               }}
             />
           )}
-          {getCurrentDay() ? (
-            <div
-              className="absolute left-0 w-full bg-blue-500"
-              style={{
-                top: `${currentTimePosition}px`,
-                height: "2px",
-                zIndex: 13,
-              }}
-            >
-              <div className="absolute -left-1 -top-0.75 w-2 h-2 rounded-full bg-blue-500" />
-            </div>
-          ) : (
-            <div
-              className="absolute left-0 w-full bg-blue-500 opacity-30"
-              style={{
-                top: `${currentTimePosition}px`,
-                height: "2px",
-                zIndex: 11,
-              }}
-            ></div>
-          )}
+          {isDraggingAcrossDays &&
+            draggedEvent &&
+            currentDragDayIndex === dayIndex && (
+              <div
+                className="absolute left-0 w-full z-20 pointer-events-none"
+                style={{
+                  ...positionEvent(
+                    draggedEvent.timeStart,
+                    draggedEvent.timeEnd
+                  ),
+                }}
+              >
+                <div
+                  className="relative rounded-sm h-full shadow-lg"
+                  style={{
+                    backgroundColor:
+                      lightCategoryColors[draggedEvent.category || "None"],
+                    opacity: 0.7,
+                    border: `1px dashed ${
+                      categoryColors[draggedEvent.category || "None"]
+                    }`,
+                  }}
+                ></div>
+              </div>
+            )}
           {showHeatmap ? (
             renderHeatmap()
           ) : (
             <>
               {dayEvents.map((event) => {
-                const { timeStart, timeEnd, category, id } = event; // Extract id
+                const { timeStart, timeEnd, category, id } = event;
                 const eventPosition = positionEvent(timeStart, timeEnd);
-                const isSmallEvent = parseInt(eventPosition.height) < 30; // Changed from 50 to 25
+                const isSmallEvent = parseInt(eventPosition.height) < 30;
                 const eventDuration =
                   getTimeSlot(event.timeEnd) - getTimeSlot(event.timeStart);
 
@@ -546,7 +605,14 @@ const DayWeek = ({ day, index }) => {
                       id ||
                       `${day.format("YYYY-MM-DD")}-${timeStart}-${timeEnd}`
                     }`}
-                    className="event transition-all"
+                    onMouseDown={(e) => handleEventMouseDown(e, event)}
+                    onMouseEnter={() => setHoveredEventId(event.id)}
+                    onMouseLeave={() => setHoveredEventId(null)}
+                    className={`event ${
+                      draggedEvent && draggedEvent.id === event.id
+                        ? "opacity-75 shadow-lg"
+                        : ""
+                    }`}
                     style={{
                       position: "absolute",
                       top: eventPosition.top,
@@ -560,16 +626,6 @@ const DayWeek = ({ day, index }) => {
                       zIndex: 3,
                       color: "black",
                     }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setTimeStart(event.timeStart);
-                      setTimeEnd(event.timeEnd);
-                      setSelectedDay(day);
-                      setSelectedEvent(event);
-                      setShowEventModal(true);
-                    }}
-                    onMouseEnter={() => setHoveredEventId(event.id)}
-                    onMouseLeave={() => setHoveredEventId(null)}
                     onContextMenu={(e) => handleContextMenu(e, event)}
                   >
                     <div
@@ -584,9 +640,9 @@ const DayWeek = ({ day, index }) => {
                       <div
                         className=" relative flex items-start h-full"
                         style={{
-                          borderLeft: `3px solid ${
+                          borderLeft: `3px ${
                             categoryColors[event.category || "None"]
-                          }`,
+                          } ${event.locked ? "dashed" : "solid"}`,
                         }}
                       >
                         {isSmallEvent ? (
@@ -618,7 +674,7 @@ const DayWeek = ({ day, index }) => {
                                 src={lockIcon}
                                 className="w-2 h-2 opacity-50 mr-1"
                                 alt="Locked"
-                                style={{ marginLeft: "auto" }} // Ensure it stays at the far right
+                                style={{ marginLeft: "auto" }}
                               />
                             )}
                           </div>
@@ -761,7 +817,6 @@ const DayWeek = ({ day, index }) => {
                           </div>
                         )}
                       </div>
-                      {/* Time until/since indicator */}
                       {eventDuration > 60 && (
                         <div
                           style={{
@@ -785,6 +840,29 @@ const DayWeek = ({ day, index }) => {
             </>
           )}
         </div>
+        {getCurrentDay() ? (
+          <div
+            className="absolute left-0 w-full bg-blue-500"
+            style={{
+              top: `${currentTimePosition}px`,
+              height: "2px",
+              zIndex: 10,
+              pointerEvents: "none",
+            }}
+          >
+            <div className="absolute -left-1 -top-0.75 w-2 h-2 rounded-full bg-blue-500" />
+          </div>
+        ) : (
+          <div
+            className="absolute left-0 w-full bg-blue-500 opacity-30"
+            style={{
+              top: `${currentTimePosition}px`,
+              height: "2px",
+              zIndex: 10,
+              pointerEvents: "none",
+            }}
+          ></div>
+        )}
       </div>
       {contextMenu.isOpen && (
         <ContextMenu

@@ -49,10 +49,16 @@ export default function SmallCalendar() {
     const nowDay = dayjs().format("DD-MM-YY");
     const currentDay = day.format("DD-MM-YY");
     const sDay = selectedDay && selectedDay.format("DD-MM-YY");
-    if (nowDay === currentDay) return "bg-black rounded-full text-white";
-    else if (sDay === currentDay)
-      return "bg-blue-100 rounded-full text-blue-600";
-    else return "hover:bg-blue-100 rounded-full";
+
+    if (day.month() !== currentMonthIndex) {
+      return "text-gray-300"; // Gray out days outside the current month
+    } else if (nowDay === currentDay) {
+      return "bg-black rounded-full text-white";
+    } else if (sDay === currentDay) {
+      return "bg-gray-100 rounded-full text-black";
+    } else {
+      return "rounded-full";
+    }
   };
 
   const getCategoryData = (day) => {
@@ -118,7 +124,7 @@ export default function SmallCalendar() {
               return (
                 <button
                   key={index}
-                  className={`mx-auto relative flex items-center justify-center ${getDayClass(
+                  className={`mx-auto relative flex items-center justify-center transition-all ${getDayClass(
                     day
                   )} my-1 h-8 w-8 text-sm`}
                   onClick={() => {
