@@ -51,7 +51,7 @@ function App() {
           onClose={() => setIsAIModalOpen(false)}
         />
       )}
-      <div className="p-2 h-screen bg-black flex flex-col">
+      <div className="p-2 h-screen bg-gray-100 flex flex-col">
         <CalendarMainHeader
           onOpenAIModal={() => setIsAIModalOpen(true)}
           onToggleSuggestions={() => setShowSuggestions(!showSuggestions)}
@@ -73,7 +73,7 @@ function App() {
               {isDayView && <DayView />}
             </div>
           </div>
-          {/* <AISuggestionsPanel /> */}
+          <AISuggestionsPanel />
         </div>
       </div>
     </>

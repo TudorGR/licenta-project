@@ -110,13 +110,23 @@ const Week = ({ month, weekIndex }) => {
         if (e.clientX >= rect.left && e.clientX <= rect.right) {
           // Get time from y position
           const relativeY = e.clientY - rect.top;
-          const minutes = (relativeY / TIME_SLOT_HEIGHT) * 60;
-          const hours = Math.floor(minutes / 60);
-          const mins = Math.round((minutes % 60) / 15) * 15;
 
-          const timeString = `${hours.toString().padStart(2, "0")}:${mins
+          // Adjust position by the drag offset
+          const adjustedY = relativeY - dragOffset.y;
+
+          const minutes = (adjustedY / TIME_SLOT_HEIGHT) * 60;
+
+          // Fix for the hour offset issue - handle minutes conversion properly
+          let hours = Math.floor(minutes / 60) - 1;
+          let mins = Math.round((minutes % 60) / 15) * 15;
+
+          // Ensure values are within valid range
+          const validHours = Math.max(0, Math.min(23, hours));
+          const validMins = Math.max(0, Math.min(59, mins));
+
+          const timeString = `${validHours
             .toString()
-            .padStart(2, "0")}`;
+            .padStart(2, "0")}:${validMins.toString().padStart(2, "0")}`;
 
           // Update with the day index and time
           handleEventDrag(e, timeString, i);

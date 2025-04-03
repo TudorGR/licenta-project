@@ -128,21 +128,23 @@ const DayWeek = ({
       const gridElement = e.currentTarget;
       const currentTime = getTimeFromMousePosition(e.clientY, gridElement);
       setDragEnd(currentTime);
-    } else if (
-      isDraggingAcrossDays &&
-      draggedEvent &&
-      currentDragDayIndex === dayIndex
-    ) {
+    } else if (isDraggingAcrossDays && draggedEvent) {
       const gridElement = e.currentTarget;
       const timeString = getTimeFromMousePosition(e.clientY, gridElement);
 
       onEventDrag(e, timeString, dayIndex);
 
+      // Ensure `hasMoved` is set when the mouse moves beyond a small threshold
       if (
         mouseDownPos &&
         (Math.abs(e.clientX - mouseDownPos.x) > 3 ||
           Math.abs(e.clientY - mouseDownPos.y) > 3)
       ) {
+        setHasMoved(true);
+      }
+
+      // Set `hasMoved` to true if the event is dragged to a different day
+      if (currentDragDayIndex !== dayIndex) {
         setHasMoved(true);
       }
     }
@@ -167,7 +169,6 @@ const DayWeek = ({
         setSelectedEvent(draggedEvent);
         setShowEventModal(true);
       }
-
       setIsDraggingEvent(false);
       setMouseDownPos(null);
       setHasMoved(false);
@@ -195,10 +196,18 @@ const DayWeek = ({
 
     e.stopPropagation();
 
-    if (event.locked) return;
-
     setMouseDownPos({ x: e.clientX, y: e.clientY });
-    setHasMoved(false);
+    setHasMoved(false); // Reset `hasMoved` when starting a new drag
+
+    if (event.locked) {
+      // Directly open the modal for locked events without delay
+      setSelectedEvent(event);
+      setTimeStart(event.timeStart);
+      setTimeEnd(event.timeEnd);
+      setSelectedDay(dayjs(event.day));
+      setShowEventModal(true);
+      return;
+    }
 
     const gridElement = e.currentTarget.closest(".time-grid");
     const rect = gridElement.getBoundingClientRect();
@@ -516,11 +525,7 @@ const DayWeek = ({
         </div>
       </header>
       <div
-        className={`time-grid relative mb-12 ${
-          isDraggingAcrossDays && currentDragDayIndex === dayIndex
-            ? "bg-blue-50"
-            : ""
-        }`}
+        className={`time-grid relative mb-12 `}
         style={{ height: "1200px" }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -567,7 +572,7 @@ const DayWeek = ({
             draggedEvent &&
             currentDragDayIndex === dayIndex && (
               <div
-                className="absolute left-0 w-full z-20 pointer-events-none"
+                className=" absolute left-0 w-full z-20 pointer-events-none"
                 style={{
                   ...positionEvent(
                     draggedEvent.timeStart,

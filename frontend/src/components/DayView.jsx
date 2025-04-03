@@ -469,26 +469,7 @@ const DayView = () => {
                       } "solid"`,
                     }}
                   >
-                    <div className="text-xs ml-1 overflow-hidden whitespace-nowrap mt-1">
-                      <span
-                        style={{
-                          color:
-                            darkCategoryColors[draggedEvent.category || "None"],
-                        }}
-                        className="font-medium"
-                      >
-                        {draggedEvent.title}
-                      </span>
-                      <div
-                        style={{
-                          color:
-                            darkCategoryColors[draggedEvent.category || "None"],
-                        }}
-                        className="opacity-80 font-medium text-xs"
-                      >
-                        {`${draggedEvent.timeStart} - ${draggedEvent.timeEnd}`}
-                      </div>
-                    </div>
+                    <div className="text-xs ml-1 overflow-hidden whitespace-nowrap mt-1"></div>
                   </div>
                 </div>
               </div>

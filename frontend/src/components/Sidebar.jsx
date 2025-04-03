@@ -72,9 +72,39 @@ const Sidebar = () => {
       {/* Small Calendar */}
       <SmallCalendar />
 
-      <div className="flex gap-2">
+      {(isWeekView || isMonthView || isDayView) && (
+        <>
+          <div className="rounded-sm w-full">
+            <CategoryStats
+              view={isWeekView ? "week" : isMonthView ? "month" : "day"}
+              onCategoryClick={isWeekView ? adjustEvents : null}
+            />
+          </div>
+
+          <div className="w-full rounded-sm p-0 overflow-clip">
+            <h3 className="mb-2 mx-4">Working Hours</h3>
+            <div className="flex items-center border-y-1 border-gray-100">
+              <input
+                type="time"
+                value={workingHoursStart}
+                onChange={(e) => setWorkingHoursStart(e.target.value)}
+                className="h-12 relative text-gray-500 text-sm outline-0 w-full  px-2 workingHours"
+              />
+              <span className="h-12 border-r-1 border-gray-100"></span>
+              <input
+                type="time"
+                value={workingHoursEnd}
+                onChange={(e) => setWorkingHoursEnd(e.target.value)}
+                className="h-12 relative text-gray-500 text-sm outline-0 w-full px-2  workingHours"
+              />
+            </div>
+          </div>
+        </>
+      )}
+      <div className="flex gap-2 w-full px-4">
         {isWeekView && (
-          <>
+          <div className="flex items-center w-full justify-between gap-2">
+            Show Heatmap
             <button
               onClick={() => setShowHeatmap(!showHeatmap)}
               className={`transition-all cursor-pointer h-8 w-8 border-1 border-gray-200 rounded-sm`}
@@ -86,7 +116,7 @@ const Sidebar = () => {
                 }`}
               />
             </button>
-          </>
+          </div>
         )}
       </div>
       {showHeatmap && (
@@ -151,36 +181,6 @@ const Sidebar = () => {
             ))}
           </div>
         </div>
-      )}
-
-      {(isWeekView || isMonthView || isDayView) && (
-        <>
-          <div className="rounded-sm w-full">
-            <CategoryStats
-              view={isWeekView ? "week" : isMonthView ? "month" : "day"}
-              onCategoryClick={isWeekView ? adjustEvents : null}
-            />
-          </div>
-
-          <div className="w-full rounded-sm p-0 overflow-clip">
-            <h3 className="mb-2 mx-4">Working Hours</h3>
-            <div className="flex items-center border-y-1 border-gray-100">
-              <input
-                type="time"
-                value={workingHoursStart}
-                onChange={(e) => setWorkingHoursStart(e.target.value)}
-                className="h-12 relative text-gray-500 text-sm outline-0 w-full  px-2 workingHours"
-              />
-              <span className="h-12 border-r-1 border-gray-100"></span>
-              <input
-                type="time"
-                value={workingHoursEnd}
-                onChange={(e) => setWorkingHoursEnd(e.target.value)}
-                className="h-12 relative text-gray-500 text-sm outline-0 w-full px-2  workingHours"
-              />
-            </div>
-          </div>
-        </>
       )}
     </aside>
   );
