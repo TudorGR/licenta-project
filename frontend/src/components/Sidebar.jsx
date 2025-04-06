@@ -2,6 +2,7 @@ import React, { useContext, useState } from "react";
 import Context from "../context/Context";
 import checkIcon from "../assets/check.svg";
 import heatmapIcon from "../assets/heatmapIcon.png";
+import weatherIcon from "../assets/partly-cloudy.svg"; // Use the cloudy icon as the toggle icon
 import CategoryStats from "./CategoryStats";
 import CategoryAnalysis from "./CategoryAnalysis";
 import dayjs from "dayjs";
@@ -37,6 +38,10 @@ const Sidebar = () => {
     selectedDay,
     monthIndex,
     selectedWeek,
+    autoRescheduleEnabled,
+    setAutoRescheduleEnabled,
+    showWeather,
+    setShowWeather,
   } = useContext(Context);
   const [dropdown, setDropdown] = useState(true);
   const [showCategoryAdjust, setShowCategoryAdjust] = useState(false);
@@ -99,25 +104,60 @@ const Sidebar = () => {
               />
             </div>
           </div>
+
+          <div className="w-full rounded-sm p-0 overflow-clip mt-2">
+            <h3 className="mb-2 mx-4">AI Settings</h3>
+            <div className="flex items-center justify-between border-y-1 border-gray-100 px-4 h-12">
+              <span className="text-sm">Auto-reschedule on overlap</span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={autoRescheduleEnabled}
+                  onChange={() =>
+                    setAutoRescheduleEnabled(!autoRescheduleEnabled)
+                  }
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
+              </label>
+            </div>
+          </div>
         </>
       )}
       <div className="flex gap-2 w-full px-4">
         {isWeekView && (
           <div className="flex items-center w-full justify-between gap-2">
-            Show Heatmap
+            Heatmap
             <button
               onClick={() => setShowHeatmap(!showHeatmap)}
               className={`transition-all cursor-pointer h-8 w-8 border-1 border-gray-200 rounded-sm`}
             >
               <img
                 src={heatmapIcon}
-                className={`transition-all opacity-50 object-contain rounded-xs ${
+                className={`transition-all opacity-30 object-contain rounded-xs ${
                   showHeatmap ? "opacity-100" : "hover:opacity-100"
                 }`}
               />
             </button>
           </div>
         )}
+        {isWeekView || isDayView ? (
+          <div className="flex items-center w-full justify-between gap-2">
+            Weather
+            <button
+              onClick={() => setShowWeather(!showWeather)}
+              className={`transition-all cursor-pointer h-8 w-8`}
+            >
+              <img
+                src={weatherIcon}
+                className={`transition-all opacity-30 object-contain rounded-xs ${
+                  showWeather ? "opacity-100" : "hover:opacity-100"
+                }`}
+                alt="Weather"
+              />
+            </button>
+          </div>
+        ) : null}
       </div>
       {showHeatmap && (
         <div className="w-full border border-gray-200 rounded-sm overflow-hidden">
@@ -182,6 +222,21 @@ const Sidebar = () => {
           </div>
         </div>
       )}
+
+      <div className="flex-1 flex items-end">
+        {/* Attribution for weather icons */}
+        <div className="text-xs text-black opacity-20 mb-2 text-center">
+          Weather icons by{" "}
+          <a
+            href="https://www.amcharts.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 underline"
+          >
+            amCharts
+          </a>
+        </div>
+      </div>
     </aside>
   );
 };

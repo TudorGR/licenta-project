@@ -33,6 +33,8 @@ const Context = React.createContext({
   workingHoursEnd: "17:00",
   setWorkingHoursStart: (time) => {},
   setWorkingHoursEnd: (time) => {},
+  showWeather: false,
+  setShowWeather: () => {},
 });
 
 export default Context;

@@ -367,7 +367,7 @@ export default function EventModal() {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/10 bg-opacity-0 flex justify-center items-center z-20">
+    <div className="fixed inset-0 bg-black/10 bg-opacity-0 flex justify-center items-center z-40">
       <form
         name="eventModal"
         className="bg-white w-[400px]  rounded-3xl"

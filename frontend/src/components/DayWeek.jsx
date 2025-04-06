@@ -20,6 +20,10 @@ import pinIcon from "../assets/lock.svg";
 import deleteIcon from "../assets/delete_icon.svg";
 import lockIcon from "../assets/lock.svg";
 import ContextMenu from "./ContextMenu";
+import TravelTimeIndicator, {
+  clearTravelTimeCache,
+} from "./TravelTimeIndicator";
+import WeatherIndicator from "./WeatherIndicator";
 import {
   categoryColors,
   lightCategoryColors,
@@ -73,6 +77,7 @@ const DayWeek = ({
     showHeatmap,
     workingHoursStart,
     workingHoursEnd,
+    showWeather,
   } = useContext(Context);
 
   const [isDraggingEvent, setIsDraggingEvent] = useState(false);
@@ -101,8 +106,9 @@ const DayWeek = ({
     const relativeY = mouseY - rect.top;
     const minutes = (relativeY / TIME_SLOT_HEIGHT) * 60;
     const hours = Math.floor(minutes / 60);
-    const mins = Math.round((minutes % 60) / 15) * 15;
+    const mins = Math.round((minutes % 60) / 15) * 15; // Snap to 15-minute intervals
 
+    // Ensure minutes stay within valid bounds (0-59)
     if (mins === 60) {
       return `${(hours + 1).toString().padStart(2, "0")}:00`;
     }
@@ -161,7 +167,7 @@ const DayWeek = ({
       setShowEventModal(true);
     } else if (isDraggingAcrossDays) {
       if (hasMoved) {
-        onEventDragEnd();
+        handleEventDrag();
       } else {
         setTimeStart(draggedEvent.timeStart);
         setTimeEnd(draggedEvent.timeEnd);
@@ -172,6 +178,17 @@ const DayWeek = ({
       setIsDraggingEvent(false);
       setMouseDownPos(null);
       setHasMoved(false);
+    }
+  };
+
+  const handleEventDrag = async () => {
+    try {
+      // Your existing event update code...
+      // Add this line to clear travel time cache when events are moved
+      clearTravelTimeCache();
+      // Rest of your function...
+    } catch (error) {
+      console.error("Error updating event:", error);
     }
   };
 
@@ -463,6 +480,54 @@ const DayWeek = ({
       .sort((a, b) => b.duration - a.duration);
   };
 
+  const getConsecutiveEventsWithLocations = (events) => {
+    // Sort events by start time
+    const sortedEvents = [...events].sort((a, b) => {
+      const timeA = new Date(`2000-01-01T${a.timeStart}`).getTime();
+      const timeB = new Date(`2000-01-01T${b.timeStart}`).getTime();
+      return timeA - timeB;
+    });
+
+    const pairs = [];
+
+    // Find consecutive events with locations
+    for (let i = 0; i < sortedEvents.length - 1; i++) {
+      const currentEvent = sortedEvents[i];
+      const nextEvent = sortedEvents[i + 1];
+
+      // Check if both events have locations
+      if (
+        currentEvent.location &&
+        nextEvent.location &&
+        currentEvent.location.trim() !== "" &&
+        nextEvent.location.trim() !== ""
+      ) {
+        // Check if they are on the same day
+        if (currentEvent.day === nextEvent.day) {
+          // Calculate the time between events in minutes
+          const currentEndTime = new Date(
+            `2000-01-01T${currentEvent.timeEnd}`
+          ).getTime();
+          const nextStartTime = new Date(
+            `2000-01-01T${nextEvent.timeStart}`
+          ).getTime();
+          const timeBetween = (nextStartTime - currentEndTime) / (1000 * 60);
+
+          // Consider events consecutive if they're less than 3 hours apart
+          if (timeBetween <= 180 && timeBetween > 0) {
+            pairs.push({
+              firstEvent: currentEvent,
+              secondEvent: nextEvent,
+              timeBetween,
+            });
+          }
+        }
+      }
+    }
+
+    return pairs;
+  };
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -536,6 +601,37 @@ const DayWeek = ({
           }
         }}
       >
+        {/* Travel time indicators between consecutive events with locations */}
+        {!showHeatmap &&
+          getConsecutiveEventsWithLocations(dayEvents).map((pair, idx) => {
+            const firstEventEnd = getTimeSlot(pair.firstEvent.timeEnd);
+            const secondEventStart = getTimeSlot(pair.secondEvent.timeStart);
+
+            const top = (firstEventEnd / 60) * TIME_SLOT_HEIGHT;
+            const height =
+              ((secondEventStart - firstEventEnd) / 60) * TIME_SLOT_HEIGHT;
+
+            return (
+              <div
+                key={`travel-${idx}`}
+                className="travel-time-container"
+                style={{
+                  position: "absolute",
+                  top: `${top}px`,
+                  height: `${height}px`,
+                  left: "0",
+                  width: "100%",
+                  zIndex: 30,
+                }}
+              >
+                <TravelTimeIndicator
+                  origin={pair.firstEvent.location}
+                  destination={pair.secondEvent.location}
+                  timeBetween={pair.timeBetween}
+                />
+              </div>
+            );
+          })}
         <div
           className={`absolute top-0 w-full z-3 ${
             day.day() === 6 || day.day() === 0 ? "bg-black/1" : ""
@@ -557,7 +653,13 @@ const DayWeek = ({
                 width: "100%",
                 zIndex: 1,
               }}
-            ></div>
+            >
+              {showWeather && (
+                <div className="absolute right-1 top-1 opacity-50">
+                  <WeatherIndicator hour={i} date={day} />
+                </div>
+              )}
+            </div>
           ))}
           {isDragging && dragStart && dragEnd && (
             <div
@@ -847,7 +949,7 @@ const DayWeek = ({
         </div>
         {getCurrentDay() ? (
           <div
-            className="absolute left-0 w-full bg-blue-500"
+            className="absolute left-0 w-full bg-black rounded-full"
             style={{
               top: `${currentTimePosition}px`,
               height: "2px",
@@ -855,18 +957,10 @@ const DayWeek = ({
               pointerEvents: "none",
             }}
           >
-            <div className="absolute -left-1 -top-0.75 w-2 h-2 rounded-full bg-blue-500" />
+            <div className="absolute -left-1 -top-0.75 w-2 h-2 rounded-full bg-black" />
           </div>
         ) : (
-          <div
-            className="absolute left-0 w-full bg-blue-500 opacity-30"
-            style={{
-              top: `${currentTimePosition}px`,
-              height: "2px",
-              zIndex: 10,
-              pointerEvents: "none",
-            }}
-          ></div>
+          <div></div>
         )}
       </div>
       {contextMenu.isOpen && (

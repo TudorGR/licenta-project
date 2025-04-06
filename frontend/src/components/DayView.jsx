@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
+import toast from "react-hot-toast"; // Add this import
 import Context from "../context/Context";
 import dayjs from "dayjs";
 import workoutIcon from "../assets/workout.svg";
@@ -19,6 +20,10 @@ import eventsIcon from "../assets/event.svg";
 import pinIcon from "../assets/lock.svg";
 import deleteIcon from "../assets/delete_icon.svg";
 import ContextMenu from "./ContextMenu";
+import TravelTimeIndicator, {
+  clearTravelTimeCache,
+} from "./TravelTimeIndicator"; // Add .clearTravelTimeCache to the import
+import WeatherIndicator from "./WeatherIndicator"; // Add this import
 import {
   categoryColors,
   lightCategoryColors,
@@ -49,6 +54,8 @@ const DayView = () => {
     selectedCategory,
     setSelectedCategory,
     dispatchEvent,
+    autoRescheduleEnabled, // Add this new value
+    showWeather, // Add this new value
   } = useContext(Context);
 
   const calculateTimePosition = () => {
@@ -181,8 +188,17 @@ const DayView = () => {
 
       const adjustedY = relativeY - dragOffset;
       const newTimeSlot = Math.floor((adjustedY / TIME_SLOT_HEIGHT) * 60);
-      const hours = Math.floor(newTimeSlot / 60);
-      const mins = Math.round((newTimeSlot % 60) / 15) * 15;
+      let hours = Math.floor(newTimeSlot / 60);
+      let mins = Math.round((newTimeSlot % 60) / 15) * 15;
+
+      // Fix for minutes = 60 case
+      if (mins === 60) {
+        mins = 0;
+        hours += 1;
+      }
+
+      // Ensure hours are within valid range
+      hours = Math.min(Math.max(hours, 0), 23);
 
       const newTime = `${hours.toString().padStart(2, "0")}:${mins
         .toString()
@@ -191,9 +207,13 @@ const DayView = () => {
       const eventDuration =
         getTimeSlot(draggedEvent.timeEnd) - getTimeSlot(draggedEvent.timeStart);
 
-      const totalMins = hours * 60 + mins + eventDuration;
-      const endHours = Math.floor(totalMins / 60);
-      const endMins = totalMins % 60;
+      let totalMins = hours * 60 + mins + eventDuration;
+      let endHours = Math.floor(totalMins / 60);
+      let endMins = totalMins % 60;
+
+      // Ensure end hours are within valid range
+      endHours = Math.min(Math.max(endHours, 0), 23);
+
       const newEndTime = `${endHours.toString().padStart(2, "0")}:${endMins
         .toString()
         .padStart(2, "0")}`;
@@ -206,7 +226,15 @@ const DayView = () => {
     }
   };
 
-  const handleMouseUp = (e) => {
+  const resetDragStates = () => {
+    setIsDraggingEvent(false);
+    setDraggedEvent(null);
+    setMouseDownPos(null);
+    setHasMoved(false);
+    setSelectedEventForClick(null);
+  };
+
+  const handleMouseUp = async (e) => {
     if (isDragging) {
       e.preventDefault();
       setIsDragging(false);
@@ -237,29 +265,65 @@ const DayView = () => {
     } else if (isDraggingEvent && draggedEvent) {
       e.preventDefault();
 
-      if (hasMoved) {
-        const updatedEvent = {
-          ...draggedEvent,
-          timeStart: draggedEvent.timeStart,
-          timeEnd: draggedEvent.timeEnd,
+      try {
+        // Check for overlaps
+        const checkOverlap = (event1, event2) => {
+          const start1 = getTimeSlot(event1.timeStart);
+          const end1 = getTimeSlot(event1.timeEnd);
+          const start2 = getTimeSlot(event2.timeStart);
+          const end2 = getTimeSlot(event2.timeEnd);
+
+          return start1 < end2 && start2 < end1; // Overlap condition
         };
 
-        dispatchEvent({
-          type: "update",
-          payload: updatedEvent,
-        });
-      } else {
-        setTimeStart(draggedEvent.timeStart);
-        setTimeEnd(draggedEvent.timeEnd);
-        setSelectedDay(dayjs(draggedEvent.day));
-        setSelectedEvent(draggedEvent);
-        setShowEventModal(true);
-      }
+        const hasOverlap = dayEvents.some(
+          (event) =>
+            event.id !== draggedEvent.id && // Exclude the dragged event itself
+            checkOverlap(event, draggedEvent)
+        );
 
-      setIsDraggingEvent(false);
-      setDraggedEvent(null);
-      setMouseDownPos(null);
-      setHasMoved(false);
+        // Always update the event's position first for immediate feedback
+        if (hasMoved) {
+          const updatedEvent = {
+            ...draggedEvent,
+            timeStart: draggedEvent.timeStart,
+            timeEnd: draggedEvent.timeEnd,
+          };
+
+          await dispatchEvent({
+            type: "update",
+            payload: updatedEvent,
+          });
+
+          // Clear travel time cache when events are moved
+          TravelTimeIndicator.clearTravelTimeCache();
+
+          // Then handle overlap if needed
+          if (hasOverlap && autoRescheduleEnabled) {
+            // After updating the position, handle overlap with AI
+            handleResolveOverlapWithAI(updatedEvent);
+          } else if (hasOverlap) {
+            toast.warning(
+              "Event overlaps detected. Consider adjusting your schedule.",
+              {
+                duration: 3000,
+              }
+            );
+          }
+        } else {
+          setTimeStart(draggedEvent.timeStart);
+          setTimeEnd(draggedEvent.timeEnd);
+          setSelectedDay(dayjs(draggedEvent.day));
+          setSelectedEvent(draggedEvent);
+          setShowEventModal(true);
+        }
+      } catch (error) {
+        console.error("Error updating event position:", error);
+        toast.error("Failed to update event position", { duration: 3000 });
+      } finally {
+        // Always reset drag states regardless of outcome
+        resetDragStates();
+      }
     } else if (mouseDownPos && !hasMoved && selectedEventForClick) {
       setTimeStart(selectedEventForClick.timeStart);
       setTimeEnd(selectedEventForClick.timeEnd);
@@ -267,8 +331,7 @@ const DayView = () => {
       setSelectedEvent(selectedEventForClick);
       setShowEventModal(true);
 
-      setSelectedEventForClick(null);
-      setMouseDownPos(null);
+      resetDragStates();
     }
   };
 
@@ -296,6 +359,167 @@ const DayView = () => {
       });
     } catch (error) {
       console.error("Error locking event:", error);
+    }
+  };
+
+  const handleResolveOverlapWithAI = async (overlappingEvent) => {
+    try {
+      // Show a loading toast
+      const loadingToast = toast.loading("Resolving event overlap...");
+
+      // 1. Get the day of the week (0-6, Sunday is 0)
+      const dayOfWeek = selectedDay.day();
+      const dayName = [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+      ][dayOfWeek];
+
+      // 2. Collect all events for that day including the overlapping one
+      const allDayEvents = [...dayEvents];
+
+      // Replace the original event with the dragged version if it exists
+      const eventIndex = allDayEvents.findIndex(
+        (e) => e.id === overlappingEvent.id
+      );
+      if (eventIndex >= 0) {
+        allDayEvents[eventIndex] = overlappingEvent;
+      } else {
+        allDayEvents.push(overlappingEvent);
+      }
+
+      // 3. Create frequency vectors for each category
+      // Get events from the past grouped by category and day of week
+      const pastEvents = savedEvents.filter((event) => {
+        const eventDay = dayjs(parseInt(event.day));
+        return eventDay.isBefore(dayjs()) && eventDay.day() === dayOfWeek;
+      });
+
+      // Create frequency vectors for each category
+      const frequencyVectors = {};
+      const generalFrequencyVectors = {};
+
+      // Get all used categories
+      const categories = new Set();
+      [...pastEvents, ...allDayEvents].forEach((event) => {
+        const category = event.category || "None";
+        categories.add(category);
+      });
+
+      // Create hourly frequency arrays
+      categories.forEach((category) => {
+        frequencyVectors[category] = Array(24).fill(0);
+        generalFrequencyVectors[category] = Array(24).fill(0);
+      });
+
+      // Populate specific day frequency
+      pastEvents.forEach((event) => {
+        const category = event.category || "None";
+        const startHour = parseInt(event.timeStart.split(":")[0]);
+        let endHour = parseInt(event.timeEnd.split(":")[0]);
+        const endHourMinutes = parseInt(event.timeEnd.split(":")[1]);
+        if (endHourMinutes > 0) {
+          endHour++;
+        }
+
+        // Increment frequency for all hours the event overlaps
+        for (let hour = startHour; hour <= endHour; hour++) {
+          frequencyVectors[category][hour] += 1;
+        }
+      });
+
+      // Populate general frequency (from all past events)
+      savedEvents
+        .filter((event) => dayjs(parseInt(event.day)).isBefore(dayjs()))
+        .forEach((event) => {
+          const category = event.category || "None";
+          if (!generalFrequencyVectors[category]) {
+            generalFrequencyVectors[category] = Array(24).fill(0);
+          }
+
+          const startHour = parseInt(event.timeStart.split(":")[0]);
+          let endHour = parseInt(event.timeEnd.split(":")[0]);
+          const endHourMinutes = parseInt(event.timeEnd.split(":")[1]);
+          if (endHourMinutes > 0) {
+            endHour++;
+          }
+
+          // Increment frequency for all hours the event overlaps
+          for (let hour = startHour; hour <= endHour; hour++) {
+            generalFrequencyVectors[category][hour] += 1;
+          }
+        });
+
+      // 4. Make API call to backend
+      const response = await fetch(
+        "http://localhost:5000/api/events/resolve-overlap",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            dayOfWeek: dayName,
+            eventsForDay: allDayEvents.map((e) => ({
+              id: e.id,
+              title: e.title,
+              category: e.category || "None",
+              timeStart: e.timeStart,
+              timeEnd: e.timeEnd,
+              description: e.description || "",
+              locked: e.locked || false,
+            })),
+            frequencyVectors,
+            generalFrequencyVectors,
+            movedEvent: overlappingEvent,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      // Dismiss the loading toast
+      toast.dismiss(loadingToast);
+
+      if (result.updatedEvents) {
+        // Apply suggested updates
+        result.updatedEvents.forEach((updatedEvent) => {
+          const originalEvent = allDayEvents.find(
+            (e) => e.id === updatedEvent.id
+          );
+          if (originalEvent) {
+            dispatchEvent({
+              type: "update",
+              payload: {
+                ...originalEvent,
+                timeStart: updatedEvent.timeStart,
+                timeEnd: updatedEvent.timeEnd,
+              },
+            });
+          }
+        });
+
+        // Show success toast
+        if (result.toast) {
+          toast.success(
+            `Adjusted ${result.updatedEvents.length} event${
+              result.updatedEvents.length !== 1 ? "s" : ""
+            } to resolve overlap`,
+            {
+              duration: 4000,
+            }
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Error resolving event overlap with AI:", error);
+      toast.error("Couldn't resolve event overlap. Please try again.", {
+        duration: 5000,
+      });
     }
   };
 
@@ -406,6 +630,56 @@ const DayView = () => {
     setDragOffset(relativeY - eventTop);
   };
 
+  const getConsecutiveEventsWithLocations = (events) => {
+    // Sort events by start time
+    const sortedEvents = [...events].sort((a, b) => {
+      const timeA = new Date(`2000-01-01T${a.timeStart}`).getTime();
+      const timeB = new Date(`2000-01-01T${b.timeStart}`).getTime();
+      return timeA - timeB;
+    });
+
+    const pairs = [];
+
+    // Find consecutive events with locations
+    for (let i = 0; i < sortedEvents.length - 1; i++) {
+      const currentEvent = sortedEvents[i];
+      const nextEvent = sortedEvents[i + 1];
+
+      // Check if both events have locations
+      if (
+        currentEvent.location &&
+        nextEvent.location &&
+        currentEvent.location.trim() !== "" &&
+        nextEvent.location.trim() !== ""
+      ) {
+        // Check if they are on the same day
+        if (currentEvent.day === nextEvent.day) {
+          // Calculate the time between events in minutes
+          const currentEndTime = new Date(
+            `2000-01-01T${currentEvent.timeEnd}`
+          ).getTime();
+          const nextStartTime = new Date(
+            `2000-01-01T${nextEvent.timeStart}`
+          ).getTime();
+          const timeBetween = (nextStartTime - currentEndTime) / (1000 * 60);
+
+          // Consider events consecutive if they're less than 3 hours apart
+          if (timeBetween <= 180 && timeBetween > 0) {
+            pairs.push({
+              firstEvent: currentEvent,
+              secondEvent: nextEvent,
+              timeBetween,
+            });
+          }
+        }
+      }
+    }
+
+    return pairs;
+  };
+
+  const consecutiveEventPairs = getConsecutiveEventsWithLocations(dayEvents);
+
   return (
     <div className="flex-1 flex flex-col">
       <div ref={timeGridRef} className="flex-1 overflow-y-auto">
@@ -423,15 +697,20 @@ const DayView = () => {
             {Array.from({ length: 24 }, (_, i) => (
               <div
                 key={i}
-                className=" border-gray-100 border-l absolute w-full gray-border-bottom"
+                className="border-gray-100 border-l absolute w-full gray-border-bottom"
                 style={{
                   top: `${i * TIME_SLOT_HEIGHT}px`,
                   height: `${TIME_SLOT_HEIGHT}px`,
                 }}
               >
-                <div className="pl-1.5  absolute -left-13 -top-2 text-xs text-gray-300">
+                <div className="pl-1.5 absolute -left-13 -top-2 text-xs text-gray-300">
                   {`${i.toString().padStart(2, "0")}:00`}
                 </div>
+                {showWeather && (
+                  <div className="absolute right-1 top-1 opacity-50">
+                    <WeatherIndicator hour={i} date={selectedDay} />
+                  </div>
+                )}
               </div>
             ))}
 
@@ -491,9 +770,11 @@ const DayView = () => {
                   onContextMenu={(e) => handleContextMenu(e, event)}
                   onMouseEnter={() => setHoveredEventId(event.id)}
                   onMouseLeave={() => setHoveredEventId(null)}
-                  className={`pb-0.5 px-0.5 eventt absolute left-0 w-full cursor-pointer ${
+                  className={`pb-0.5 px-0.5 eventt absolute left-0 ${
+                    showWeather ? "w-[calc(100%-64px)]" : "w-full"
+                  } cursor-pointer ${
                     draggedEvent && draggedEvent.id === event.id
-                      ? "opacity-75 shadow-lg"
+                      ? "opacity-50"
                       : ""
                   }`}
                   style={{ top, height }}
@@ -705,16 +986,47 @@ const DayView = () => {
               );
             })}
 
+            {consecutiveEventPairs.map((pair, idx) => {
+              const firstEventEnd = getTimeSlot(pair.firstEvent.timeEnd);
+              const secondEventStart = getTimeSlot(pair.secondEvent.timeStart);
+
+              const top = (firstEventEnd / 60) * TIME_SLOT_HEIGHT;
+              const height =
+                ((secondEventStart - firstEventEnd) / 60) * TIME_SLOT_HEIGHT;
+
+              return (
+                <div
+                  key={`travel-${idx}`}
+                  className="travel-time-container"
+                  style={{
+                    position: "absolute",
+                    top: `${top}px`,
+                    height: `${height}px`,
+                    left: "0",
+                    width: "100%",
+                    zIndex: 2,
+                    pointerEvents: "none",
+                  }}
+                >
+                  <TravelTimeIndicator
+                    origin={pair.firstEvent.location}
+                    destination={pair.secondEvent.location}
+                    timeBetween={pair.timeBetween}
+                  />
+                </div>
+              );
+            })}
+
             {selectedDay.format("DD-MM-YY") === dayjs().format("DD-MM-YY") && (
               <div
-                className="absolute left-0 w-full bg-blue-500"
+                className="absolute left-0 w-full bg-black"
                 style={{
                   top: `${currentTimePosition}px`,
                   height: "2px",
                   zIndex: 13,
                 }}
               >
-                <div className="absolute -left-15 -top-1.5 text-xs text-white px-[15.5px] bg-blue-500 rounded-full">
+                <div className="absolute -left-15 -top-1.75 text-xs text-white w-15 px-[15.5px] bg-black">
                   {currentTimeString}
                 </div>
               </div>

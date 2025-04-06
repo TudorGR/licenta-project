@@ -10,6 +10,7 @@ import AIInputModal from "./components/AIInputModal";
 import Week from "./components/Week";
 import DayView from "./components/DayView";
 import AISuggestionsPanel from "./components/AISuggestionsPanel";
+import { Toaster } from "react-hot-toast";
 import "./App.css";
 
 function App() {
@@ -44,6 +45,33 @@ function App() {
 
   return (
     <>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          // Default options for all toasts
+          style: {
+            background: "#fff",
+            color: "#333",
+            fontSize: "14px",
+            borderRadius: "calc(infinity * 1px)",
+            boxShadow:
+              "0 1px 4px rgba(0, 0, 0, 0.1), 0 1px 4px rgba(0, 0, 0, 0.1), 0 8px 16px rgba(0, 0, 0, 0.1)",
+          },
+          success: {
+            iconTheme: {
+              primary: "black",
+              secondary: "white",
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: "#d13438",
+              secondary: "white",
+            },
+          },
+        }}
+      />
+
       {showEventModal && <EventModal />}
       {isAIModalOpen && (
         <AIInputModal
@@ -73,7 +101,7 @@ function App() {
               {isDayView && <DayView />}
             </div>
           </div>
-          <AISuggestionsPanel />
+          {/* <AISuggestionsPanel /> */}
         </div>
       </div>
     </>

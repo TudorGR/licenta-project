@@ -1,13 +1,15 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import axios from "axios";
 import sequelize from "./config/database.js";
 import eventRoutes from "./routes/events.js";
 import algoRoutes from "./routes/algo.js";
 import suggestionRoutes from "./routes/suggestions.js";
+import travelRoutes from "./routes/travel.js";
 
-dotenv.config();
 const app = express();
 app.use(express.json());
 app.use(cors());
@@ -19,6 +21,7 @@ sequelize.sync();
 app.use("/api/events", eventRoutes);
 app.use("/api/algo", algoRoutes);
 app.use("/api/suggestions", suggestionRoutes);
+app.use("/api/travel", travelRoutes);
 
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${process.env.GEMINI_API_KEY}`;
 

@@ -116,15 +116,16 @@ const Week = ({ month, weekIndex }) => {
 
           const minutes = (adjustedY / TIME_SLOT_HEIGHT) * 60;
 
-          // Fix for the hour offset issue - handle minutes conversion properly
-          let hours = Math.floor(minutes / 60) - 1;
-          let mins = Math.round((minutes % 60) / 15) * 15;
+          // Calculate hours and snap minutes to the nearest 15-minute interval
+          const hours = Math.floor(minutes / 60) - 1;
+          const mins = Math.round((minutes % 60) / 15) * 15;
 
           // Ensure values are within valid range
           const validHours = Math.max(0, Math.min(23, hours));
-          const validMins = Math.max(0, Math.min(59, mins));
+          const validMins = mins === 60 ? 0 : mins; // Reset to 0 if minutes reach 60
+          const adjustedHours = mins === 60 ? validHours + 1 : validHours; // Increment hour if minutes reach 60
 
-          const timeString = `${validHours
+          const timeString = `${adjustedHours
             .toString()
             .padStart(2, "0")}:${validMins.toString().padStart(2, "0")}`;
 
@@ -174,7 +175,7 @@ const Week = ({ month, weekIndex }) => {
 
           <div className="sticky top-0 mt-[-48px] w-full h-[45px] border-b-1 border-b-gray-100 bg-white"></div>
           <div
-            className="absolute text-xs rounded-xl bg-blue-500 text-white"
+            className="absolute text-xs bg-black text-white"
             style={{
               top: `${calculateTimePosition()}px`,
               transform: "translateY(-55%)",
