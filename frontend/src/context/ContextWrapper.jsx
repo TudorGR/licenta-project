@@ -134,6 +134,15 @@ export default function ContextWrapper(props) {
   const [workingHoursEnd, setWorkingHoursEnd] = useState("19:00");
   const [autoRescheduleEnabled, setAutoRescheduleEnabled] = useState(false);
   const [showWeather, setShowWeather] = useState(false);
+  const [showLocalEvents, setShowLocalEvents] = useState(false);
+  const [userCity, setUserCity] = useState(
+    localStorage.getItem("userCity") || "Iasi Romania"
+  );
+
+  // Save city to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem("userCity", userCity);
+  }, [userCity]);
 
   const [savedEvents, dispatch] = useReducer(savedEventsReducer, []);
 
@@ -243,6 +252,10 @@ export default function ContextWrapper(props) {
         setAutoRescheduleEnabled,
         showWeather,
         setShowWeather,
+        showLocalEvents,
+        setShowLocalEvents,
+        userCity,
+        setUserCity,
       }}
     >
       {props.children}

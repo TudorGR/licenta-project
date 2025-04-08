@@ -367,10 +367,10 @@ export default function EventModal() {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/10 bg-opacity-0 flex justify-center items-center z-40">
+    <div className="fixed inset-0 bg-black/30 bg-opacity-0 flex justify-center items-center z-40">
       <form
         name="eventModal"
-        className="bg-white w-[400px]  rounded-3xl"
+        className="bg-white w-[400px] rounded-3xl relative"
         ref={modalRef}
       >
         <header className="border-b-1 border-gray-100 h-14 flex justify-between items-center">
@@ -382,7 +382,7 @@ export default function EventModal() {
               onClick={() => {
                 setShowEventModal(false);
               }}
-              className="cursor-pointer  mr-4"
+              className="cursor-pointer mr-4"
               type="button"
             >
               <img src={closeIcon} className="w-5" />
@@ -401,31 +401,27 @@ export default function EventModal() {
                     ? " border-red-500 focus:border-red-500"
                     : " border-gray-100"
                 } border-b-1 px-4 h-12 outline-0 w-full`}
-                placeholder={
-                  suggestions.length > 0
-                    ? `Suggestion: ${suggestions[currentSuggestionIndex].suggestedTitle}`
-                    : "Add Title..."
-                }
+                placeholder="Add Title..."
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 autoComplete="off"
               />
               <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2 text-gray-400 select-none">
-                {suggestions.length > 1 && (
-                  <div className="flex gap-2 items-center">
-                    <kbd className="px-2 py-1 bg-gray-100 rounded-sm text-sm border border-gray-300">
-                      ↑↓
-                    </kbd>
-                    <span className="text-sm">navigate</span>
-                  </div>
-                )}
                 {suggestions.length > 0 && (
-                  <div className="flex gap-2 items-center">
-                    <kbd className="px-2 py-1 bg-gray-100 rounded-sm text-sm border border-gray-300">
-                      Tab
-                    </kbd>
-                    <span className="text-sm">select</span>
-                  </div>
+                  <>
+                    <div className="flex gap-2 items-center">
+                      <kbd className="px-2 py-1 bg-gray-100 rounded-sm text-sm border border-gray-300">
+                        ↑↓
+                      </kbd>
+                      <span className="text-sm">navigate</span>
+                    </div>
+                    <div className="flex gap-2 items-center">
+                      <kbd className="px-2 py-1 bg-gray-100 rounded-sm text-sm border border-gray-300">
+                        Tab
+                      </kbd>
+                      <span className="text-sm">select</span>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
@@ -602,6 +598,63 @@ export default function EventModal() {
             </button>
           </div>
         </footer>
+
+        {suggestions.length > 0 && (
+          <div className="absolute left-full ml-4 top-0 max-w-xs w-64 overflow-hidden">
+            <div className="max-h-80 overflow-y-auto">
+              {suggestions.map((suggestion, index) => (
+                <div
+                  key={`${suggestion.category}-${suggestion.suggestedTitle}`}
+                  className={`p-3 cursor-pointer transition-all ${
+                    index === currentSuggestionIndex
+                      ? "opacity-100"
+                      : "opacity-75 hover:opacity-90"
+                  }`}
+                  onClick={() => {
+                    setCurrentSuggestionIndex(index);
+                    setTitle(suggestion.suggestedTitle);
+                    setSelectedCategory(suggestion.category);
+                    setLocation(suggestion.suggestedLocation);
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    {categoryIcons[suggestion.category] && (
+                      <img
+                        src={categoryIcons[suggestion.category]}
+                        alt={suggestion.category}
+                        className="w-5 h-5 filter invert drop-shadow-[0_0_1px_rgba(255,255,255,0.5)]"
+                      />
+                    )}
+                    <span className="font-medium text-white text-shadow-white">
+                      {suggestion.suggestedTitle}
+                    </span>
+                  </div>
+                  <div className="text-xs mt-1 text-white">
+                    <div className="flex items-center gap-1">
+                      <span className="text-white text-shadow-white">
+                        Categorie:
+                      </span>
+                      <span className="font-medium text-white text-shadow-white">
+                        {suggestion.category}
+                      </span>
+                    </div>
+                    {suggestion.suggestedLocation && (
+                      <div className="flex items-center gap-1 mt-1">
+                        <img
+                          src={locationIcon}
+                          className="w-3 h-3 filter invert drop-shadow-[0_0_1px_rgba(255,255,255,0.5)]"
+                        />
+                        <span className="text-white text-shadow-white">
+                          {suggestion.suggestedLocation}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </form>
     </div>
   );

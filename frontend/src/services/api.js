@@ -57,4 +57,14 @@ export const api = {
       throw error;
     }
   },
+
+  getLocalEvents: async (city = "New York") => {
+    try {
+      const response = await axios.get(`${API_URL}/local-events/${city}`);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to get local events:", error);
+      throw error;
+    }
+  },
 };

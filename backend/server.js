@@ -9,6 +9,7 @@ import eventRoutes from "./routes/events.js";
 import algoRoutes from "./routes/algo.js";
 import suggestionRoutes from "./routes/suggestions.js";
 import travelRoutes from "./routes/travel.js";
+import localEventsRoutes from "./routes/localEvents.js";
 
 const app = express();
 app.use(express.json());
@@ -22,6 +23,7 @@ app.use("/api/events", eventRoutes);
 app.use("/api/algo", algoRoutes);
 app.use("/api/suggestions", suggestionRoutes);
 app.use("/api/travel", travelRoutes);
+app.use("/api/local-events", localEventsRoutes);
 
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${process.env.GEMINI_API_KEY}`;
 

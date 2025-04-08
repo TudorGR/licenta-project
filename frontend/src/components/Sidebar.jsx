@@ -42,6 +42,8 @@ const Sidebar = () => {
     setAutoRescheduleEnabled,
     showWeather,
     setShowWeather,
+    showLocalEvents,
+    setShowLocalEvents,
   } = useContext(Context);
   const [dropdown, setDropdown] = useState(true);
   const [showCategoryAdjust, setShowCategoryAdjust] = useState(false);
@@ -105,7 +107,7 @@ const Sidebar = () => {
             </div>
           </div>
 
-          <div className="w-full rounded-sm p-0 overflow-clip mt-2">
+          <div className="w-full rounded-sm p-0 overflow-clip">
             <h3 className="mb-2 mx-4">AI Settings</h3>
             <div className="flex items-center justify-between border-y-1 border-gray-100 px-4 h-12">
               <span className="text-sm">Auto-reschedule on overlap</span>
@@ -121,44 +123,53 @@ const Sidebar = () => {
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
               </label>
             </div>
+            <div className="flex items-center justify-between border-b-1 border-gray-100 px-4 h-12">
+              <span className="text-sm">Show local events</span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showLocalEvents}
+                  onChange={() => setShowLocalEvents(!showLocalEvents)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
+              </label>
+            </div>
+
+            <h3 className="my-2 mx-4 ">Misc Settings</h3>
+            {(isWeekView || isDayView) && (
+              <div className="flex items-center justify-between border-y-1 border-gray-100 px-4 h-12">
+                <span className="text-sm">Show weather</span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showWeather}
+                    onChange={() => setShowWeather(!showWeather)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
+                </label>
+              </div>
+            )}
+
+            {isWeekView && (
+              <div className="flex items-center justify-between border-b-1 border-gray-100 px-4 h-12">
+                <span className="text-sm">Show heatmap</span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showHeatmap}
+                    onChange={() => setShowHeatmap(!showHeatmap)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
+                </label>
+              </div>
+            )}
           </div>
         </>
       )}
-      <div className="flex gap-2 w-full px-4">
-        {isWeekView && (
-          <div className="flex items-center w-full justify-between gap-2">
-            Heatmap
-            <button
-              onClick={() => setShowHeatmap(!showHeatmap)}
-              className={`transition-all cursor-pointer h-8 w-8 border-1 border-gray-200 rounded-sm`}
-            >
-              <img
-                src={heatmapIcon}
-                className={`transition-all opacity-30 object-contain rounded-xs ${
-                  showHeatmap ? "opacity-100" : "hover:opacity-100"
-                }`}
-              />
-            </button>
-          </div>
-        )}
-        {isWeekView || isDayView ? (
-          <div className="flex items-center w-full justify-between gap-2">
-            Weather
-            <button
-              onClick={() => setShowWeather(!showWeather)}
-              className={`transition-all cursor-pointer h-8 w-8`}
-            >
-              <img
-                src={weatherIcon}
-                className={`transition-all opacity-30 object-contain rounded-xs ${
-                  showWeather ? "opacity-100" : "hover:opacity-100"
-                }`}
-                alt="Weather"
-              />
-            </button>
-          </div>
-        ) : null}
-      </div>
+
       {showHeatmap && (
         <div className="w-full border border-gray-200 rounded-sm overflow-hidden">
           <button

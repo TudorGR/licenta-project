@@ -29,6 +29,7 @@ import {
   lightCategoryColors,
   darkCategoryColors,
 } from "../utils/categoryColors";
+import { api } from "../services/api";
 
 const TIME_SLOT_HEIGHT = 50;
 const TOTAL_HEIGHT = TIME_SLOT_HEIGHT * 24;
@@ -78,12 +79,15 @@ const DayWeek = ({
     workingHoursStart,
     workingHoursEnd,
     showWeather,
+    showLocalEvents,
+    userCity,
   } = useContext(Context);
 
   const [isDraggingEvent, setIsDraggingEvent] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   const [mouseDownPos, setMouseDownPos] = useState(null);
   const [hasMoved, setHasMoved] = useState(false);
+  const [localEvents, setLocalEvents] = useState([]);
 
   const handleLock = async (eventId) => {
     try {
@@ -266,6 +270,21 @@ const DayWeek = ({
     return () => window.removeEventListener("mousedown", handleGlobalClick);
   }, []);
 
+  useEffect(() => {
+    if (showLocalEvents) {
+      api
+        .getLocalEvents(userCity)
+        .then((events) => {
+          setLocalEvents(events);
+        })
+        .catch((error) => {
+          console.error("Error fetching local events:", error);
+        });
+    } else {
+      setLocalEvents([]);
+    }
+  }, [showLocalEvents, userCity]);
+
   function getCurrentDay() {
     return day.format("DD-MM-YY") === dayjs().format("DD-MM-YY");
   }
@@ -298,6 +317,14 @@ const DayWeek = ({
       (evt) => dayjs(evt.day).format("DD-MM-YY") === day.format("DD-MM-YY")
     );
   }, [savedEvents, day]);
+
+  const dayLocalEvents = useMemo(() => {
+    if (!showLocalEvents || !localEvents.length) return [];
+
+    return localEvents.filter((event) => {
+      return dayjs(event.day).format("DD-MM-YY") === day.format("DD-MM-YY");
+    });
+  }, [localEvents, day, showLocalEvents]);
 
   useEffect(() => {
     if (timeGridRef.current) {
@@ -944,6 +971,66 @@ const DayWeek = ({
                   </div>
                 );
               })}
+              {showLocalEvents &&
+                dayLocalEvents.map((event) => {
+                  const { timeStart, timeEnd } = event;
+                  const eventPosition = positionEvent(timeStart, timeEnd);
+
+                  return (
+                    <div
+                      key={`local-event-${event.title}-${timeStart}`}
+                      className="local-event"
+                      style={{
+                        position: "absolute",
+                        top: eventPosition.top,
+                        height: eventPosition.height,
+                        left: 0,
+                        width: "100%",
+                        padding: "0px 4px 0px 0px",
+                        boxSizing: "border-box",
+                        pointerEvents: "none", // Makes the event "ghost-like"
+                        opacity: 0.75, // Increased opacity for better visibility
+                        zIndex: 2,
+                      }}
+                    >
+                      <div
+                        className="relative rounded-sm pr-0.5 py-0 overflow-hidden"
+                        style={{
+                          backgroundColor: "#f3f4f6", // Lighter background
+                          height: "100%",
+                          position: "relative",
+                          border: "2px dashed #6b7280", // Thicker, more visible border
+                          boxShadow: "0 1px 3px rgba(0,0,0,0.1)", // Subtle shadow
+                        }}
+                      >
+                        <div className="relative flex items-start h-full">
+                          <div
+                            className="text-xs ml-0.5 overflow-hidden whitespace-nowrap flex justify-between items-center gap-1 h-full"
+                            style={{ width: "100%" }}
+                          >
+                            <div className="flex flex-col justify-center h-full w-full bg-white bg-opacity-70 px-1 rounded">
+                              <span className="truncate font-semibold text-gray-800">
+                                {event.title}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <div className="w-2 h-2 rounded-full bg-gray-500"></div>{" "}
+                                {/* Indicator dot */}
+                                <div className="font-medium text-xs text-nowrap overflow-clip text-gray-700">
+                                  {`${timeStart} - ${timeEnd}`}
+                                </div>
+                              </div>
+                              {event.location && (
+                                <div className="text-gray-600 text-xs truncate">
+                                  {event.location}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
             </>
           )}
         </div>
