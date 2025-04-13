@@ -104,4 +104,164 @@ router.post("/", async (req, res) => {
   }
 });
 
+// Get event suggestions based on user patterns
+router.post("/event-suggestions", async (req, res) => {
+  try {
+    const { events } = req.body;
+
+    if (!events || events.length === 0) {
+      return res.json({ suggestions: [] });
+    }
+
+    // Get events from the past month
+    const oneMonthAgo = dayjs().subtract(1, "month").valueOf();
+    const pastEvents = events.filter(
+      (event) => dayjs(event.day).valueOf() >= oneMonthAgo
+    );
+
+    // Group events by category
+    const eventsByCategory = {};
+    pastEvents.forEach((event) => {
+      const category = event.category || "None";
+      if (!eventsByCategory[category]) {
+        eventsByCategory[category] = [];
+      }
+      eventsByCategory[category].push(event);
+    });
+
+    // Analyze patterns for each category
+    const categoryPatterns = {};
+    Object.entries(eventsByCategory).forEach(([category, events]) => {
+      if (events.length < 2) return;
+
+      // Calculate average duration
+      const durations = events.map((event) => {
+        const start = event.timeStart.split(":").map(Number);
+        const end = event.timeEnd.split(":").map(Number);
+        return end[0] * 60 + end[1] - (start[0] * 60 + start[1]);
+      });
+
+      const avgDuration = Math.round(
+        durations.reduce((a, b) => a + b, 0) / durations.length
+      );
+
+      // Determine typical time of day
+      const timeSlots = events.map((event) => {
+        const hour = parseInt(event.timeStart.split(":")[0]);
+        if (hour < 12) return "morning";
+        if (hour < 17) return "midday";
+        return "afternoon";
+      });
+
+      const timeOfDay = findMostCommon(timeSlots);
+
+      categoryPatterns[category] = {
+        avgDuration,
+        timeOfDay,
+        sampleTitles: events.map((event) => event.title),
+      };
+    });
+
+    // Find empty slots in the next week
+    const slots = findEmptyTimeSlots(events);
+
+    // Generate suggestions by matching patterns to slots
+    const possibleSuggestions = [];
+
+    Object.entries(categoryPatterns).forEach(([category, pattern]) => {
+      // Find slots that match this category's preferred time of day
+      const matchingSlots = slots.filter((slot) => {
+        const hour = slot.hour;
+        if (pattern.timeOfDay === "morning" && hour >= 6 && hour < 12)
+          return true;
+        if (pattern.timeOfDay === "midday" && hour >= 12 && hour < 17)
+          return true;
+        if (pattern.timeOfDay === "afternoon" && hour >= 17 && hour < 22)
+          return true;
+        return false;
+      });
+
+      if (matchingSlots.length > 0) {
+        // Pick a random sample title
+        const sampleTitle =
+          pattern.sampleTitles[
+            Math.floor(Math.random() * pattern.sampleTitles.length)
+          ];
+
+        // Create suggestion for each matching slot
+        matchingSlots.forEach((slot) => {
+          possibleSuggestions.push({
+            category,
+            title: sampleTitle,
+            day: slot.day,
+            timeStart: `${slot.hour}:00`,
+            timeEnd: `${slot.hour + Math.ceil(pattern.avgDuration / 60)}:00`,
+            durationMins: pattern.avgDuration,
+          });
+        });
+      }
+    });
+
+    // Randomly select up to 5 suggestions
+    const shuffled = possibleSuggestions.sort(() => 0.5 - Math.random());
+    const suggestions = shuffled.slice(0, 5);
+
+    res.json({ suggestions });
+  } catch (error) {
+    console.error("Error generating event suggestions:", error);
+    res.status(500).json({ error: "Failed to generate event suggestions" });
+  }
+});
+
+// Helper function to find most common item in array
+const findMostCommon = (arr) => {
+  const counts = {};
+  arr.forEach((item) => {
+    counts[item] = (counts[item] || 0) + 1;
+  });
+  let maxCount = 0;
+  let maxItem = null;
+  Object.entries(counts).forEach(([item, count]) => {
+    if (count > maxCount) {
+      maxCount = count;
+      maxItem = item;
+    }
+  });
+  return maxItem;
+};
+
+// Find empty time slots in the next week
+const findEmptyTimeSlots = (events) => {
+  const slots = [];
+  const today = dayjs().startOf("day");
+
+  // Check for the next 7 days
+  for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+    const currentDay = today.add(dayOffset, "day");
+    const dayEvents = events.filter(
+      (event) =>
+        dayjs(event.day).format("YYYY-MM-DD") ===
+        currentDay.format("YYYY-MM-DD")
+    );
+
+    // Check each hour from 8am to 8pm
+    for (let hour = 8; hour <= 20; hour++) {
+      const hourTaken = dayEvents.some((event) => {
+        const startHour = parseInt(event.timeStart.split(":")[0]);
+        const endHour = parseInt(event.timeEnd.split(":")[0]);
+        return hour >= startHour && hour < endHour;
+      });
+
+      if (!hourTaken) {
+        slots.push({
+          day: currentDay.valueOf(),
+          hour,
+        });
+      }
+    }
+  }
+
+  return slots;
+};
+
 export default router;

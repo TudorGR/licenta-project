@@ -67,4 +67,17 @@ export const api = {
       throw error;
     }
   },
+
+  getEventSuggestions: async (events) => {
+    try {
+      const response = await axios.post(
+        `${API_URL}/suggestions/event-suggestions`,
+        { events }
+      );
+      return response.data.suggestions;
+    } catch (error) {
+      console.error("Failed to get event suggestions:", error);
+      throw error;
+    }
+  },
 };

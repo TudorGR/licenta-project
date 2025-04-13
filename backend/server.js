@@ -10,6 +10,7 @@ import algoRoutes from "./routes/algo.js";
 import suggestionRoutes from "./routes/suggestions.js";
 import travelRoutes from "./routes/travel.js";
 import localEventsRoutes from "./routes/localEvents.js";
+import chatRoutes from "./routes/chat.js"; // Import the new route
 
 const app = express();
 app.use(express.json());
@@ -24,6 +25,7 @@ app.use("/api/algo", algoRoutes);
 app.use("/api/suggestions", suggestionRoutes);
 app.use("/api/travel", travelRoutes);
 app.use("/api/local-events", localEventsRoutes);
+app.use("/api/chat", chatRoutes); // Add the new route
 
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
@@ -93,4 +95,6 @@ app.post("/api/parse-event", async (req, res) => {
   }
 });
 
-app.listen(5000);
+// Start the server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

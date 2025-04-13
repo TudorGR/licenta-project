@@ -76,15 +76,6 @@ const CalendarHeader = ({ onOpenAIModal }) => {
     <header className="pb-2 flex justify-between items-center ">
       <h1 className="text-4xl font-bold text-black">CalendarIQ</h1>
       <div className="flex">
-        <button
-          onClick={onOpenAIModal}
-          className="px-4 transition-all shadow-custom active:bg-gray-700 cursor-pointer h-10 text-white bg-black rounded-full ml-2 flex items-center justify-center gap-2"
-        >
-          <span className="text-nowrap">Quick Add</span>
-          <kbd className="text-xs bg-white text-black px-2 py-0.5 rounded-full">
-            Ctrl+Space
-          </kbd>
-        </button>
         <CreateEventButton />
       </div>
     </header>

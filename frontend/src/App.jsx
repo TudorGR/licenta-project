@@ -6,10 +6,9 @@ import Month from "./components/Month";
 import CalendarHeader from "./components/CalendarHeader";
 import CalendarMainHeader from "./components/CalendarMainHeader";
 import EventModal from "./components/EventModal";
-import AIInputModal from "./components/AIInputModal";
 import Week from "./components/Week";
 import DayView from "./components/DayView";
-import AISuggestionsPanel from "./components/AISuggestionsPanel";
+import AIChatBox from "./components/AIChatBox"; // Import the new component
 import { Toaster } from "react-hot-toast";
 import "./App.css";
 
@@ -32,10 +31,10 @@ function App() {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Check for Alt + Space shortcut
+      // You can keep or remove this shortcut based on your preference
       if (e.ctrlKey && e.code === "Space") {
         e.preventDefault();
-        setIsAIModalOpen(true);
+        // Do nothing now or toggle the right sidebar visibility
       }
     };
 
@@ -45,54 +44,13 @@ function App() {
 
   return (
     <>
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          // Default options for all toasts
-          style: {
-            background: "#fff",
-            color: "#333",
-            fontSize: "14px",
-            borderRadius: "calc(infinity * 1px)",
-            boxShadow:
-              "0 1px 4px rgba(0, 0, 0, 0.1), 0 1px 4px rgba(0, 0, 0, 0.1), 0 8px 16px rgba(0, 0, 0, 0.1)",
-          },
-          success: {
-            iconTheme: {
-              primary: "black",
-              secondary: "white",
-            },
-          },
-          error: {
-            iconTheme: {
-              primary: "#d13438",
-              secondary: "white",
-            },
-          },
-        }}
-      />
-
-      {showEventModal && <EventModal />}
-      {isAIModalOpen && (
-        <AIInputModal
-          isOpen={isAIModalOpen}
-          onClose={() => setIsAIModalOpen(false)}
-        />
-      )}
+      <Toaster position="top-right" />
       <div className="p-2 h-screen bg-gray-100 flex flex-col">
-        <CalendarMainHeader
-          onOpenAIModal={() => setIsAIModalOpen(true)}
-          onToggleSuggestions={() => setShowSuggestions(!showSuggestions)}
-          showSuggestions={showSuggestions}
-        />
+        <CalendarMainHeader />
         <div className="h-[calc(100vh-65px)] overflow-clip flex bg-white rounded-xl">
           <Sidebar />
-          <div className="flex flex-col flex-1 h-full ">
-            <CalendarHeader
-              onOpenAIModal={() => setIsAIModalOpen(true)}
-              onToggleSuggestions={() => setShowSuggestions(!showSuggestions)}
-              showSuggestions={showSuggestions}
-            />
+          <div className="flex flex-col flex-1 h-full">
+            <CalendarHeader />
             <div className="flex flex-1 h-full">
               {isMonthView && <Month month={calendarMonth} />}
               {isWeekView && (
@@ -101,9 +59,10 @@ function App() {
               {isDayView && <DayView />}
             </div>
           </div>
-          {/* <AISuggestionsPanel /> */}
+          <AIChatBox /> {/* Add the AI Chatbox here */}
         </div>
       </div>
+      {showEventModal && <EventModal />}
     </>
   );
 }

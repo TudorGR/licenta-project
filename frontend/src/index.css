@@ -50,3 +50,7 @@ body {
   margin-left: -8px;
   padding: 20px 0px;
 }
+
+strong {
+  font-weight: 600;
+}
