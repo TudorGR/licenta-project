@@ -730,7 +730,7 @@ const DayView = () => {
                 )}
               >
                 <div
-                  className="relative rounded-sm h-full shadow-lg"
+                  className="relative rounded-sm h-full "
                   style={{
                     backgroundColor:
                       lightCategoryColors[draggedEvent.category || "None"],
@@ -770,7 +770,7 @@ const DayView = () => {
                   onContextMenu={(e) => handleContextMenu(e, event)}
                   onMouseEnter={() => setHoveredEventId(event.id)}
                   onMouseLeave={() => setHoveredEventId(null)}
-                  className={`pb-0.5 px-0.5 eventt absolute left-0 ${
+                  className={`transition-opacity pb-0.5 px-0.5 eventt absolute left-0 ${
                     showWeather ? "w-[calc(100%-64px)]" : "w-full"
                   } cursor-pointer ${
                     draggedEvent && draggedEvent.id === event.id

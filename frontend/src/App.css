@@ -125,3 +125,7 @@
   padding: 1px 2px;
   border-radius: 3px;
 }
+.text-xxs {
+  font-size: 0.65rem;
+  line-height: 0.75rem;
+}

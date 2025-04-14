@@ -710,7 +710,7 @@ const DayWeek = ({
                 }}
               >
                 <div
-                  className="relative rounded-sm h-full shadow-lg"
+                  className="relative rounded-sm h-full"
                   style={{
                     backgroundColor:
                       lightCategoryColors[draggedEvent.category || "None"],
@@ -742,9 +742,9 @@ const DayWeek = ({
                     onMouseDown={(e) => handleEventMouseDown(e, event)}
                     onMouseEnter={() => setHoveredEventId(event.id)}
                     onMouseLeave={() => setHoveredEventId(null)}
-                    className={`event ${
+                    className={`event transition-opacity ${
                       draggedEvent && draggedEvent.id === event.id
-                        ? "opacity-75 shadow-lg"
+                        ? "opacity-50 "
                         : ""
                     }`}
                     style={{

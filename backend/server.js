@@ -25,7 +25,7 @@ app.use("/api/algo", algoRoutes);
 app.use("/api/suggestions", suggestionRoutes);
 app.use("/api/travel", travelRoutes);
 app.use("/api/local-events", localEventsRoutes);
-app.use("/api/chat", chatRoutes); // Add the new route
+app.use("/api/chat", chatRoutes);
 
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
