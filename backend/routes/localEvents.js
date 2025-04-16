@@ -1,6 +1,7 @@
 import express from "express";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
+import dayjs from "dayjs";
 
 dotenv.config();
 const router = express.Router();
@@ -11,6 +12,8 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 router.get("/:city", async (req, res) => {
   try {
     const { city } = req.params;
+    const { timeframe = "this week" } = req.query;
+
     const model = genAI.getGenerativeModel({
       model: "gemini-2.0-flash",
       systemInstruction:
@@ -19,7 +22,7 @@ router.get("/:city", async (req, res) => {
     });
 
     const prompt = `
-      Find the top 5-10 current and upcoming events in ${city} for this week.
+      What events are happening in ${city} ${timeframe}.
       Return ONLY a JSON array with the following structure for each event:
       [
         {

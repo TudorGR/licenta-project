@@ -58,7 +58,7 @@ const AIChatBox = () => {
     }
   }, [savedEvents]);
 
-  // Assign a template to each suggestion when fetched
+  // Update the fetchEventSuggestions function to randomly select categories
   const fetchEventSuggestions = async () => {
     if (!savedEvents || savedEvents.length === 0) return;
 
@@ -67,9 +67,8 @@ const AIChatBox = () => {
 
       // Assign a random template to each suggestion
       const enhancedSuggestions = rawSuggestions.map((suggestion) => {
-        const templateIndex = Math.floor(
-          Math.random() * suggestionTemplates.length
-        );
+        // Only select from event creation templates (first 10 templates)
+        const templateIndex = Math.floor(Math.random() * 10);
         const messageTemplate = suggestionTemplates[templateIndex];
         const template = messageTemplate(suggestion);
 
@@ -85,10 +84,73 @@ const AIChatBox = () => {
         };
       });
 
-      setSuggestions(enhancedSuggestions);
+      // Get event query suggestions
+      const queryEventSuggestions = generateEventQuerySuggestions();
+
+      // Create a pool of all possible suggestions
+      const allSuggestions = [...enhancedSuggestions, ...queryEventSuggestions];
+
+      // Pick a random number between 3-5 for total suggestions
+      const totalSuggestions = Math.floor(Math.random() * 3) + 3;
+
+      // Randomly select suggestions from the combined pool
+      const finalSuggestions = shuffleArray(allSuggestions).slice(
+        0,
+        totalSuggestions
+      );
+
+      setSuggestions(finalSuggestions);
     } catch (error) {
       console.error("Failed to fetch event suggestions:", error);
+
+      // Even if event suggestions fail, show a query suggestion
+      const queryEventSuggestions = generateEventQuerySuggestions();
+      setSuggestions(queryEventSuggestions);
     }
+  };
+
+  // Add this helper function to shuffle an array (Fisher-Yates algorithm)
+  const shuffleArray = (array) => {
+    const newArray = [...array];
+    for (let i = newArray.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+    }
+    return newArray;
+  };
+
+  // Generate static event query suggestions
+  const generateEventQuerySuggestions = () => {
+    const queryTemplates = [
+      {
+        template: `Show me local events for this week`,
+        values: { query: "events week" },
+      },
+      {
+        template: `What's happening today in the city?`,
+        values: { query: "events today" },
+      },
+      {
+        template: `What events are going on this month?`,
+        values: { query: "events month" },
+      },
+      {
+        template: `Any interesting events this weekend?`,
+        values: { query: "events weekend" },
+      },
+    ];
+
+    // Select just 1 random template instead of 2
+    const randomIndex = Math.floor(Math.random() * queryTemplates.length);
+    const selectedTemplate = queryTemplates[randomIndex];
+
+    return [
+      {
+        ...selectedTemplate,
+        messageTemplate: selectedTemplate,
+        formattedMessage: selectedTemplate.template,
+      },
+    ];
   };
 
   // Message templates for suggestions with formatted parts
@@ -176,6 +238,38 @@ const AIChatBox = () => {
         day: dayjs(suggestion.day).format("MMMM D"),
       },
     }),
+
+    // New templates for local events queries
+    (suggestion) => ({
+      template: `Show me local events for this week`,
+      values: {
+        query: "events week",
+      },
+    }),
+    (suggestion) => ({
+      template: `What's happening today in the city?`,
+      values: {
+        query: "events today",
+      },
+    }),
+    (suggestion) => ({
+      template: `What events are going on this month?`,
+      values: {
+        query: "events month",
+      },
+    }),
+    (suggestion) => ({
+      template: `Any interesting events this weekend?`,
+      values: {
+        query: "events weekend",
+      },
+    }),
+    (suggestion) => ({
+      template: `Show me local concerts and performances`,
+      values: {
+        query: "local concerts",
+      },
+    }),
   ];
 
   // Helper function to format the message text from template and values
@@ -223,7 +317,6 @@ const AIChatBox = () => {
     setMessages((prev) => [...prev, { type: "user", text: messageToSend }]);
 
     setInput("");
-
     setLoading(true);
 
     try {
@@ -294,8 +387,24 @@ const AIChatBox = () => {
             },
           },
         ]);
+      } else if (response.data.intent === "list_events") {
+        // Handle list events response
+        const { events, timeframe, city } = response.data;
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: "system",
+            content: {
+              type: "localEvents",
+              events,
+              timeframe,
+              city,
+            },
+          },
+        ]);
       } else {
-        // For other intents, just show the response message
+        // For other intents (existing code)
         setMessages((prev) => [
           ...prev,
           { type: "system", text: response.data.message },
@@ -403,6 +512,11 @@ const AIChatBox = () => {
         </div>
         <div className="mt-2 mb-2">
           <div className="flex flex-row gap-1 items-center">
+            {suggestedSlots.length == 0 ? (
+              <div className="text-xs text-gray-500">No time slots found.</div>
+            ) : (
+              ""
+            )}
             {/* Display first 3 time slots */}
             {suggestedSlots.slice(0, 3).map((slot, index) => (
               <button
@@ -447,9 +561,72 @@ const AIChatBox = () => {
             )}
           </div>
         </div>
-        <div className="text-xs text-gray-500">
-          Click on a time slot to schedule this event
+        {suggestedSlots.length == 0 ? (
+          ""
+        ) : (
+          <div className="text-xs text-gray-500">
+            Click on a time slot to schedule this event
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Custom component for rendering local events list
+  const LocalEventsMessage = ({ events, timeframe, city }) => {
+    const [expandedEvent, setExpandedEvent] = useState(null);
+
+    return (
+      <div className="flex flex-col">
+        <div className=" mb-2">
+          Here are some events I found in {city} {timeframe && `(${timeframe})`}
+          :
         </div>
+
+        {events.length === 0 ? (
+          <div className="text-gray-500">No events found.</div>
+        ) : (
+          <div className="space-y-2 max-h-72 overflow-y-auto">
+            {events.map((event, index) => (
+              <div
+                key={index}
+                className="p-2.5 rounded-md bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors"
+                onClick={() =>
+                  setExpandedEvent(expandedEvent === index ? null : index)
+                }
+              >
+                <div className="flex justify-between items-center">
+                  <span>{event.title}</span>
+                  <span className="text-xs text-gray-500">
+                    {dayjs(event.day).format("MMM D")}
+                  </span>
+                </div>
+
+                {expandedEvent === index && (
+                  <div className="mt-2 text-sm space-y-1 text-gray-700">
+                    <div className="text-xs">
+                      {dayjs(event.day).format("dddd, MMMM D")}
+                    </div>
+                    <div>
+                      {event.timeStart} - {event.timeEnd}
+                    </div>
+                    {event.location && <div>📍 {event.location}</div>}
+                    {event.description && (
+                      <div className="italic">{event.description}</div>
+                    )}
+                    {event.category && (
+                      <div className="mt-1">
+                        <span className="inline-block px-2 py-0.5 bg-gray-200 rounded text-xs">
+                          {event.category}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   };
@@ -481,7 +658,21 @@ const AIChatBox = () => {
                     bg-gray-50 text-gray-600
               `}
               >
-                {isTimeSuggestion ? (
+                {suggestion.values.query ? (
+                  // Events/location icon for event queries
+                  <svg
+                    className="h-3.5 w-3.5"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M5.05 4.05a7 7 0 119.9 9.9l-4.95 4.95a1 1 0 01-1.414 0l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                ) : isTimeSuggestion ? (
+                  // Clock icon for time suggestions
                   <svg
                     className="h-3.5 w-3.5"
                     viewBox="0 0 20 20"
@@ -494,6 +685,7 @@ const AIChatBox = () => {
                     />
                   </svg>
                 ) : (
+                  // Calendar icon for regular events
                   <svg
                     className="h-3.5 w-3.5"
                     viewBox="0 0 20 20"
@@ -563,6 +755,15 @@ const AIChatBox = () => {
           eventData={msg.content.eventData}
           suggestedSlots={msg.content.suggestedSlots}
           message={msg.content.message}
+        />
+      );
+    } else if (msg.content && msg.content.type === "localEvents") {
+      // Local events list message
+      content = (
+        <LocalEventsMessage
+          events={msg.content.events}
+          timeframe={msg.content.timeframe}
+          city={msg.content.city}
         />
       );
     }

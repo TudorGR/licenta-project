@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import dayjs from "dayjs";
 import Event from "../models/Event.js";
 import { Op } from "sequelize"; // Add this import for Sequelize operators
+import axios from "axios"; // Add this import for axios
 
 dotenv.config();
 const router = express.Router();
@@ -33,10 +34,13 @@ router.post("/", async (req, res) => {
   Extract the function and it's parameters from the user message, and provide a short but useful message for completion or missing any parameters.
   These are all your possible function: "
 createEvent(title,startTime,endTime,date)
+list_events(timeframe)
 unknownFuntion()"
   Example format: {function: '', parameters: ['','',...], category: "", message: ""}.
   RULES:
   - if the user asks to find the best time it refers to createEvent function
+  - if the user asks about what events are happening, local events, or similar queries, use list_events function
+  - for list_events, timeframe can be "today", "this week", "this month"
   - the parameters should be in the order: title(string), startTime(24hr format), endTime(24hr format), date(YYYY-MM-DD)
   - if a parameter is not specified ask for it and make the parameter empty in the list
   - ignore formats like "now", "in 2 hours", "before that", etc.
@@ -171,6 +175,30 @@ unknownFuntion()"
           message: `Here are the best times to schedule "${title}" on ${dayjs(
             date
           ).format("YYYY-MM-DD")} based on your patterns.`,
+        });
+      }
+    }
+
+    if (assistantResponse.function === "list_events") {
+      const timeframe = params[0] || "this week";
+      const cityName = "Iasi Romania"; // City is hardcoded as specified in requirements
+
+      try {
+        // Get events using the existing endpoint with timeframe parameter
+        const events = await getLocalEvents(cityName, timeframe);
+
+        return res.json({
+          intent: "list_events",
+          events: events,
+          timeframe: timeframe,
+          city: cityName,
+          message: `Here are the events in ${cityName} for ${timeframe}`,
+        });
+      } catch (error) {
+        console.error("Error fetching local events:", error);
+        return res.json({
+          intent: "error",
+          message: "Sorry, I couldn't fetch the local events at this time.",
         });
       }
     }
@@ -433,6 +461,22 @@ function minutesToTimeString(minutes) {
 function getTimeInMinutes(time) {
   const [hours, minutes] = time.split(":").map(Number);
   return hours * 60 + minutes;
+}
+
+// Helper function to fetch local events
+async function getLocalEvents(city, timeframe) {
+  try {
+    // Pass timeframe as a query parameter to the local-events endpoint
+    const response = await axios.get(
+      `http://localhost:5000/api/local-events/${encodeURIComponent(
+        city
+      )}?timeframe=${encodeURIComponent(timeframe)}`
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error in getLocalEvents:", error);
+    return [];
+  }
 }
 
 // Get category patterns based on past month's data
