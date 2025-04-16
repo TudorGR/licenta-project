@@ -54,8 +54,7 @@ const DayView = () => {
     selectedCategory,
     setSelectedCategory,
     dispatchEvent,
-    autoRescheduleEnabled, // Add this new value
-    showWeather, // Add this new value
+    showWeather,
   } = useContext(Context);
 
   const calculateTimePosition = () => {
@@ -266,22 +265,6 @@ const DayView = () => {
       e.preventDefault();
 
       try {
-        // Check for overlaps
-        const checkOverlap = (event1, event2) => {
-          const start1 = getTimeSlot(event1.timeStart);
-          const end1 = getTimeSlot(event1.timeEnd);
-          const start2 = getTimeSlot(event2.timeStart);
-          const end2 = getTimeSlot(event2.timeEnd);
-
-          return start1 < end2 && start2 < end1; // Overlap condition
-        };
-
-        const hasOverlap = dayEvents.some(
-          (event) =>
-            event.id !== draggedEvent.id && // Exclude the dragged event itself
-            checkOverlap(event, draggedEvent)
-        );
-
         // Always update the event's position first for immediate feedback
         if (hasMoved) {
           const updatedEvent = {
@@ -298,18 +281,7 @@ const DayView = () => {
           // Clear travel time cache when events are moved
           TravelTimeIndicator.clearTravelTimeCache();
 
-          // Then handle overlap if needed
-          if (hasOverlap && autoRescheduleEnabled) {
-            // After updating the position, handle overlap with AI
-            handleResolveOverlapWithAI(updatedEvent);
-          } else if (hasOverlap) {
-            toast.warning(
-              "Event overlaps detected. Consider adjusting your schedule.",
-              {
-                duration: 3000,
-              }
-            );
-          }
+          // Overlap detection kept but toast notification removed
         } else {
           setTimeStart(draggedEvent.timeStart);
           setTimeEnd(draggedEvent.timeEnd);
@@ -359,167 +331,6 @@ const DayView = () => {
       });
     } catch (error) {
       console.error("Error locking event:", error);
-    }
-  };
-
-  const handleResolveOverlapWithAI = async (overlappingEvent) => {
-    try {
-      // Show a loading toast
-      const loadingToast = toast.loading("Resolving event overlap...");
-
-      // 1. Get the day of the week (0-6, Sunday is 0)
-      const dayOfWeek = selectedDay.day();
-      const dayName = [
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday",
-        "Sunday",
-      ][dayOfWeek];
-
-      // 2. Collect all events for that day including the overlapping one
-      const allDayEvents = [...dayEvents];
-
-      // Replace the original event with the dragged version if it exists
-      const eventIndex = allDayEvents.findIndex(
-        (e) => e.id === overlappingEvent.id
-      );
-      if (eventIndex >= 0) {
-        allDayEvents[eventIndex] = overlappingEvent;
-      } else {
-        allDayEvents.push(overlappingEvent);
-      }
-
-      // 3. Create frequency vectors for each category
-      // Get events from the past grouped by category and day of week
-      const pastEvents = savedEvents.filter((event) => {
-        const eventDay = dayjs(parseInt(event.day));
-        return eventDay.isBefore(dayjs()) && eventDay.day() === dayOfWeek;
-      });
-
-      // Create frequency vectors for each category
-      const frequencyVectors = {};
-      const generalFrequencyVectors = {};
-
-      // Get all used categories
-      const categories = new Set();
-      [...pastEvents, ...allDayEvents].forEach((event) => {
-        const category = event.category || "None";
-        categories.add(category);
-      });
-
-      // Create hourly frequency arrays
-      categories.forEach((category) => {
-        frequencyVectors[category] = Array(24).fill(0);
-        generalFrequencyVectors[category] = Array(24).fill(0);
-      });
-
-      // Populate specific day frequency
-      pastEvents.forEach((event) => {
-        const category = event.category || "None";
-        const startHour = parseInt(event.timeStart.split(":")[0]);
-        let endHour = parseInt(event.timeEnd.split(":")[0]);
-        const endHourMinutes = parseInt(event.timeEnd.split(":")[1]);
-        if (endHourMinutes > 0) {
-          endHour++;
-        }
-
-        // Increment frequency for all hours the event overlaps
-        for (let hour = startHour; hour <= endHour; hour++) {
-          frequencyVectors[category][hour] += 1;
-        }
-      });
-
-      // Populate general frequency (from all past events)
-      savedEvents
-        .filter((event) => dayjs(parseInt(event.day)).isBefore(dayjs()))
-        .forEach((event) => {
-          const category = event.category || "None";
-          if (!generalFrequencyVectors[category]) {
-            generalFrequencyVectors[category] = Array(24).fill(0);
-          }
-
-          const startHour = parseInt(event.timeStart.split(":")[0]);
-          let endHour = parseInt(event.timeEnd.split(":")[0]);
-          const endHourMinutes = parseInt(event.timeEnd.split(":")[1]);
-          if (endHourMinutes > 0) {
-            endHour++;
-          }
-
-          // Increment frequency for all hours the event overlaps
-          for (let hour = startHour; hour <= endHour; hour++) {
-            generalFrequencyVectors[category][hour] += 1;
-          }
-        });
-
-      // 4. Make API call to backend
-      const response = await fetch(
-        "http://localhost:5000/api/events/resolve-overlap",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            dayOfWeek: dayName,
-            eventsForDay: allDayEvents.map((e) => ({
-              id: e.id,
-              title: e.title,
-              category: e.category || "None",
-              timeStart: e.timeStart,
-              timeEnd: e.timeEnd,
-              description: e.description || "",
-              locked: e.locked || false,
-            })),
-            frequencyVectors,
-            generalFrequencyVectors,
-            movedEvent: overlappingEvent,
-          }),
-        }
-      );
-
-      const result = await response.json();
-
-      // Dismiss the loading toast
-      toast.dismiss(loadingToast);
-
-      if (result.updatedEvents) {
-        // Apply suggested updates
-        result.updatedEvents.forEach((updatedEvent) => {
-          const originalEvent = allDayEvents.find(
-            (e) => e.id === updatedEvent.id
-          );
-          if (originalEvent) {
-            dispatchEvent({
-              type: "update",
-              payload: {
-                ...originalEvent,
-                timeStart: updatedEvent.timeStart,
-                timeEnd: updatedEvent.timeEnd,
-              },
-            });
-          }
-        });
-
-        // Show success toast
-        if (result.toast) {
-          toast.success(
-            `Adjusted ${result.updatedEvents.length} event${
-              result.updatedEvents.length !== 1 ? "s" : ""
-            } to resolve overlap`,
-            {
-              duration: 4000,
-            }
-          );
-        }
-      }
-    } catch (error) {
-      console.error("Error resolving event overlap with AI:", error);
-      toast.error("Couldn't resolve event overlap. Please try again.", {
-        duration: 5000,
-      });
     }
   };
 

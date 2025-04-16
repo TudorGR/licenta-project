@@ -333,7 +333,7 @@ const AIChatBox = () => {
           <li
             key={event.id}
             onClick={() => handleEventClick(event)}
-            className="py-1 px-2 my-1 rounded transition-all bg-gray-200 hover:bg-gray-300 cursor-pointer flex justify-between"
+            className="py-1 px-2 my-1 rounded transition-all bg-gray-100 hover:bg-gray-200 cursor-pointer flex justify-between"
           >
             <span className="font-medium">{event.title}</span>
             <span className="text-gray-600">
@@ -411,7 +411,7 @@ const AIChatBox = () => {
                 className={`py-1 px-2 rounded-full cursor-pointer transition-all ${
                   index === 0
                     ? "bg-black hover:bg-gray-700 text-white"
-                    : "bg-gray-200 hover:bg-gray-300 transition-all text-gray-800"
+                    : "bg-gray-100 hover:bg-gray-200 transition-all text-gray-800"
                 }`}
               >
                 {formatTime(slot.timeStart)}
@@ -423,7 +423,7 @@ const AIChatBox = () => {
               <div className="relative inline-block">
                 <button
                   onClick={() => setShowAllSlots(!showAllSlots)}
-                  className="py-1  rounded-full  text-gray-800 flex items-center"
+                  className="py-1 overflow-x-scroll rounded-full  text-gray-800 flex items-center"
                 >
                   {suggestedSlots.slice(3).length}
                   {showAllSlots ? "▲" : "▼"}
@@ -470,19 +470,15 @@ const AIChatBox = () => {
               key={index}
               onClick={() => handleSuggestionClick(suggestion)}
               className={`
-                text-left px-2 py-2 rounded-xl  w-full
-                flex items-center gap-2 border bg-white border-gray-100 hover:bg-gray-50 transition-all
+                text-left px-2 py-2  w-full
+                flex items-center gap-2 rounded-xl  bg-gray-50  hover:bg-gray-100 transition-all
               `}
             >
               {/* Icon based on suggestion type */}
               <div
                 className={`
                 rounded-full p-1.5 flex-shrink-0
-                ${
-                  isTimeSuggestion
-                    ? "bg-black text-white"
-                    : "bg-gray-100 text-gray-500"
-                }
+                    bg-gray-50 text-gray-600
               `}
               >
                 {isTimeSuggestion ? (
@@ -513,11 +509,7 @@ const AIChatBox = () => {
               </div>
 
               {/* Text content with formatted parts */}
-              <div
-                className={`text-xs leading-tight ${
-                  isTimeSuggestion ? "text-gray-800" : "text-gray-600"
-                }`}
-              >
+              <div className={`text-xs leading-tight text-gray-600`}>
                 {renderFormattedSuggestion(suggestion)}
               </div>
             </button>
@@ -540,7 +532,7 @@ const AIChatBox = () => {
         const key = part;
         const value = values[key];
         return (
-          <span key={index} className="font-semibold text-black">
+          <span key={index} className="font-medium ">
             {value}
           </span>
         );
@@ -581,10 +573,10 @@ const AIChatBox = () => {
         className={`mb-2 ${msg.type === "user" ? "text-right" : ""}`}
       >
         <div
-          className={`text-sm inline-block p-3 rounded-lg max-w-[85%] ${
+          className={`text-sm  inline-block p-3 rounded-lg max-w-[85%] ${
             msg.type === "user"
               ? "bg-black text-white rounded-tr-none"
-              : "bg-gray-100 text-black rounded-tl-none"
+              : "bg-gray-50 text-black rounded-tl-none border border-gray-100"
           }`}
         >
           {content}
@@ -625,24 +617,35 @@ const AIChatBox = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="border-t border-gray-100">
+      <div className="border-t border-gray-100 ">
         <div className="flex">
-          <input
-            type="text"
+          <textarea
             value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) =>
-              e.key === "Enter" && !loading && handleSendMessage()
-            }
+            onChange={(e) => {
+              setInput(e.target.value);
+              // Auto-resize the textarea
+              e.target.style.height = "auto";
+              e.target.style.height = `${Math.min(
+                e.target.scrollHeight,
+                150
+              )}px`;
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                if (!loading) handleSendMessage();
+              }
+            }}
             placeholder="Type a message..."
-            className="flex-1 p-4 focus:outline-none focus:border-black"
+            className=" flex-1 p-4 focus:outline-none focus:border-black resize-none min-h-[50px] max-h-[150px] overflow-y-auto"
             disabled={loading}
             ref={inputRef}
+            rows={1}
           />
           <button
             onClick={() => handleSendMessage()}
             disabled={loading || !input.trim()}
-            className="text-white m-2 p-2.5 transition"
+            className="text-white m-2 p-2.5 transition align-self-end"
           >
             <img src={sendIcon} alt="Send" />
           </button>

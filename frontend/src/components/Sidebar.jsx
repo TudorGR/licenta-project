@@ -108,21 +108,6 @@ const Sidebar = () => {
           </div>
 
           <div className="w-full rounded-sm p-0 overflow-clip">
-            <h3 className="mb-2 mx-4">AI Settings</h3>
-            <div className="flex items-center justify-between border-y-1 border-gray-100 px-4 h-12">
-              <span className="text-sm">Auto-reschedule on overlap</span>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={autoRescheduleEnabled}
-                  onChange={() =>
-                    setAutoRescheduleEnabled(!autoRescheduleEnabled)
-                  }
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
-              </label>
-            </div>
             <div className="flex items-center justify-between border-b-1 border-gray-100 px-4 h-12">
               <span className="text-sm">Show local events</span>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -136,9 +121,8 @@ const Sidebar = () => {
               </label>
             </div>
 
-            <h3 className="my-2 mx-4 ">Misc Settings</h3>
             {(isWeekView || isDayView) && (
-              <div className="flex items-center justify-between border-y-1 border-gray-100 px-4 h-12">
+              <div className="flex items-center justify-between border-b-1 border-gray-100 px-4 h-12">
                 <span className="text-sm">Show weather</span>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input

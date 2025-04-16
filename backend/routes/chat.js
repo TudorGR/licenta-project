@@ -15,6 +15,20 @@ router.post("/", async (req, res) => {
 
   const currentDate = dayjs().format("YYYY-MM-DD");
 
+  // Generate date mapping for the upcoming week
+  const dateMapping = [];
+  const today = dayjs();
+  const currentDayOfWeek = today.day(); // 0 is Sunday, 6 is Saturday
+
+  // Loop through next 7 days to create mapping
+  for (let i = 0; i < 7; i++) {
+    // Calculate the date for each day of the week starting from current day
+    const date = today.add(i, "day");
+    const dayOfWeek = date.format("dddd").toLowerCase(); // e.g. "monday"
+    const formattedDate = date.format("YYYY-MM-DD");
+    dateMapping.push(`${dayOfWeek}: ${formattedDate}`);
+  }
+
   let systemPrompt = `You are a calendar assistant that outputs JSON only.
   Extract the function and it's parameters from the user message, and provide a short but useful message for completion or missing any parameters.
   These are all your possible function: "
@@ -25,10 +39,12 @@ unknownFuntion()"
   - if the user asks to find the best time it refers to createEvent function
   - the parameters should be in the order: title(string), startTime(24hr format), endTime(24hr format), date(YYYY-MM-DD)
   - if a parameter is not specified ask for it and make the parameter empty in the list
-  - ignore day of week if mentioned
   - ignore formats like "now", "in 2 hours", "before that", etc.
   - date is by default currentDate if it is not specified
   - currentDate = ${currentDate}
+  - days of week map to these specific dates for the next 7 days:
+    ${dateMapping.join("\n    ")}
+  - when a day of week is mentioned (like "monday", "tuesday", etc.) use the corresponding date from the mapping above
   - you are gonna choose the category: Meeting, Workout, Study, Personal, Work, Social, Family, Health, Hobby, Chores, Travel, Finance, Learning, Self-care, Events, None`;
 
   const messages = [

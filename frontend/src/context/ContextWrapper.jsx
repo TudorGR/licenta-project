@@ -132,7 +132,6 @@ export default function ContextWrapper(props) {
   });
   const [workingHoursStart, setWorkingHoursStart] = useState("07:00");
   const [workingHoursEnd, setWorkingHoursEnd] = useState("19:00");
-  const [autoRescheduleEnabled, setAutoRescheduleEnabled] = useState(false);
   const [showWeather, setShowWeather] = useState(false);
   const [showLocalEvents, setShowLocalEvents] = useState(false);
   const [userCity, setUserCity] = useState(
@@ -248,8 +247,6 @@ export default function ContextWrapper(props) {
         workingHoursEnd,
         setWorkingHoursStart,
         setWorkingHoursEnd,
-        autoRescheduleEnabled,
-        setAutoRescheduleEnabled,
         showWeather,
         setShowWeather,
         showLocalEvents,
