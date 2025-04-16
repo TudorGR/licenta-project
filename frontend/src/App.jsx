@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useContext } from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import PrivateRoute from "./components/PrivateRoute";
+import Login from "./components/Login";
+import Register from "./components/Register";
 import { getCalendarMonth } from "./util";
 import Context from "./context/Context";
+import ContextWrapper from "./context/ContextWrapper";
 import Sidebar from "./components/Sidebar";
 import Month from "./components/Month";
 import CalendarHeader from "./components/CalendarHeader";
@@ -8,11 +14,11 @@ import CalendarMainHeader from "./components/CalendarMainHeader";
 import EventModal from "./components/EventModal";
 import Week from "./components/Week";
 import DayView from "./components/DayView";
-import AIChatBox from "./components/AIChatBox"; // Import the new component
+import AIChatBox from "./components/AIChatBox";
 import { Toaster } from "react-hot-toast";
 import "./App.css";
 
-function App() {
+const CalendarApp = () => {
   const [calendarMonth, setCalendarMonth] = useState(getCalendarMonth());
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -28,19 +34,6 @@ function App() {
   useEffect(() => {
     setCalendarMonth(getCalendarMonth(monthIndex));
   }, [monthIndex]);
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      // You can keep or remove this shortcut based on your preference
-      if (e.ctrlKey && e.code === "Space") {
-        e.preventDefault();
-        // Do nothing now or toggle the right sidebar visibility
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
 
   return (
     <>
@@ -59,11 +52,34 @@ function App() {
               {isDayView && <DayView />}
             </div>
           </div>
-          <AIChatBox /> {/* Add the AI Chatbox here */}
+          <AIChatBox />
         </div>
       </div>
       {showEventModal && <EventModal />}
     </>
+  );
+};
+
+function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route
+            path="/"
+            element={
+              <PrivateRoute>
+                <ContextWrapper>
+                  <CalendarApp />
+                </ContextWrapper>
+              </PrivateRoute>
+            }
+          />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
 

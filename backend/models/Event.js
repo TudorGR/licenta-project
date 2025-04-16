@@ -1,5 +1,6 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../config/database.js";
+import User from "./User.js";
 
 const Event = sequelize.define("Event", {
   id: {
@@ -40,6 +41,18 @@ const Event = sequelize.define("Event", {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
+  userId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: User,
+      key: "id",
+    },
+  },
 });
+
+// Create association
+Event.belongsTo(User, { foreignKey: "userId" });
+User.hasMany(Event, { foreignKey: "userId" });
 
 export default Event;

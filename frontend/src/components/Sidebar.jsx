@@ -1,8 +1,9 @@
 import React, { useContext, useState } from "react";
 import Context from "../context/Context";
+import { AuthContext } from "../context/AuthContext";
 import checkIcon from "../assets/check.svg";
 import heatmapIcon from "../assets/heatmapIcon.png";
-import weatherIcon from "../assets/partly-cloudy.svg"; // Use the cloudy icon as the toggle icon
+import weatherIcon from "../assets/partly-cloudy.svg";
 import CategoryStats from "./CategoryStats";
 import CategoryAnalysis from "./CategoryAnalysis";
 import dayjs from "dayjs";
@@ -45,6 +46,7 @@ const Sidebar = () => {
     showLocalEvents,
     setShowLocalEvents,
   } = useContext(Context);
+  const { currentUser, logout } = useContext(AuthContext);
   const [dropdown, setDropdown] = useState(true);
   const [showCategoryAdjust, setShowCategoryAdjust] = useState(false);
 
@@ -72,10 +74,6 @@ const Sidebar = () => {
 
   return (
     <aside className="pt-2 shrink-0 w-70 border-gray-100 border-r flex flex-col items-center gap-2">
-      {/* <h1 className="text-center my-3 font-bold text-2xl">
-        Calendar<span className="text-blue-500">IQ</span>
-      </h1> */}
-
       {/* Small Calendar */}
       <SmallCalendar />
 

@@ -1,3 +1,9 @@
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@100..800&display=swap");
+
+.header-font {
+  font-family: "Sora", sans-serif;
+}
+
 .calendar-day:hover .calendar-day-number {
   color: black;
   background-color: rgb(240, 240, 240);

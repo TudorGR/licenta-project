@@ -11,13 +11,23 @@ import suggestionRoutes from "./routes/suggestions.js";
 import travelRoutes from "./routes/travel.js";
 import localEventsRoutes from "./routes/localEvents.js";
 import chatRoutes from "./routes/chat.js"; // Import the new route
+import authRoutes from "./routes/auth.js";
+import "./models/associations.js";
+
+// Import models
+import User from "./models/User.js";
+import Event from "./models/Event.js";
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Initialize database
-sequelize.sync();
+try {
+  await sequelize.sync({ alter: true });
+  console.log("Database synchronized successfully");
+} catch (error) {
+  console.error("Error synchronizing database:", error);
+}
 
 // Routes
 app.use("/api/events", eventRoutes);
@@ -26,6 +36,7 @@ app.use("/api/suggestions", suggestionRoutes);
 app.use("/api/travel", travelRoutes);
 app.use("/api/local-events", localEventsRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/auth", authRoutes);
 
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${process.env.GEMINI_API_KEY}`;
 

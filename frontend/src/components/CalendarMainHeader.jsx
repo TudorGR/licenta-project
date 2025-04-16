@@ -1,9 +1,11 @@
 import React, { useContext } from "react";
 import Context from "../context/Context";
+import { AuthContext } from "../context/AuthContext";
 import dayjs from "dayjs";
 import CreateEventButton from "./CreateEventButton";
 import left from "../assets/chevron-left.svg";
 import right from "../assets/chevron-right.svg";
+import logoutIcon from "../assets/log-out.svg";
 
 const CalendarHeader = ({ onOpenAIModal }) => {
   const {
@@ -17,6 +19,7 @@ const CalendarHeader = ({ onOpenAIModal }) => {
     selectedDay,
     isWeekView,
   } = useContext(Context);
+  const { currentUser, logout } = useContext(AuthContext);
 
   const getCurrentWeekIndex = () => {
     const today = dayjs();
@@ -73,10 +76,24 @@ const CalendarHeader = ({ onOpenAIModal }) => {
   };
 
   return (
-    <header className="pb-2 flex justify-between items-center ">
-      <h1 className="text-4xl font-bold text-black">CalendarIQ</h1>
-      <div className="flex">
+    <header className="pb-2 flex justify-between items-center">
+      <h1 className="header-font text-4xl font-bold text-black">CalendarIQ</h1>
+      <div className="flex items-center gap-2">
         <CreateEventButton />
+        <div className="flex gap-2 items-center bg-white rounded-full pl-4 pr-2 shadow-custom">
+          <div className="text-center">
+            <h3 className="font-medium">{currentUser?.name}</h3>
+            <p className="text-xs text-gray-500">{currentUser?.email}</p>
+          </div>
+          <button onClick={logout} className=" cursor-pointer text-sm">
+            <img
+              src={logoutIcon}
+              width="30"
+              height="30"
+              className="hover:opacity-50 transition-opacity"
+            />
+          </button>
+        </div>
       </div>
     </header>
   );

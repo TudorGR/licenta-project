@@ -5,6 +5,7 @@ import weekOfYear from "dayjs/plugin/isoWeek.js";
 import { Op } from "sequelize";
 import axios from "axios";
 import dotenv from "dotenv";
+import { authMiddleware } from "../middleware/auth.js";
 dotenv.config();
 
 // Extend dayjs with the weekOfYear plugin
@@ -16,10 +17,15 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 const router = express.Router();
 
-// Get all events
+// Apply auth middleware to protect event routes
+router.use(authMiddleware);
+
+// Get all events for the authenticated user
 router.get("/", async (req, res) => {
   try {
-    const events = await Event.findAll();
+    const events = await Event.findAll({
+      where: { userId: req.user.userId },
+    });
     res.json(events);
   } catch (error) {
     console.error("Error fetching events:", error);
@@ -27,83 +33,80 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Create event
+// Create a new event (attach userId)
 router.post("/", async (req, res) => {
   try {
-    const eventData = {
+    const newEvent = {
       ...req.body,
-      day: req.body.day.toString(),
+      userId: req.user.userId,
     };
-    const event = await Event.create(eventData);
+    const event = await Event.create(newEvent);
     res.status(201).json(event);
   } catch (error) {
     console.error("Error creating event:", error);
-    res.status(400).json({ error: error.message });
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Update event
+// Update routes to check ownership
 router.put("/:id", async (req, res) => {
   try {
-    const eventId = req.params.id;
+    const event = await Event.findOne({
+      where: {
+        id: req.params.id,
+        userId: req.user.userId,
+      },
+    });
 
-    // Check if this is a new event (ID starts with 'new-')
-    if (eventId.startsWith("new-")) {
-      // Create new event instead of updating
-      const eventData = {
-        ...req.body,
-        day: req.body.day.toString(),
-        id: undefined, // Let the database assign a real ID
-      };
-      const event = await Event.create(eventData);
-      res.status(201).json(event);
-    } else {
-      // Regular update for existing event
-      const event = await Event.findByPk(eventId);
-      if (event) {
-        const eventData = {
-          ...req.body,
-          day: req.body.day.toString(),
-        };
-        const updatedEvent = await event.update(eventData);
-        res.json(updatedEvent);
-      } else {
-        res.status(404).json({ error: "Event not found" });
-      }
+    if (!event) {
+      return res.status(404).json({ error: "Event not found or unauthorized" });
     }
+
+    await event.update(req.body);
+    res.json(event);
   } catch (error) {
     console.error("Error updating event:", error);
-    res.status(400).json({ error: error.message });
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Delete event
 router.delete("/:id", async (req, res) => {
   try {
-    const event = await Event.findByPk(req.params.id);
-    if (event) {
-      await event.destroy();
-      res.json({ message: "Event deleted" });
-    } else {
-      res.status(404).json({ error: "Event not found" });
+    const event = await Event.findOne({
+      where: {
+        id: req.params.id,
+        userId: req.user.userId,
+      },
+    });
+
+    if (!event) {
+      return res.status(404).json({ error: "Event not found or unauthorized" });
     }
+
+    await event.destroy();
+    res.json({ message: "Event deleted" });
   } catch (error) {
     console.error("Error deleting event:", error);
-    res.status(400).json({ error: error.message });
+    res.status(500).json({ error: error.message });
   }
 });
 
 // Add a new route to toggle lock status
 router.patch("/:id/lock", async (req, res) => {
   try {
-    const event = await Event.findByPk(req.params.id);
+    const event = await Event.findOne({
+      where: {
+        id: req.params.id,
+        userId: req.user.userId,
+      },
+    });
     if (event) {
       const updatedEvent = await event.update({
         locked: !event.locked,
       });
       res.json(updatedEvent);
     } else {
-      res.status(404).json({ error: "Event not found" });
+      res.status(404).json({ error: "Event not found or unauthorized" });
     }
   } catch (error) {
     console.error("Error updating event lock:", error);
@@ -122,6 +125,7 @@ router.get("/past-events", async (req, res) => {
         day: {
           [Op.between]: [threeMonthsAgo.valueOf(), today.valueOf()],
         },
+        userId: req.user.userId,
       },
       order: [["day", "ASC"]],
     });

@@ -135,8 +135,8 @@ const AIChatBox = () => {
         values: { query: "events month" },
       },
       {
-        template: `Any interesting events this weekend?`,
-        values: { query: "events weekend" },
+        template: `Any interesting events this week?`,
+        values: { query: "events week" },
       },
     ];
 
