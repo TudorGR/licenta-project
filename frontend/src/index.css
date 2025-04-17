@@ -54,3 +54,8 @@ body {
 strong {
   font-weight: 600;
 }
+
+.gray-bg-done {
+  background-color: rgb(243, 243, 245);
+  border-color: hsl(240, 5.9%, 90%);
+}

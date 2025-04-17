@@ -84,6 +84,20 @@ export default function EventModal() {
       ? selectedDay.format("YYYY-MM-DD")
       : dayjs().format("YYYY-MM-DD")
   );
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    // Trigger enter animation on mount
+    setIsVisible(true);
+
+    return () => {
+      // Clean up not needed here since component unmounts
+    };
+  }, []);
+
+  const closeWithAnimation = () => {
+    setShowEventModal(false);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -367,10 +381,12 @@ export default function EventModal() {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/30 bg-opacity-0 flex justify-center items-center z-40">
+    <div className="fixed inset-0 bg-opacity-0 flex justify-center items-center z-40">
       <form
         name="eventModal"
-        className="bg-white w-[400px] rounded-3xl relative"
+        className={`bg-white border shadow-xl border-gray-100 w-[400px] rounded-3xl relative transform transition-all duration-100 ease-out ${
+          isVisible ? "scale-100 " : "scale-97"
+        }`}
         ref={modalRef}
       >
         <header className="border-b-1 border-gray-100 h-14 flex justify-between items-center">
@@ -379,9 +395,7 @@ export default function EventModal() {
           </h1>
           <div className="flex items-center">
             <button
-              onClick={() => {
-                setShowEventModal(false);
-              }}
+              onClick={closeWithAnimation}
               className="cursor-pointer mr-4"
               type="button"
             >
@@ -580,9 +594,7 @@ export default function EventModal() {
               ""
             )}
             <button
-              onClick={() => {
-                setShowEventModal(false);
-              }}
+              onClick={closeWithAnimation}
               className="transition-all  active:bg-gray-50 cursor-pointer border px-4 h-10 shadow-custom border-gray-100 rounded-full mr-2"
               type="button"
             >
@@ -600,15 +612,17 @@ export default function EventModal() {
         </footer>
 
         {suggestions.length > 0 && (
-          <div className="absolute left-full ml-4 top-0 max-w-xs w-64 overflow-hidden">
+          <div className="absolute  left-full top-0 max-w-xs w-50 overflow-hidden">
             <div className="max-h-80 overflow-y-auto">
               {suggestions.map((suggestion, index) => (
                 <div
                   key={`${suggestion.category}-${suggestion.suggestedTitle}`}
-                  className={`p-3 cursor-pointer transition-all ${
+                  className={`overflow-clip px-3 py-1 ml-2 shadow-xl mr-4 mt-2 ${
+                    index === suggestions.length - 1 ? "mb-10" : ""
+                  }  border  rounded-xl cursor-pointer transition-all ${
                     index === currentSuggestionIndex
-                      ? "opacity-100"
-                      : "opacity-75 hover:opacity-90"
+                      ? "bg-black border-black"
+                      : "bg-gray-50 border-gray-100"
                   }`}
                   onClick={() => {
                     setCurrentSuggestionIndex(index);
@@ -622,29 +636,65 @@ export default function EventModal() {
                       <img
                         src={categoryIcons[suggestion.category]}
                         alt={suggestion.category}
-                        className="w-5 h-5 filter invert drop-shadow-[0_0_1px_rgba(255,255,255,0.5)]"
+                        className={`w-4 h-4  ${
+                          index === currentSuggestionIndex ? "alter invert" : ""
+                        }`}
                       />
                     )}
-                    <span className="font-medium text-white text-shadow-white">
+                    <span
+                      className={`font-medium ${
+                        index === currentSuggestionIndex
+                          ? "text-white"
+                          : "text-black"
+                      }  text-shadow-white`}
+                    >
                       {suggestion.suggestedTitle}
                     </span>
                   </div>
-                  <div className="text-xs mt-1 text-white">
-                    <div className="flex items-center gap-1">
-                      <span className="text-white text-shadow-white">
-                        Categorie:
+                  <div
+                    className={`text-xxs mt-1 ${
+                      index === currentSuggestionIndex
+                        ? "text-white"
+                        : "text-black"
+                    }`}
+                  >
+                    <div className={`flex items-center gap-1`}>
+                      <span
+                        className={`text-xxs ${
+                          index === currentSuggestionIndex
+                            ? "text-white"
+                            : "text-black"
+                        } text-shadow-white`}
+                      >
+                        Category:
                       </span>
-                      <span className="font-medium text-white text-shadow-white">
+                      <span
+                        className={`font-medium text-xxs ${
+                          index === currentSuggestionIndex
+                            ? "text-white"
+                            : "text-black"
+                        } text-shadow-white`}
+                      >
                         {suggestion.category}
                       </span>
                     </div>
                     {suggestion.suggestedLocation && (
-                      <div className="flex items-center gap-1 mt-1">
+                      <div className={`flex items-center gap-1 mt-1`}>
                         <img
                           src={locationIcon}
-                          className="w-3 h-3 filter invert drop-shadow-[0_0_1px_rgba(255,255,255,0.5)]"
+                          className={`w-3 h-3  ${
+                            index === currentSuggestionIndex
+                              ? "alter invert"
+                              : ""
+                          }`}
                         />
-                        <span className="text-white text-shadow-white">
+                        <span
+                          className={`text-xxs ${
+                            index === currentSuggestionIndex
+                              ? "text-white"
+                              : "text-black"
+                          } text-shadow-white`}
+                        >
                           {suggestion.suggestedLocation}
                         </span>
                       </div>

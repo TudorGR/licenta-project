@@ -3,6 +3,7 @@ import axios from "axios";
 import Context from "../context/Context";
 import dayjs from "dayjs";
 import sendIcon from "../assets/send-icon.svg";
+import searchIcon from "../assets/search.svg";
 import { api } from "../services/api.js";
 
 const AIChatBox = () => {
@@ -545,7 +546,7 @@ const AIChatBox = () => {
 
                 {/* Dropdown menu for all slots */}
                 {showAllSlots && (
-                  <div className="shadow-custom absolute z-10 mt-1 right-0 bg-white rounded-md border border-gray-100 py-1 w-48">
+                  <div className="shadow-custom absolute z-10 mt-1 right-0 bg-white rounded-md border border-gray-100 py-1 w-40 max-h-100 overflow-scroll">
                     {suggestedSlots.slice(3).map((slot, index) => (
                       <button
                         key={index + 3}
@@ -774,10 +775,10 @@ const AIChatBox = () => {
         className={`mb-2 ${msg.type === "user" ? "text-right" : ""}`}
       >
         <div
-          className={`text-sm  inline-block p-3 rounded-lg max-w-[85%] ${
+          className={`text-sm text-left inline-block p-3 rounded-lg max-w-[85%] ${
             msg.type === "user"
-              ? "bg-black text-white rounded-tr-none"
-              : "bg-gray-50 text-black rounded-tl-none border border-gray-100"
+              ? "bg-gray-100  text-black  border border-gray-200"
+              : "bg-white text-black border border-gray-200 "
           }`}
         >
           {content}
@@ -800,7 +801,7 @@ const AIChatBox = () => {
 
         {loading && (
           <div className="mb-2">
-            <div className="inline-block p-3 rounded-lg max-w-[85%] bg-gray-100 text-black rounded-tl-none">
+            <div className="inline-block p-3 rounded-lg max-w-[85%] border border-gray-100 text-black rounded-tl-none">
               <div className="flex space-x-2">
                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
                 <div
@@ -818,39 +819,35 @@ const AIChatBox = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="border-t border-gray-100 ">
-        <div className="flex">
-          <textarea
-            value={input}
-            onChange={(e) => {
-              setInput(e.target.value);
-              // Auto-resize the textarea
-              e.target.style.height = "auto";
-              e.target.style.height = `${Math.min(
-                e.target.scrollHeight,
-                150
-              )}px`;
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                if (!loading) handleSendMessage();
-              }
-            }}
-            placeholder="Type a message..."
-            className=" flex-1 p-4 focus:outline-none focus:border-black resize-none min-h-[50px] max-h-[150px] overflow-y-auto"
-            disabled={loading}
-            ref={inputRef}
-            rows={1}
-          />
-          <button
-            onClick={() => handleSendMessage()}
-            disabled={loading || !input.trim()}
-            className="text-white m-2 p-2.5 transition align-self-end"
-          >
-            <img src={sendIcon} alt="Send" />
-          </button>
-        </div>
+      <div className="flex items-center m-2 rounded-xl shadow-custom border border-gray-100">
+        <button
+          onClick={() => handleSendMessage()}
+          disabled={loading || !input.trim()}
+          className="text-white transition align-self-end"
+        >
+          <img src={searchIcon} className="h-6 w-6 mx-2" />
+        </button>
+
+        <textarea
+          value={input}
+          onChange={(e) => {
+            setInput(e.target.value);
+            // Auto-resize the textarea
+            e.target.style.height = "auto";
+            e.target.style.height = `${Math.min(e.target.scrollHeight, 130)}px`;
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              if (!loading) handleSendMessage();
+            }
+          }}
+          placeholder="Type here..."
+          className=" flex-1 py-3 focus:outline-none focus:border-black resize-none min-h-[30px] max-h-[150px] overflow-y-auto"
+          disabled={loading}
+          ref={inputRef}
+          rows={1}
+        />
       </div>
     </div>
   );

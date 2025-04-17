@@ -22,13 +22,6 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-try {
-  await sequelize.sync({ alter: true });
-  console.log("Database synchronized successfully");
-} catch (error) {
-  console.error("Error synchronizing database:", error);
-}
-
 // Routes
 app.use("/api/events", eventRoutes);
 app.use("/api/algo", algoRoutes);
