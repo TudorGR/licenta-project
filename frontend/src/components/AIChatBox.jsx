@@ -6,6 +6,10 @@ import sendIcon from "../assets/send-icon.svg";
 import searchIcon from "../assets/search.svg";
 import micIcon from "../assets/mic.svg";
 import { api } from "../services/api.js";
+// Import the speech recognition library
+import SpeechRecognition, {
+  useSpeechRecognition,
+} from "react-speech-recognition";
 
 const AIChatBox = () => {
   const [messages, setMessages] = useState([
@@ -23,8 +27,14 @@ const AIChatBox = () => {
   const initialLoadDone = useRef(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestionTimer = useRef(null);
-  const [isListening, setIsListening] = useState(false);
-  const recognitionRef = useRef(null);
+
+  // Replace the speech recognition implementation with react-speech-recognition
+  const {
+    transcript,
+    listening: isListening,
+    resetTranscript,
+    browserSupportsSpeechRecognition,
+  } = useSpeechRecognition();
 
   // Auto-scroll to bottom of messages
   useEffect(() => {
@@ -56,6 +66,31 @@ const AIChatBox = () => {
     };
   }, [suggestions, loading]);
 
+  // Update input when transcript changes
+  useEffect(() => {
+    if (transcript) {
+      setInput(transcript);
+    }
+  }, [transcript]);
+
+  // Auto-send message when speech recognition stops
+  useEffect(() => {
+    if (!isListening && transcript) {
+      // Wait a bit to ensure state is updated
+      setTimeout(() => {
+        handleSendMessage();
+        resetTranscript();
+      }, 100);
+    }
+  }, [isListening, transcript]);
+
+  // Check for browser support
+  useEffect(() => {
+    if (!browserSupportsSpeechRecognition) {
+      console.warn("Speech recognition is not supported in this browser");
+    }
+  }, [browserSupportsSpeechRecognition]);
+
   // Generate suggestions based on past events
   useEffect(() => {
     if (savedEvents && savedEvents.length > 0 && !initialLoadDone.current) {
@@ -64,69 +99,16 @@ const AIChatBox = () => {
     }
   }, [savedEvents]);
 
-  // Initialize speech recognition
-  useEffect(() => {
-    if (
-      !("webkitSpeechRecognition" in window) &&
-      !("SpeechRecognition" in window)
-    ) {
-      console.warn("Speech recognition is not supported in this browser");
-      return;
-    }
-
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
-    recognitionRef.current = new SpeechRecognition();
-
-    recognitionRef.current.continuous = false;
-    recognitionRef.current.interimResults = true; // Changed to true to get intermediate results
-    recognitionRef.current.lang = "en-US";
-
-    recognitionRef.current.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      setInput(transcript);
-
-      // Store transcript to use in onend event
-      recognitionRef.current.lastTranscript = transcript;
-    };
-
-    recognitionRef.current.onend = () => {
-      setIsListening(false);
-
-      // Auto-send the message if we have content
-      if (recognitionRef.current.lastTranscript) {
-        // Use setTimeout to ensure state has been updated
-        setTimeout(() => {
-          handleSendMessage();
-          recognitionRef.current.lastTranscript = null;
-        }, 100);
-      }
-    };
-
-    recognitionRef.current.onerror = (event) => {
-      console.error("Speech recognition error", event.error);
-      setIsListening(false);
-    };
-
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-    };
-  }, []);
-
   // Function to toggle speech recognition
   const toggleListening = () => {
     if (isListening) {
-      recognitionRef.current.stop();
-      setIsListening(false);
+      SpeechRecognition.stopListening();
     } else {
-      try {
-        recognitionRef.current.start();
-        setIsListening(true);
-      } catch (error) {
-        console.error("Error starting speech recognition:", error);
-      }
+      resetTranscript();
+      SpeechRecognition.startListening({
+        continuous: false,
+        language: "en-US",
+      });
     }
   };
 
@@ -921,7 +903,7 @@ const AIChatBox = () => {
         />
         <button
           onClick={toggleListening}
-          disabled={loading}
+          disabled={loading || !browserSupportsSpeechRecognition}
           className={`transition align-self-end relative ${
             isListening ? "text-blue-500" : ""
           }`}
