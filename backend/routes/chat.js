@@ -46,6 +46,7 @@ unknownFuntion()"
   - ignore formats like "now", "in 2 hours", "before that", etc.
   - date is by default currentDate if it is not specified
   - currentDate = ${currentDate}
+  - some valid formats are these [add (event) today] [put (event) from 10 to 12] [when to schedule (event)?] etc. ex: "add meeting today"
   - days of week map to these specific dates for the next 7 days:
     ${dateMapping.join("\n    ")}
   - when a day of week is mentioned (like "monday", "tuesday", etc.) use the corresponding date from the mapping above

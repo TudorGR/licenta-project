@@ -10,6 +10,7 @@ import { api } from "../services/api.js";
 import SpeechRecognition, {
   useSpeechRecognition,
 } from "react-speech-recognition";
+import AudioWaveform from "./AudioWaveform";
 
 const AIChatBox = () => {
   const [messages, setMessages] = useState([
@@ -27,6 +28,7 @@ const AIChatBox = () => {
   const initialLoadDone = useRef(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestionTimer = useRef(null);
+  const [showVoiceInput, setShowVoiceInput] = useState(false);
 
   // Replace the speech recognition implementation with react-speech-recognition
   const {
@@ -77,10 +79,8 @@ const AIChatBox = () => {
   useEffect(() => {
     if (!isListening && transcript) {
       // Wait a bit to ensure state is updated
-      setTimeout(() => {
-        handleSendMessage();
-        resetTranscript();
-      }, 100);
+      handleSendMessage();
+      resetTranscript();
     }
   }, [isListening, transcript]);
 
@@ -103,13 +103,21 @@ const AIChatBox = () => {
   const toggleListening = () => {
     if (isListening) {
       SpeechRecognition.stopListening();
+      setShowVoiceInput(false);
     } else {
       resetTranscript();
+      setShowVoiceInput(true);
       SpeechRecognition.startListening({
         continuous: false,
         language: "en-US",
       });
     }
+  };
+
+  // Add a function to handle closing the voice input modal
+  const handleCloseVoiceInput = () => {
+    SpeechRecognition.stopListening();
+    setShowVoiceInput(false);
   };
 
   // Update the fetchEventSuggestions function to randomly select categories
@@ -876,42 +884,52 @@ const AIChatBox = () => {
         <button
           onClick={() => handleSendMessage()}
           disabled={loading || !input.trim()}
-          className="text-white transition align-self-end"
+          className="text-white hover:opacity-50 transition-all cursor-pointer align-self-end"
         >
           <img src={searchIcon} className="h-6 w-6 mx-2" />
         </button>
 
-        <textarea
-          value={input}
-          onChange={(e) => {
-            setInput(e.target.value);
-            // Auto-resize the textarea
-            e.target.style.height = "auto";
-            e.target.style.height = `${Math.min(e.target.scrollHeight, 130)}px`;
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              if (!loading) handleSendMessage();
-            }
-          }}
-          placeholder="Type here..."
-          className=" flex-1 py-3 focus:outline-none focus:border-black resize-none min-h-[30px] max-h-[150px] overflow-y-auto"
-          disabled={loading}
-          ref={inputRef}
-          rows={1}
-        />
+        {isListening ? (
+          <div className="flex-1 min-h-[30px] py-1 flex items-center justify-center">
+            <AudioWaveform isListening={isListening} />
+          </div>
+        ) : (
+          <textarea
+            value={input}
+            onChange={(e) => {
+              setInput(e.target.value);
+              // Auto-resize the textarea
+              e.target.style.height = "auto";
+              e.target.style.height = `${Math.min(
+                e.target.scrollHeight,
+                130
+              )}px`;
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                if (!loading) handleSendMessage();
+              }
+            }}
+            placeholder="Type here..."
+            className="flex-1 py-3 focus:outline-none focus:border-black resize-none min-h-[30px] max-h-[150px] overflow-y-auto"
+            disabled={loading}
+            ref={inputRef}
+            rows={1}
+          />
+        )}
+
         <button
           onClick={toggleListening}
           disabled={loading || !browserSupportsSpeechRecognition}
-          className={`transition align-self-end relative ${
+          className={`transition align-self-end ${
             isListening ? "text-blue-500" : ""
           }`}
         >
-          <img src={micIcon} className="h-6 w-6 mx-2" />
-          {isListening && (
-            <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full animate-pulse"></span>
-          )}
+          <img
+            src={micIcon}
+            className="hover:opacity-50 transition-all cursor-pointer h-6 w-6 mx-2"
+          />
         </button>
       </div>
     </div>
