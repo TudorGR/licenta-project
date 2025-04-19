@@ -19,6 +19,7 @@ import selfCareIcon from "../assets/self-care.svg";
 import eventsIcon from "../assets/event.svg";
 import pinIcon from "../assets/lock.svg";
 import deleteIcon from "../assets/delete_icon.svg";
+import bellIcon from "../assets/bell.svg";
 import ContextMenu from "./ContextMenu";
 import TravelTimeIndicator, {
   clearTravelTimeCache,
@@ -108,10 +109,14 @@ const DayView = () => {
       setCurrentTimeString(now.format("HH:mm"));
     };
 
+    // Run immediately
     updateTimePosition();
-    const interval = setInterval(updateTimePosition, 60000);
+
+    // Update more frequently - every 15 seconds
+    const interval = setInterval(updateTimePosition, 15000);
+
     return () => clearInterval(interval);
-  }, []);
+  }, []); // No dependencies needed as calculateTimePosition doesn't depend on props/state
 
   useEffect(() => {
     const handleGlobalClick = (e) => {
@@ -595,8 +600,6 @@ const DayView = () => {
                     style={{
                       backgroundColor:
                         lightCategoryColors[event.category || "None"],
-                      height: "100%",
-                      position: "relative",
                     }}
                   >
                     <div
@@ -631,23 +634,23 @@ const DayView = () => {
                               {`${event.timeStart} - ${event.timeEnd}`}
                             </div>
                           </div>
-                          {event.locked && (
+                          {event.reminderEnabled ? (
                             <img
-                              src={pinIcon}
+                              src={bellIcon}
                               className="w-3 h-3 opacity-50 mr-1"
-                              alt="Locked"
+                              alt="Reminder"
                             />
-                          )}
+                          ) : null}
                         </div>
                       ) : (
                         <div className="relative w-full">
-                          {event.locked && (
+                          {event.reminderEnabled ? (
                             <img
-                              src={pinIcon}
+                              src={bellIcon}
                               className="absolute top-5 right-0 w-3 h-3 opacity-50"
-                              alt="Locked"
+                              alt="Reminder"
                             />
-                          )}
+                          ) : null}
 
                           {event.category === "Workout" && (
                             <img

@@ -4,12 +4,14 @@ import Context from "../context/Context";
 import dayjs from "dayjs";
 import sendIcon from "../assets/send-icon.svg";
 import searchIcon from "../assets/search.svg";
+import micIcon from "../assets/mic.svg";
 import { api } from "../services/api.js";
 
 const AIChatBox = () => {
   const [messages, setMessages] = useState([
     { type: "system", text: "Hi! How can I help you with your calendar?" },
   ]);
+
   const [input, setInput] = useState("");
   const inputRef = useRef(null);
   const [loading, setLoading] = useState(false);
@@ -17,9 +19,12 @@ const AIChatBox = () => {
   const [suggestions, setSuggestions] = useState([]);
   const { dispatchEvent, setSelectedEvent, setShowEventModal, savedEvents } =
     useContext(Context);
+
   const initialLoadDone = useRef(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestionTimer = useRef(null);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef(null);
 
   // Auto-scroll to bottom of messages
   useEffect(() => {
@@ -58,6 +63,72 @@ const AIChatBox = () => {
       initialLoadDone.current = true;
     }
   }, [savedEvents]);
+
+  // Initialize speech recognition
+  useEffect(() => {
+    if (
+      !("webkitSpeechRecognition" in window) &&
+      !("SpeechRecognition" in window)
+    ) {
+      console.warn("Speech recognition is not supported in this browser");
+      return;
+    }
+
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognitionRef.current = new SpeechRecognition();
+
+    recognitionRef.current.continuous = false;
+    recognitionRef.current.interimResults = true; // Changed to true to get intermediate results
+    recognitionRef.current.lang = "en-US";
+
+    recognitionRef.current.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setInput(transcript);
+
+      // Store transcript to use in onend event
+      recognitionRef.current.lastTranscript = transcript;
+    };
+
+    recognitionRef.current.onend = () => {
+      setIsListening(false);
+
+      // Auto-send the message if we have content
+      if (recognitionRef.current.lastTranscript) {
+        // Use setTimeout to ensure state has been updated
+        setTimeout(() => {
+          handleSendMessage();
+          recognitionRef.current.lastTranscript = null;
+        }, 100);
+      }
+    };
+
+    recognitionRef.current.onerror = (event) => {
+      console.error("Speech recognition error", event.error);
+      setIsListening(false);
+    };
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, []);
+
+  // Function to toggle speech recognition
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      try {
+        recognitionRef.current.start();
+        setIsListening(true);
+      } catch (error) {
+        console.error("Error starting speech recognition:", error);
+      }
+    }
+  };
 
   // Update the fetchEventSuggestions function to randomly select categories
   const fetchEventSuggestions = async () => {
@@ -546,7 +617,7 @@ const AIChatBox = () => {
 
                 {/* Dropdown menu for all slots */}
                 {showAllSlots && (
-                  <div className="shadow-custom absolute z-10 mt-1 right-0 bg-white rounded-md border border-gray-100 py-1 w-40 max-h-100 overflow-scroll">
+                  <div className="shadow-custom absolute z-10 mt-1 right-0 bg-white rounded-md border border-gray-200 py-1 w-40 max-h-100 overflow-scroll">
                     {suggestedSlots.slice(3).map((slot, index) => (
                       <button
                         key={index + 3}
@@ -788,8 +859,8 @@ const AIChatBox = () => {
   };
 
   return (
-    <div className="w-80 h-full border-l border-gray-100 flex flex-col bg-white">
-      <div className="p-3.5 border-b border-gray-100">
+    <div className="w-80 h-full border-l border-gray-200 flex flex-col bg-white">
+      <div className="p-3.5 border-b border-gray-200">
         <h2 className="text-lg font-medium">AI Assistant</h2>
       </div>
 
@@ -801,7 +872,7 @@ const AIChatBox = () => {
 
         {loading && (
           <div className="mb-2">
-            <div className="inline-block p-3 rounded-lg max-w-[85%] border border-gray-100 text-black rounded-tl-none">
+            <div className="inline-block p-3 rounded-lg max-w-[85%] border border-gray-200 text-black rounded-tl-none">
               <div className="flex space-x-2">
                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
                 <div
@@ -819,7 +890,7 @@ const AIChatBox = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="flex items-center m-2 rounded-xl shadow-custom border border-gray-100">
+      <div className="flex items-center m-2 rounded-xl shadow-custom border border-gray-200">
         <button
           onClick={() => handleSendMessage()}
           disabled={loading || !input.trim()}
@@ -848,6 +919,18 @@ const AIChatBox = () => {
           ref={inputRef}
           rows={1}
         />
+        <button
+          onClick={toggleListening}
+          disabled={loading}
+          className={`transition align-self-end relative ${
+            isListening ? "text-blue-500" : ""
+          }`}
+        >
+          <img src={micIcon} className="h-6 w-6 mx-2" />
+          {isListening && (
+            <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full animate-pulse"></span>
+          )}
+        </button>
       </div>
     </div>
   );

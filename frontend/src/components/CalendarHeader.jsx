@@ -137,23 +137,23 @@ const CalendarHeader = ({ onOpenAIModal }) => {
   };
 
   return (
-    <header className="px-2 py-2 flex justify-between items-center border-gray-100 border-b">
+    <header className="px-2 py-2 flex justify-between items-center border-gray-200 border-b">
       <div className="flex">
         <button
           onClick={handleToday}
-          className="transition-all shadow-custom text-sm cursor-pointer border-1 w-20 h-10 border-gray-100 rounded-full mr-2 active:bg-gray-50"
+          className="transition-all shadow-custom text-sm cursor-pointer border-1 w-20 h-10 border-gray-200 rounded-full mr-2 active:bg-gray-50"
         >
           Today
         </button>
         <div className={`flex items-center justify-between gap-1`}>
           <button
-            className="transition-all  cursor-pointer  w-10 h-10 shadow-custom rounded-full active:bg-gray-50 border-1 border-gray-100"
+            className="transition-all  cursor-pointer  w-10 h-10 shadow-custom rounded-full active:bg-gray-50 border-1 border-gray-200"
             onClick={handlePrev}
           >
             <img src={left} className="w-5 mx-auto" />
           </button>
           <button
-            className="transition-all  cursor-pointer w-10 h-10 shadow-custom rounded-full active:bg-gray-50 border-1 border-gray-100"
+            className="transition-all  cursor-pointer w-10 h-10 shadow-custom rounded-full active:bg-gray-50 border-1 border-gray-200"
             onClick={handleNext}
           >
             <img src={right} className="w-5 mx-auto" />
@@ -168,7 +168,7 @@ const CalendarHeader = ({ onOpenAIModal }) => {
             setIsWeekView(false);
             setIsDayView(false);
           }}
-          className={`active:bg-gray-50 text-sm transition-all border-1 border-gray-100 cursor-pointer h-10 px-4 rounded-l-full ${
+          className={`active:bg-gray-50 text-sm transition-all border-1 border-gray-200 cursor-pointer h-10 px-4 rounded-l-full ${
             isMonthView ? "text-black " : "text-gray-400"
           }`}
         >
@@ -180,7 +180,7 @@ const CalendarHeader = ({ onOpenAIModal }) => {
             setIsWeekView(true);
             setIsDayView(false);
           }}
-          className={`active:bg-gray-50 text-sm transition-all border-1 border-gray-100 border-x-0 cursor-pointer h-10 px-4 ${
+          className={`active:bg-gray-50 text-sm transition-all border-1 border-gray-200 border-x-0 cursor-pointer h-10 px-4 ${
             isWeekView ? "text-black " : "text-gray-400"
           }`}
         >
@@ -192,7 +192,7 @@ const CalendarHeader = ({ onOpenAIModal }) => {
             setIsWeekView(false);
             setIsDayView(true);
           }}
-          className={`active:bg-gray-50 text-sm transition-all border-1 border-gray-100 cursor-pointer h-10 px-4 rounded-r-full ${
+          className={`active:bg-gray-50 text-sm transition-all border-1 border-gray-200 cursor-pointer h-10 px-4 rounded-r-full ${
             isDayView ? "text-black " : "text-gray-400"
           }`}
         >

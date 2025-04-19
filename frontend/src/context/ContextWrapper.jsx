@@ -1,4 +1,10 @@
-import React, { useEffect, useReducer, useState, useMemo } from "react";
+import React, {
+  useEffect,
+  useReducer,
+  useState,
+  useMemo,
+  useCallback,
+} from "react";
 import Context from "./Context";
 import dayjs from "dayjs";
 import isBetween from "dayjs/plugin/isBetween";
@@ -6,6 +12,7 @@ import { api } from "../services/api.js";
 import axios from "axios";
 import weekday from "dayjs/plugin/weekday.js";
 import isoWeek from "dayjs/plugin/isoWeek";
+import { reminderService } from "../services/reminderService.js";
 
 dayjs.extend(weekday);
 dayjs.extend(isoWeek);
@@ -24,9 +31,18 @@ const asyncDispatchEvent = (dispatch) => async (action, getState) => {
         break;
 
       case "update":
-        await api.updateEvent(action.payload.id, action.payload);
-        const eventsAfterUpdate = await api.getEvents();
-        dispatch({ type: "set", payload: eventsAfterUpdate });
+        try {
+          // Update event in database
+          await api.updateEvent(action.payload.id, action.payload);
+          const eventsAfterUpdate = await api.getEvents();
+          dispatch({ type: "set", payload: eventsAfterUpdate });
+
+          // Make sure we're updating the reminder with the updated event
+          reminderService.updateReminder(action.payload);
+        } catch (error) {
+          console.error("Error updating event:", error);
+          throw error;
+        }
         break;
 
       case "delete":
@@ -186,6 +202,9 @@ export default function ContextWrapper(props) {
         setLoading(true);
         const events = await api.getEvents();
         dispatch({ type: "set", payload: events });
+
+        // Initialize reminder service with events
+        reminderService.initialize(events);
       } catch (error) {
         console.error("Failed to fetch events:", error);
         dispatch({ type: "set", payload: [] });
@@ -207,6 +226,51 @@ export default function ContextWrapper(props) {
       setSelectedEvent(null);
     }
   }, [showEventModal]);
+
+  const dispatchCalEvent = useCallback(
+    async (action) => {
+      try {
+        switch (action.type) {
+          case "push":
+            // Create event code...
+            const createdEvent = await api.createEvent(action.payload);
+            const eventsAfterPush = await api.getEvents();
+            dispatch({ type: "set", payload: eventsAfterPush });
+
+            // Schedule reminder for new event
+            if (createdEvent.reminderEnabled) {
+              reminderService.scheduleReminder(createdEvent);
+            }
+            break;
+
+          case "update":
+            // Update event code...
+            await api.updateEvent(action.payload.id, action.payload);
+            const eventsAfterUpdate = await api.getEvents();
+            dispatch({ type: "set", payload: eventsAfterUpdate });
+
+            // Update reminder
+            reminderService.updateReminder(action.payload);
+            break;
+
+          case "delete":
+            await api.deleteEvent(action.payload.id);
+            const eventsAfterDelete = await api.getEvents();
+            dispatch({ type: "set", payload: eventsAfterDelete });
+
+            // Remove reminder
+            reminderService.removeReminder(action.payload.id);
+            break;
+
+          // Other cases...
+        }
+      } catch (error) {
+        console.error("Error in dispatch:", error);
+        throw error;
+      }
+    },
+    [dispatch]
+  );
 
   return (
     <Context.Provider

@@ -5,7 +5,6 @@ import deleteIcon from "../assets/delete_icon.svg";
 import calendar from "../assets/calendar.svg";
 import dayjs from "dayjs";
 import saveIcon from "../assets/save.svg";
-import recurringIcon from "../assets/recurring.svg";
 import categoryIcon from "../assets/category.svg";
 import locationIcon from "../assets/location.svg";
 import workoutIcon from "../assets/workout.svg";
@@ -22,10 +21,9 @@ import travelIcon from "../assets/travel.svg";
 import financeIcon from "../assets/finance.svg";
 import learningIcon from "../assets/learning.svg";
 import selfCareIcon from "../assets/self-care.svg";
+import clockIcon from "../assets/clock.svg";
 import eventsIcon from "../assets/event.svg";
 import { categoryColors } from "../utils/categoryColors";
-
-const recurringOptions = ["None", "Daily", "Weekly", "Monthly"];
 
 const categoryIcons = {
   None: null,
@@ -45,6 +43,14 @@ const categoryIcons = {
   "Self-care": selfCareIcon,
   Events: eventsIcon,
 };
+
+const reminderOptions = [
+  { label: "No reminder", value: 0 },
+  { label: "15 minutes before", value: 15 },
+  { label: "30 minutes before", value: 30 },
+  { label: "1 hour before", value: 60 },
+  { label: "2 hours before", value: 120 },
+];
 
 export default function EventModal() {
   const {
@@ -69,7 +75,6 @@ export default function EventModal() {
   );
   const [startTime, setStartTime] = useState(timeStart ? timeStart : "08:00");
   const [endTime, setEndTime] = useState(timeEnd ? timeEnd : "09:00");
-  const [recurring, setRecurring] = useState("");
   const [location, setLocation] = useState(
     selectedEvent ? selectedEvent.location : ""
   );
@@ -85,6 +90,13 @@ export default function EventModal() {
       : dayjs().format("YYYY-MM-DD")
   );
   const [isVisible, setIsVisible] = useState(false);
+  const [reminderEnabled, setReminderEnabled] = useState(
+    selectedEvent ? selectedEvent.reminderEnabled : false
+  );
+  const [reminderTime, setReminderTime] = useState(
+    selectedEvent ? selectedEvent.reminderTime : 15
+  );
+  const [isReminderSelectOpen, setIsReminderSelectOpen] = useState(false);
 
   useEffect(() => {
     // Trigger enter animation on mount
@@ -136,44 +148,20 @@ export default function EventModal() {
         timeEnd: finalEndTime,
         category: selectedCategory || "None",
         location,
+        reminderEnabled,
+        reminderTime,
       };
 
-      if (recurring === "None" || recurring === "") {
-        const event = {
-          ...baseEvent,
-          day: dayjs(selectedDate).valueOf(),
-          id: selectedEvent ? selectedEvent.id : undefined,
-        };
+      const event = {
+        ...baseEvent,
+        day: dayjs(selectedDate).valueOf(),
+        id: selectedEvent ? selectedEvent.id : undefined,
+      };
 
-        if (selectedEvent) {
-          await dispatchEvent({ type: "update", payload: event });
-        } else {
-          await dispatchEvent({ type: "push", payload: event });
-        }
+      if (selectedEvent) {
+        await dispatchEvent({ type: "update", payload: event });
       } else {
-        const events = [];
-        for (let i = 0; i < 5; i++) {
-          let eventDate;
-          switch (recurring) {
-            case "Daily":
-              eventDate = dayjs(selectedDate).add(i, "day");
-              break;
-            case "Weekly":
-              eventDate = dayjs(selectedDate).add(i, "week");
-              break;
-            case "Monthly":
-              eventDate = dayjs(selectedDate).add(i, "month");
-              break;
-            default:
-              eventDate = dayjs(selectedDate);
-          }
-
-          const event = {
-            ...baseEvent,
-            day: eventDate.valueOf(),
-          };
-          await dispatchEvent({ type: "push", payload: event });
-        }
+        await dispatchEvent({ type: "push", payload: event });
       }
 
       setSelectedEvent(null);
@@ -367,6 +355,8 @@ export default function EventModal() {
     const handleClickOutside = (e) => {
       if (modalRef.current && !modalRef.current.contains(e.target)) {
         setShowEventModal(false);
+        setIsSelectOpen(false);
+        setIsReminderSelectOpen(false);
       }
     };
 
@@ -384,12 +374,12 @@ export default function EventModal() {
     <div className="fixed inset-0 bg-opacity-0 flex justify-center items-center z-40">
       <form
         name="eventModal"
-        className={`bg-white border shadow-xl border-gray-100 w-[400px] rounded-3xl relative transform transition-all duration-100 ease-out ${
+        className={`bg-white border shadow-xl border-gray-200 w-[400px] rounded-3xl relative transform transition-all duration-100 ease-out ${
           isVisible ? "scale-100 " : "scale-97"
         }`}
         ref={modalRef}
       >
-        <header className="border-b-1 border-gray-100 h-14 flex justify-between items-center">
+        <header className="border-b-1 border-gray-200 h-14 flex justify-between items-center">
           <h1 className="ml-4 text-lg">
             {selectedEvent ? "Update Event" : "Add Event"}
           </h1>
@@ -413,7 +403,7 @@ export default function EventModal() {
                 className={` ${
                   error
                     ? " border-red-500 focus:border-red-500"
-                    : " border-gray-100"
+                    : " border-gray-200"
                 } border-b-1 px-4 h-12 outline-0 w-full`}
                 placeholder="Add Title..."
                 value={title}
@@ -445,7 +435,7 @@ export default function EventModal() {
                 name="eventDate"
                 value={selectedDate}
                 onChange={handleDateChange}
-                className="modalDay relative border-b-1 border-gray-100 h-12 py-0 pl-10 pr-2 outline-0 w-full cursor-pointer"
+                className="modalDay relative border-b-1 border-gray-200 h-12 py-0 pl-10 pr-2 outline-0 w-full cursor-pointer"
               />
               <p className="absolute right-4 top-4 text-sm text-gray-500 ml-2 z-6">
                 {dayjs(selectedDate).format("dddd, MMMM DD")}
@@ -455,15 +445,15 @@ export default function EventModal() {
               <input
                 type="time"
                 name="startTime"
-                className="relative h-12 modalTime border-gray-100 border-b-1 py-1 px-2 outline-0   w-full"
+                className="relative h-12 modalTime border-gray-200 border-b-1 py-1 px-2 outline-0   w-full"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
               />
-              <div className="h-12 border-r-1 border-gray-100"></div>
+              <div className="h-12 border-r-1 border-gray-200"></div>
               <input
                 type="time"
                 name="endTime"
-                className="relative h-12 modalTime border-gray-100 border-b-1 py-1 px-2 outline-0 w-full"
+                className="relative h-12 modalTime border-gray-200 border-b-1 py-1 px-2 outline-0 w-full"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
               />
@@ -479,7 +469,7 @@ export default function EventModal() {
                     />
                   )}
                   <div
-                    className={`h-full border-gray-100 border-b-1 py-1 ${
+                    className={`h-full border-gray-200 border-b-1 py-1 ${
                       !selectedCategory && !categoryIcons[selectedCategory]
                         ? "pl-10"
                         : "pl-4"
@@ -498,7 +488,7 @@ export default function EventModal() {
                     </div>
                   </div>
                   {isSelectOpen && (
-                    <div className="absolute top-full left-0 w-full bg-white border border-gray-100 rounded-2xl shadow-custom max-h-60 overflow-y-auto z-50">
+                    <div className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-2xl shadow-custom max-h-60 overflow-y-auto z-50">
                       {categories.map((category) => (
                         <div
                           key={category}
@@ -525,31 +515,55 @@ export default function EventModal() {
                 </div>
               </div>
               <div className="flex-1">
-                <div className=" relative h-12 border-l-1 border-gray-100">
-                  <img
-                    src={recurringIcon}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4"
-                    alt="recurring"
-                  />
-                  <select
-                    name="recurring"
-                    value={recurring}
-                    onChange={(e) => setRecurring(e.target.value)}
-                    className=" h-12 border-gray-100 border-b-1 py-1.25 pl-10 pr-2 outline-0 w-full "
-                  >
-                    <option value="" disabled hidden>
-                      Add recurring
-                    </option>
-                    {recurringOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
+                <div className="relative h-12 border-l-1 border-gray-200">
+                  <div className="relative reminder-select h-full">
+                    <img
+                      src={clockIcon}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4"
+                      alt="reminder"
+                    />
+                    <div
+                      className="h-full border-gray-200 border-b-1 py-1 pl-10 pr-4 outline-0 w-full"
+                      onClick={() =>
+                        setIsReminderSelectOpen(!isReminderSelectOpen)
+                      }
+                    >
+                      <div className="h-full flex items-center">
+                        {reminderEnabled
+                          ? reminderOptions.find(
+                              (opt) => opt.value === reminderTime
+                            )?.label
+                          : "No reminder"}
+                      </div>
+                    </div>
+                    {isReminderSelectOpen && (
+                      <div className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-2xl shadow-custom max-h-60 overflow-y-auto z-50">
+                        {reminderOptions.map((option) => (
+                          <div
+                            key={option.value}
+                            className={`flex items-center gap-2 px-4 py-2 hover:bg-gray-100 cursor-pointer ${
+                              (reminderEnabled &&
+                                option.value === reminderTime) ||
+                              (!reminderEnabled && option.value === 0)
+                                ? "bg-gray-50"
+                                : ""
+                            }`}
+                            onClick={() => {
+                              setReminderTime(option.value);
+                              setReminderEnabled(option.value > 0);
+                              setIsReminderSelectOpen(false);
+                            }}
+                          >
+                            {option.label}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-            <div className="flex h-12 border-gray-100 border-b-1 py-1 px-4 outline-0 pt-3text-xl w-full">
+            <div className="flex h-12 border-gray-200 border-b-1 py-1 px-4 outline-0 pt-3text-xl w-full">
               <img src={locationIcon} className="w-4 mr-2" />
               <input
                 type="text"
@@ -569,7 +583,7 @@ export default function EventModal() {
             <input
               type="text"
               name="description"
-              className="h-12 border-gray-100 border-b-1 py-1 px-4 outline-0  w-full"
+              className="h-12 border-gray-200 border-b-1 py-1 px-4 outline-0  w-full"
               placeholder="Add Description..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -585,7 +599,7 @@ export default function EventModal() {
                   setShowEventModal(false);
                   dispatchEvent({ type: "delete", payload: selectedEvent });
                 }}
-                className="transition-all border-gray-100 rounded-full mr-2 shadow-custom active:bg-gray-50 border w-10 h-10 cursor-pointer"
+                className="transition-all border-gray-200 rounded-full mr-2 shadow-custom active:bg-gray-50 border w-10 h-10 cursor-pointer"
                 type="button"
               >
                 <img src={deleteIcon} className="w-4 mx-auto" />
@@ -595,7 +609,7 @@ export default function EventModal() {
             )}
             <button
               onClick={closeWithAnimation}
-              className="transition-all  active:bg-gray-50 cursor-pointer border px-4 h-10 shadow-custom border-gray-100 rounded-full mr-2"
+              className="transition-all  active:bg-gray-50 cursor-pointer border px-4 h-10 shadow-custom border-gray-200 rounded-full mr-2"
               type="button"
             >
               Cancel
@@ -622,7 +636,7 @@ export default function EventModal() {
                   }  border  rounded-xl cursor-pointer transition-all ${
                     index === currentSuggestionIndex
                       ? "bg-black border-black"
-                      : "bg-gray-50 border-gray-100"
+                      : "bg-gray-50 border-gray-200"
                   }`}
                   onClick={() => {
                     setCurrentSuggestionIndex(index);

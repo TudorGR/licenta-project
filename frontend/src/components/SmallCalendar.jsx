@@ -92,13 +92,13 @@ export default function SmallCalendar() {
         </p>
         <div className="flex flex-row gap-1">
           <button
-            className="transition-all  cursor-pointer  w-10 h-10 shadow-custom rounded-full active:bg-gray-50 border-1 border-gray-100"
+            className="transition-all  cursor-pointer  w-10 h-10 shadow-custom rounded-full active:bg-gray-50 border-1 border-gray-200"
             onClick={() => setCurrentMonthIndex(currentMonthIndex - 1)}
           >
             <img src={left} className="w-5 mx-auto" />
           </button>
           <button
-            className="transition-all  cursor-pointer  w-10 h-10 shadow-custom rounded-full active:bg-gray-50 border-1 border-gray-100"
+            className="transition-all  cursor-pointer  w-10 h-10 shadow-custom rounded-full active:bg-gray-50 border-1 border-gray-200"
             onClick={() => setCurrentMonthIndex(currentMonthIndex + 1)}
           >
             <img src={right} className="w-5 mx-auto" />

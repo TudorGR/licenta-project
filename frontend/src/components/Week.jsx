@@ -23,6 +23,9 @@ const Week = ({ month, weekIndex }) => {
   const [isDraggingEvent, setIsDraggingEvent] = useState(false);
   const [currentDayIndex, setCurrentDayIndex] = useState(null);
 
+  // Add this state
+  const [currentTime, setCurrentTime] = useState(calculateTimePosition());
+
   // Function to start dragging an event
   const handleStartEventDrag = (event, offset, dayIndex) => {
     setDraggedEvent(event);
@@ -149,6 +152,18 @@ const Week = ({ month, weekIndex }) => {
     };
   }, [isDraggingEvent, draggedEvent]);
 
+  // Add this effect
+  useEffect(() => {
+    const updateTime = () => {
+      setCurrentTime(calculateTimePosition());
+    };
+
+    updateTime();
+    const interval = setInterval(updateTime, 15000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div ref={timeGridRef} className="w-full overflow-y-auto">
       <div
@@ -173,11 +188,11 @@ const Week = ({ month, weekIndex }) => {
             </div>
           ))}
 
-          <div className="sticky top-0 mt-[-48px] w-full h-[45px] border-b-1 border-b-gray-100 bg-white"></div>
+          <div className="sticky top-0 z-13 mt-[-48px] w-full h-[45px] border-b-1 border-b-gray-100 bg-white"></div>
           <div
             className="absolute text-xs bg-black text-white"
             style={{
-              top: `${calculateTimePosition()}px`,
+              top: `${currentTime}px`, // Use state instead of calculateTimePosition()
               transform: "translateY(-55%)",
               right: "0",
               width: "100%",

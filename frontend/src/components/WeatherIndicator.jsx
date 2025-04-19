@@ -31,6 +31,7 @@ const CACHE_TTL = 60 * 60 * 1000; // 1 hour
 const WeatherIndicator = ({ hour, date, location = "Bucharest" }) => {
   const [weather, setWeather] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [visible, setVisible] = useState(false);
 
   // Format the date to YYYY-MM-DD for caching purposes
   const dateStr = date.format("YYYY-MM-DD");
@@ -53,6 +54,8 @@ const WeatherIndicator = ({ hour, date, location = "Bucharest" }) => {
           if (cachedHourlyData) {
             setWeather(cachedHourlyData);
             setLoading(false);
+            // Trigger fade-in after data is loaded
+            setTimeout(() => setVisible(true), 50);
             return;
           }
         }
@@ -98,6 +101,8 @@ const WeatherIndicator = ({ hour, date, location = "Bucharest" }) => {
 
         setWeather(hourlyWeather);
         setLoading(false);
+        // Trigger fade-in after data is loaded
+        setTimeout(() => setVisible(true), 50);
       } catch (error) {
         console.error("Error fetching weather data:", error);
         setLoading(false);
@@ -113,6 +118,11 @@ const WeatherIndicator = ({ hour, date, location = "Bucharest" }) => {
     };
 
     fetchWeatherData();
+
+    // Reset visibility when component unmounts or dependencies change
+    return () => {
+      setVisible(false);
+    };
   }, [hour, dateStr, location, cacheKey]);
 
   if (loading || !weather) {
@@ -187,7 +197,13 @@ const WeatherIndicator = ({ hour, date, location = "Bucharest" }) => {
   );
 
   return (
-    <div className="weather-indicator flex items-center justify-center">
+    <div
+      className="weather-indicator flex items-center justify-center"
+      style={{
+        opacity: visible ? 1 : 0,
+        transition: "opacity 0.5s ease-in-out",
+      }}
+    >
       <img src={icon} alt="Weather" className="w-8 h-8" />
       <span className="text-xs text-gray-500 ml-1">
         {Math.round(weather.temperature)}°C

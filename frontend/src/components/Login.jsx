@@ -31,8 +31,10 @@ const Login = () => {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="p-10 bg-white rounded-lg shadow-custom w-full max-w-md">
-        <h1 className="text-3xl font-bold mb-6 text-center">Log In</h1>
+      <div className=" bg-white border border-gray-200 rounded-xl shadow-xl w-full max-w-sm">
+        <header className="border-b-1 border-gray-200 h-14 flex justify-between items-center">
+          <h1 className="ml-4 text-lg">Log in</h1>
+        </header>
 
         {(formError || error) && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -41,58 +43,39 @@ const Login = () => {
         )}
 
         <form onSubmit={onSubmit}>
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 text-sm font-bold mb-2"
-              htmlFor="email"
+          <input
+            className="border-b-1 border-gray-200  px-4 h-12 outline-0 w-full appearance-none  text-gray-700 leading-tight focus:outline-none "
+            id="email"
+            type="email"
+            name="email"
+            placeholder="Email Address"
+            value={email}
+            onChange={onChange}
+            required
+          />
+          <input
+            className=" appearance-none px-4 h-12 outline-0 border-b-1 border-gray-200  w-full py-2  text-gray-700 leading-tight focus:outline-none "
+            id="password"
+            type="password"
+            name="password"
+            placeholder="Password"
+            value={password}
+            onChange={onChange}
+            required
+          />
+          <div className="flex justify-end items-center h-14">
+            <Link
+              to="/register"
+              className="transition-all flex items-center active:bg-gray-50 cursor-pointer border px-4 h-10 shadow-custom border-gray-200 rounded-full mr-2"
             >
-              Email
-            </label>
-            <input
-              className="shadow-custom appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              id="email"
-              type="email"
-              name="email"
-              value={email}
-              onChange={onChange}
-              required
-            />
-          </div>
-          <div className="mb-6">
-            <label
-              className="block text-gray-700 text-sm font-bold mb-2"
-              htmlFor="password"
-            >
-              Password
-            </label>
-            <input
-              className="shadow-custom appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              id="password"
-              type="password"
-              name="password"
-              value={password}
-              onChange={onChange}
-              required
-            />
-          </div>
-          <div className="flex items-center justify-between">
+              <p>Sign Up</p>
+            </Link>
             <button
-              className="shadow-custom cursor-pointer bg-black hover:bg-gray-800 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition-all w-full"
               type="submit"
+              className="transition-all  flex items-center justify-center active:bg-gray-700 shadow-custom text-white bg-black cursor-pointer px-4 h-10  rounded-full mr-2"
             >
-              Log In
+              Log in
             </button>
-          </div>
-          <div className="text-center mt-4">
-            <p>
-              Don't have an account?{" "}
-              <Link
-                to="/register"
-                className="text-blue-500 hover:text-blue-700"
-              >
-                Sign Up
-              </Link>
-            </p>
           </div>
         </form>
       </div>

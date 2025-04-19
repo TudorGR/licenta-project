@@ -73,7 +73,7 @@ const Sidebar = () => {
   };
 
   return (
-    <aside className="pt-2 shrink-0 w-70 border-gray-100 border-r flex flex-col items-center gap-2">
+    <aside className="pt-2 shrink-0 w-70 border-gray-200 border-r flex flex-col items-center gap-2">
       {/* Small Calendar */}
       <SmallCalendar />
 
@@ -88,14 +88,14 @@ const Sidebar = () => {
 
           <div className="w-full rounded-sm p-0 overflow-clip">
             <h3 className="mb-2 mx-4">Working Hours</h3>
-            <div className="flex items-center border-y-1 border-gray-100">
+            <div className="flex items-center border-y-1 border-gray-200">
               <input
                 type="time"
                 value={workingHoursStart}
                 onChange={(e) => setWorkingHoursStart(e.target.value)}
                 className="h-12 relative text-gray-500 text-sm outline-0 w-full  px-2 workingHours"
               />
-              <span className="h-12 border-r-1 border-gray-100"></span>
+              <span className="h-12 border-r-1 border-gray-200"></span>
               <input
                 type="time"
                 value={workingHoursEnd}
@@ -107,7 +107,7 @@ const Sidebar = () => {
 
           <div className="w-full rounded-sm p-0 overflow-clip">
             {(isWeekView || isDayView) && (
-              <div className="flex items-center justify-between border-b-1 border-gray-100 px-4 h-12">
+              <div className="flex items-center justify-between border-b-1 border-gray-200 px-4 h-12">
                 <span className="text-sm">Show weather</span>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
@@ -122,7 +122,7 @@ const Sidebar = () => {
             )}
 
             {isWeekView && (
-              <div className="flex items-center justify-between border-b-1 border-gray-100 px-4 h-12">
+              <div className="flex items-center justify-between border-b-1 border-gray-200 px-4 h-12">
                 <span className="text-sm">Show heatmap</span>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
@@ -203,20 +203,24 @@ const Sidebar = () => {
         </div>
       )}
 
-      <div className="flex-1 flex items-end">
-        {/* Attribution for weather icons */}
-        <div className="text-xs text-black opacity-20 mb-2 text-center">
-          Weather icons by{" "}
-          <a
-            href="https://www.amcharts.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-500 underline"
-          >
-            amCharts
-          </a>
+      {showWeather ? (
+        <div className="flex-1 flex items-end">
+          {/* Attribution for weather icons */}
+          <div className="text-xs text-black opacity-20 mb-2 text-center">
+            Weather icons by{" "}
+            <a
+              href="https://www.amcharts.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-500 underline"
+            >
+              amCharts
+            </a>
+          </div>
         </div>
-      </div>
+      ) : (
+        ""
+      )}
     </aside>
   );
 };

@@ -80,7 +80,7 @@ const CalendarHeader = ({ onOpenAIModal }) => {
       <h1 className="header-font text-4xl font-bold text-black">CalendarIQ</h1>
       <div className="flex items-center gap-2">
         <CreateEventButton />
-        <div className="flex gap-2 items-center bg-white rounded-full px-2 shadow-custom">
+        <div className="flex gap-2 items-center bg-white border border-gray-200 rounded-full px-2 shadow-custom">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-white font-medium">
               {currentUser?.name?.[0]?.toUpperCase() || "?"}

@@ -19,6 +19,7 @@ import eventsIcon from "../assets/event.svg";
 import pinIcon from "../assets/lock.svg";
 import deleteIcon from "../assets/delete_icon.svg";
 import lockIcon from "../assets/lock.svg";
+import bellIcon from "../assets/bell.svg";
 import ContextMenu from "./ContextMenu";
 import TravelTimeIndicator, {
   clearTravelTimeCache,
@@ -252,9 +253,11 @@ const DayWeek = ({
       setCurrentTimePosition(calculateTimePosition());
     };
 
+    // Run immediately
     updateTimePosition();
 
-    const interval = setInterval(updateTimePosition, 60000);
+    // Update more frequently - every 15 seconds
+    const interval = setInterval(updateTimePosition, 15000);
 
     return () => clearInterval(interval);
   }, []);
@@ -803,24 +806,24 @@ const DayWeek = ({
                                 {`${timeStart} - ${timeEnd}`}
                               </div>
                             </div>
-                            {event.locked && (
+                            {event.reminderEnabled ? (
                               <img
-                                src={lockIcon}
+                                src={bellIcon}
                                 className="w-2 h-2 opacity-50 mr-1"
-                                alt="Locked"
+                                alt="Reminder"
                                 style={{ marginLeft: "auto" }}
                               />
-                            )}
+                            ) : null}
                           </div>
                         ) : (
                           <div className="absolute w-full">
-                            {event.locked && (
+                            {event.reminderEnabled ? (
                               <img
-                                src={lockIcon}
+                                src={bellIcon}
                                 className="absolute round top-5 right-0 w-3 h-3 opacity-50"
-                                alt="Locked"
+                                alt="Reminder"
                               />
-                            )}
+                            ) : null}
 
                             {category === "Workout" && (
                               <img
