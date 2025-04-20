@@ -284,8 +284,17 @@ const Day = ({ day, index, showMiniDayView = false }) => {
         <ContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
-          onLock={() => {
-            handleLock(contextMenu.eventId);
+          onEdit={() => {
+            const eventToEdit = savedEvents.find(
+              (e) => e.id === contextMenu.eventId
+            );
+            if (eventToEdit) {
+              setSelectedEvent(eventToEdit);
+              setTimeStart(eventToEdit.timeStart);
+              setTimeEnd(eventToEdit.timeEnd);
+              setSelectedDay(dayjs(eventToEdit.day));
+              setShowEventModal(true);
+            }
             setContextMenu({ isOpen: false, x: 0, y: 0, eventId: null });
           }}
           onDelete={() => {

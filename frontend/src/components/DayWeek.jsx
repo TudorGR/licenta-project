@@ -31,6 +31,7 @@ import {
   darkCategoryColors,
 } from "../utils/categoryColors";
 import { api } from "../services/api";
+import { getCategoryIcon } from "../utils/categoryIcons";
 
 const TIME_SLOT_HEIGHT = 50;
 const TOTAL_HEIGHT = TIME_SLOT_HEIGHT * 24;
@@ -825,107 +826,9 @@ const DayWeek = ({
                               />
                             ) : null}
 
-                            {category === "Workout" && (
+                            {category && (
                               <img
-                                src={workoutIcon}
-                                alt={category}
-                                className="absolute round top-1 right-0 w-3 h-3 opacity-50"
-                              />
-                            )}
-                            {category === "Meeting" && (
-                              <img
-                                src={meetingIcon}
-                                alt={category}
-                                className="absolute round top-1 right-0 w-3 h-3 opacity-50"
-                              />
-                            )}
-                            {category === "Study" && (
-                              <img
-                                src={studyIcon}
-                                alt={category}
-                                className="absolute round top-1 right-0 w-3 h-3 opacity-50"
-                              />
-                            )}
-                            {category === "Personal" && (
-                              <img
-                                src={personalIcon}
-                                alt={category}
-                                className="absolute round top-1 right-0 w-3 h-3 opacity-50"
-                              />
-                            )}
-                            {category === "Work" && (
-                              <img
-                                src={workIcon}
-                                alt={category}
-                                className="absolute round top-1 right-0 w-3 h-3 opacity-50"
-                              />
-                            )}
-                            {category === "Social" && (
-                              <img
-                                src={socialIcon}
-                                alt={category}
-                                className="absolute round top-1 right-0 w-3 h-3 opacity-50"
-                              />
-                            )}
-                            {category === "Family" && (
-                              <img
-                                src={familyIcon}
-                                alt={category}
-                                className="absolute round top-1 right-0 w-3 h-3 opacity-50"
-                              />
-                            )}
-                            {category === "Health" && (
-                              <img
-                                src={healthIcon}
-                                alt={category}
-                                className="absolute round top-1 right-0 w-3 h-3 opacity-50"
-                              />
-                            )}
-                            {category === "Hobby" && (
-                              <img
-                                src={hobbyIcon}
-                                alt={category}
-                                className="absolute round top-1 right-0 w-3 h-3 opacity-50"
-                              />
-                            )}
-                            {category === "Chores" && (
-                              <img
-                                src={choresIcon}
-                                alt={category}
-                                className="absolute round top-1 right-0 w-3 h-3 opacity-50"
-                              />
-                            )}
-                            {category === "Travel" && (
-                              <img
-                                src={travelIcon}
-                                alt={category}
-                                className="absolute round top-1 right-0 w-3 h-3 opacity-50"
-                              />
-                            )}
-                            {category === "Finance" && (
-                              <img
-                                src={financeIcon}
-                                alt={category}
-                                className="absolute round top-1 right-0 w-3 h-3 opacity-50"
-                              />
-                            )}
-                            {category === "Learning" && (
-                              <img
-                                src={learningIcon}
-                                alt={category}
-                                className="absolute round top-1 right-0 w-3 h-3 opacity-50"
-                              />
-                            )}
-                            {category === "Self-care" && (
-                              <img
-                                src={selfCareIcon}
-                                alt={category}
-                                className="absolute round top-1 right-0 w-3 h-3 opacity-50"
-                              />
-                            )}
-                            {category === "Events" && (
-                              <img
-                                src={eventsIcon}
+                                src={getCategoryIcon(category)}
                                 alt={category}
                                 className="absolute round top-1 right-0 w-3 h-3 opacity-50"
                               />
@@ -1057,8 +960,17 @@ const DayWeek = ({
         <ContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
-          onLock={() => {
-            handleLock(contextMenu.eventId);
+          onEdit={() => {
+            const eventToEdit = savedEvents.find(
+              (e) => e.id === contextMenu.eventId
+            );
+            if (eventToEdit) {
+              setSelectedEvent(eventToEdit);
+              setTimeStart(eventToEdit.timeStart);
+              setTimeEnd(eventToEdit.timeEnd);
+              setSelectedDay(dayjs(eventToEdit.day));
+              setShowEventModal(true);
+            }
             setContextMenu({ isOpen: false, x: 0, y: 0, eventId: null });
           }}
           onDelete={() => {

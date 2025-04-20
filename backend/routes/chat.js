@@ -34,23 +34,25 @@ router.post("/", async (req, res) => {
   Extract the function and it's parameters from the user message, and provide a short but useful message for completion or missing any parameters.
   These are all your possible function: "
 createEvent(title,startTime,endTime,date)
-list_events(timeframe)
+local_events(timeframe)
+findEvent(category,timeframe)
 unknownFuntion()"
   Example format: {function: '', parameters: ['','',...], category: "", message: ""}.
   RULES:
-  - if the user asks to find the best time it refers to createEvent function
-  - if the user asks about what events are happening, local events, or similar queries, use list_events function
-  - for list_events, timeframe can be "today", "this week", "this month"
+  - if the user asks to find the best time or when to schedule it refers to createEvent function
+  - if the user asks about what events are happening, local events, or similar queries, use local_events function
+  - if the user asks about when an event will happen, or when was the last time, or to find specific events, use findEvent function
+  - for local_events, timeframe can be "today", "this week", "this month"
+  - for findEvent, category is gonna be the event category and timeframe must be "future", "past", or "both"
   - the parameters should be in the order: title(string), startTime(24hr format), endTime(24hr format), date(YYYY-MM-DD)
+  - date parameter is by default ${currentDate} if it is not specified
   - if a parameter is not specified ask for it and make the parameter empty in the list
   - ignore formats like "now", "in 2 hours", "before that", etc.
-  - date is by default currentDate if it is not specified
-  - currentDate = ${currentDate}
-  - some valid formats are these [add (event) today] [put (event) from 10 to 12] [when to schedule (event)?] etc. ex: "add meeting today"
+  - some valid formats are these [add a (event) today] [put (event) from 10 to 12] [when to schedule a (event)?] etc. ex: "add meeting today"
   - days of week map to these specific dates for the next 7 days:
     ${dateMapping.join("\n    ")}
   - when a day of week is mentioned (like "monday", "tuesday", etc.) use the corresponding date from the mapping above
-  - you are gonna choose the category: Meeting, Workout, Study, Personal, Work, Social, Family, Health, Hobby, Chores, Travel, Finance, Learning, Self-care, Events, None`;
+  - you are gonna choose the category: Work, Education, Health & Wellness, Finance & Bills, Social & Family, Travel & Commute, Personal Tasks, Leisure & Hobbies, Other`;
 
   const messages = [
     { role: "system", content: systemPrompt },
@@ -180,7 +182,7 @@ unknownFuntion()"
       }
     }
 
-    if (assistantResponse.function === "list_events") {
+    if (assistantResponse.function === "local_events") {
       const timeframe = params[0] || "this week";
       const cityName = "Iasi Romania"; // City is hardcoded as specified in requirements
 
@@ -189,7 +191,7 @@ unknownFuntion()"
         const events = await getLocalEvents(cityName, timeframe);
 
         return res.json({
-          intent: "list_events",
+          intent: "local_events",
           events: events,
           timeframe: timeframe,
           city: cityName,
@@ -200,6 +202,98 @@ unknownFuntion()"
         return res.json({
           intent: "error",
           message: "Sorry, I couldn't fetch the local events at this time.",
+        });
+      }
+    }
+
+    // Add this condition after the other function checks
+    if (assistantResponse.function === "findEvent") {
+      const timeframe = params[1] || "both";
+
+      try {
+        // Get events matching the category and timeframe
+        const matchingEvents = await findEventsByCategory(category, timeframe);
+
+        if (matchingEvents.length === 0) {
+          return res.json({
+            intent: "find_event_result",
+            events: [],
+            category: category,
+            timeframe: timeframe,
+            message: `I couldn't find any ${category} events ${
+              timeframe === "future"
+                ? "coming up"
+                : timeframe === "past"
+                ? "in the past"
+                : ""
+            }.`,
+          });
+        }
+
+        // Prepare the events for sending to Groq
+        const formattedEvents = matchingEvents.map((event) => ({
+          id: event.id,
+          title: event.title,
+          day: dayjs(parseInt(event.day)).format("YYYY-MM-DD"),
+          timeStart: event.timeStart,
+          timeEnd: event.timeEnd,
+          category: event.category,
+          description: event.description || "",
+          location: event.location || "",
+        }));
+
+        // Create a prompt for Groq to match the events with the user's query
+        const matchPrompt = `
+        The user asked: "${text}"
+        
+        Here are the events that match the category "${category}" in the ${
+          timeframe === "future"
+            ? "next 3 months"
+            : timeframe === "past"
+            ? "past 3 months"
+            : "3 months around now"
+        }:
+        ${JSON.stringify(formattedEvents, null, 2)}
+        
+        Based on the user's query, identify which event is the most relevant. If the user is asking about:
+        - "next" or "upcoming" event: return the earliest future event
+        - "last" or "previous" event: return the most recent past event
+        - If the user is asking about a specific event title or description, match it with the most relevant event
+        
+        Return only a JSON object with this structure:
+        {
+          "eventId": "id of the most relevant event",
+          "message": "A natural response explaining when the event is/was scheduled"
+        }`;
+
+        // Call Groq to find the most relevant event
+        const groqResponse = await groq.chat.completions.create({
+          messages: [{ role: "user", content: matchPrompt }],
+          model: "llama3-70b-8192",
+          response_format: { type: "json_object" },
+          temperature: 0.2,
+        });
+
+        const matchResult = JSON.parse(groqResponse.choices[0].message.content);
+
+        // Find the selected event
+        const selectedEvent = formattedEvents.find(
+          (e) => e.id.toString() === matchResult.eventId.toString()
+        );
+
+        return res.json({
+          intent: "find_event_result",
+          events: formattedEvents,
+          selectedEvent: selectedEvent,
+          category: category,
+          timeframe: timeframe,
+          message: matchResult.message,
+        });
+      } catch (error) {
+        console.error("Error finding events:", error);
+        return res.json({
+          intent: "error",
+          message: "Sorry, I encountered an error while searching for events.",
         });
       }
     }
@@ -476,6 +570,46 @@ async function getLocalEvents(city, timeframe) {
     return response.data;
   } catch (error) {
     console.error("Error in getLocalEvents:", error);
+    return [];
+  }
+}
+
+// Helper function to find events by category and time range
+async function findEventsByCategory(category, timeframe) {
+  try {
+    const today = dayjs();
+    let startDate, endDate;
+
+    // Determine time range based on timeframe
+    if (timeframe === "future") {
+      startDate = today.valueOf();
+      endDate = today.add(3, "month").valueOf();
+    } else if (timeframe === "past") {
+      startDate = today.subtract(3, "month").valueOf();
+      endDate = today.valueOf();
+    } else {
+      // "both"
+      startDate = today.subtract(3, "month").valueOf();
+      endDate = today.add(3, "month").valueOf();
+    }
+
+    // Fetch events in the specified time range with exact category matching only
+    const events = await Event.findAll({
+      where: {
+        day: {
+          [Op.between]: [startDate, endDate],
+        },
+        category: category, // Exact match only
+      },
+      order: [
+        ["day", "ASC"],
+        ["timeStart", "ASC"],
+      ],
+    });
+
+    return events;
+  } catch (error) {
+    console.error("Error finding events by category:", error);
     return [];
   }
 }

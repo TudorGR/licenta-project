@@ -1,14 +1,28 @@
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
+import axios from "axios"; // Make sure axios is installed
 
 // Register the relativeTime plugin
 dayjs.extend(relativeTime);
+
+// Weather condition mapping to advice
+const WEATHER_ADVICE = {
+  rain: "Don't forget to grab an umbrella!",
+  snow: "Dress warmly and watch for snow!",
+  thunderstorm: "Be careful, thunderstorms are expected!",
+  hot: "It's hot today, dress accordingly!",
+  cold: "It's cold today, bring a jacket!",
+  windy: "It's windy today, secure loose items!",
+  clear: "Weather looks great for your event!",
+  cloudy: "Expect cloudy conditions for your event.",
+};
 
 class ReminderService {
   constructor() {
     this.reminders = new Map();
     this.checkInterval = null;
     this.debug = false;
+    this.weatherCache = new Map(); // Cache for weather data
   }
 
   initialize(events) {
@@ -47,6 +61,7 @@ class ReminderService {
         eventId: event.id,
         title: event.title,
         reminderTime: reminderTime.valueOf(),
+        location: event.location || null, // Store location if available
         notified: false,
       });
     }
@@ -66,21 +81,103 @@ class ReminderService {
     this.reminders.delete(eventId);
   }
 
-  checkReminders() {
+  async checkReminders() {
     const now = dayjs().valueOf();
 
-    this.reminders.forEach((reminder, eventId) => {
+    for (const [eventId, reminder] of this.reminders.entries()) {
       if (!reminder.notified && reminder.reminderTime <= now) {
-        // Trigger notification
-        this.showNotification(reminder);
+        // Check weather if location is provided
+        let weatherAdvice = "";
+        if (reminder.location) {
+          try {
+            weatherAdvice = await this.getWeatherAdvice(reminder.location);
+          } catch (error) {
+            console.error("Failed to get weather advice:", error);
+          }
+        }
+
+        // Trigger notification with weather advice if available
+        this.showNotification(reminder, weatherAdvice);
 
         // Mark as notified
         reminder.notified = true;
       }
-    });
+    }
   }
 
-  showNotification(reminder) {
+  async getWeatherAdvice(location) {
+    // Check cache first
+    if (this.weatherCache.has(location)) {
+      const cachedData = this.weatherCache.get(location);
+      // Cache valid for 30 minutes
+      if (Date.now() - cachedData.timestamp < 30 * 60 * 1000) {
+        return cachedData.advice;
+      }
+    }
+
+    try {
+      // First, get coordinates from the location string using GROQ
+      const coordsResponse = await axios.post(
+        "http://localhost:5000/api/travel/location-to-coords",
+        {
+          location,
+        }
+      );
+      const { latitude, longitude } = coordsResponse.data;
+
+      if (!latitude || !longitude) {
+        return ""; // No coordinates found
+      }
+
+      // Use our backend proxy instead of calling Open Meteo directly
+      const weatherResponse = await axios.get(
+        `http://localhost:5000/api/travel/weather?latitude=${latitude}&longitude=${longitude}`
+      );
+
+      const data = weatherResponse.data;
+      if (!data || !data.hourly) {
+        return "";
+      }
+
+      // Get current hour's data
+      const currentHour = new Date().getHours();
+      const weatherCode = data.hourly.weathercode[currentHour];
+      const temperature = data.hourly.temperature_2m[currentHour];
+      const precipitation = data.hourly.precipitation[currentHour];
+
+      // Determine weather condition and advice
+      let advice = "";
+
+      if (precipitation > 0.5) {
+        advice = WEATHER_ADVICE.rain;
+      } else if (weatherCode >= 71 && weatherCode <= 77) {
+        advice = WEATHER_ADVICE.snow;
+      } else if (weatherCode >= 95) {
+        advice = WEATHER_ADVICE.thunderstorm;
+      } else if (temperature > 28) {
+        advice = WEATHER_ADVICE.hot;
+      } else if (temperature < 5) {
+        advice = WEATHER_ADVICE.cold;
+      } else if (weatherCode === 0) {
+        advice = WEATHER_ADVICE.clear;
+      } else {
+        advice = WEATHER_ADVICE.cloudy;
+      }
+
+      // Cache the result
+      this.weatherCache.set(location, {
+        advice,
+        timestamp: Date.now(),
+      });
+
+      return advice;
+    } catch (error) {
+      console.error("Error getting weather advice:", error);
+      return ""; // Return empty string on error
+    }
+  }
+
+  showNotification(reminder, weatherAdvice = "") {
     // Log to console when notification is shown
     console.log(
       `🔔 NOTIFICATION: "${
@@ -88,28 +185,31 @@ class ReminderService {
       }" at ${new Date().toLocaleTimeString()}`
     );
 
+    // Add weather advice if available
+    const message = weatherAdvice
+      ? `Your event is starting soon. ${weatherAdvice}`
+      : "Your event is starting soon";
+
     // Display browser notification if supported
     if ("Notification" in window) {
       if (Notification.permission === "granted") {
         new Notification(`Event Reminder: ${reminder.title}`, {
-          body: "Your event is starting soon",
+          body: message,
           icon: "/vite.svg", // You can replace this with a custom icon
         });
       } else if (Notification.permission !== "denied") {
         Notification.requestPermission().then((permission) => {
           if (permission === "granted") {
-            this.showNotification(reminder);
+            this.showNotification(reminder, weatherAdvice);
           }
         });
       }
     }
-
-    // Also show an alert as a fallback
-    // alert(`Reminder: ${reminder.title} is starting soon!`);s
   }
 
   clearAll() {
     this.reminders.clear();
+    this.weatherCache.clear();
     if (this.checkInterval) {
       clearInterval(this.checkInterval);
       this.checkInterval = null;
@@ -117,7 +217,7 @@ class ReminderService {
   }
 
   // Add function to create a test reminder that will fire shortly
-  createTestReminder(secondsFromNow = 10) {
+  createTestReminder(secondsFromNow = 10, withLocation = true) {
     const testEvent = {
       id: "test-" + Date.now(),
       title: `Test Reminder (in ${secondsFromNow} seconds)`,
@@ -127,6 +227,7 @@ class ReminderService {
         .format("HH:mm"),
       reminderEnabled: true,
       reminderTime: 1, // 1 minute before
+      location: withLocation ? "Iasi, Romania" : null,
     };
 
     // Force the reminder time to be secondsFromNow from now

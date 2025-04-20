@@ -84,12 +84,12 @@ const CalendarHeader = ({ onOpenAIModal }) => {
   const getHeaderText = () => {
     if (isDayView) {
       return (
-        <>
+        <div className="flex flex-nowrap text-nowrap">
           <h2 className="text-sm">{selectedDay.format("DD, MMMM")}</h2>
           <h2 className="text-sm text-gray-400">
             {selectedDay.format(", YYYY")}
           </h2>
-        </>
+        </div>
       );
     }
 
@@ -103,36 +103,36 @@ const CalendarHeader = ({ onOpenAIModal }) => {
 
       if (weekStart.month() !== weekEnd.month()) {
         return (
-          <>
+          <div className="flex flex-nowrap text-nowrap">
             <h2 className="text-sm">
               {weekStart.format("MMMM")}-{weekEnd.format("MMMM")}
             </h2>
             <h2 className="text-sm text-gray-400">
               , {weekStart.format("YYYY")}
             </h2>
-          </>
+          </div>
         );
       }
 
       return (
-        <>
+        <div className="flex flex-nowrap text-nowrap">
           <h2 className="text-sm">{weekStart.format("MMMM")}</h2>
           <h2 className="text-sm text-gray-400">
             , {weekStart.format("YYYY")}
           </h2>
-        </>
+        </div>
       );
     }
 
     return (
-      <>
+      <div className="flex flex-nowrap text-nowrap">
         <h2 className="text-sm">
           {dayjs(new Date(dayjs().year(), monthIndex)).format("MMMM")}
         </h2>
         <h2 className="text-sm text-gray-400">
           , {dayjs(new Date(dayjs().year(), monthIndex)).format("YYYY")}
         </h2>
-      </>
+      </div>
     );
   };
 

@@ -32,12 +32,48 @@ const WeatherIndicator = ({ hour, date, location = "Bucharest" }) => {
   const [weather, setWeather] = useState(null);
   const [loading, setLoading] = useState(true);
   const [visible, setVisible] = useState(false);
+  const [coordinates, setCoordinates] = useState(null);
+  const [geoError, setGeoError] = useState(null);
 
   // Format the date to YYYY-MM-DD for caching purposes
   const dateStr = date.format("YYYY-MM-DD");
-  const cacheKey = `${dateStr}-${location}`;
+  const cacheKey = `${dateStr}-${location}-${coordinates?.latitude}-${coordinates?.longitude}`;
+
+  // Get user's geolocation
+  useEffect(() => {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setCoordinates({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.error("Geolocation error:", error);
+          setGeoError(error.message);
+          // Fallback to default coordinates (Bucharest)
+          setCoordinates({
+            latitude: 44.4268,
+            longitude: 26.1025,
+          });
+        },
+        { timeout: 10000 }
+      );
+    } else {
+      setGeoError("Geolocation is not supported by your browser");
+      // Fallback to default coordinates
+      setCoordinates({
+        latitude: 44.4268,
+        longitude: 26.1025,
+      });
+    }
+  }, []);
 
   useEffect(() => {
+    // Don't fetch until we have coordinates
+    if (!coordinates) return;
+
     const fetchWeatherData = async () => {
       try {
         setLoading(true);
@@ -60,9 +96,9 @@ const WeatherIndicator = ({ hour, date, location = "Bucharest" }) => {
           }
         }
 
-        // If no cached data, fetch from API
+        // If no cached data, fetch from API using user's coordinates
         const response = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=44.4268&longitude=26.1025&hourly=temperature_2m,precipitation,weathercode&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,sunrise,sunset&current_weather=true&timezone=auto&start_date=${dateStr}&end_date=${dateStr}`
+          `https://api.open-meteo.com/v1/forecast?latitude=${coordinates.latitude}&longitude=${coordinates.longitude}&hourly=temperature_2m,precipitation,weathercode&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,sunrise,sunset&current_weather=true&timezone=auto&start_date=${dateStr}&end_date=${dateStr}`
         );
 
         if (!response.ok) {
@@ -123,7 +159,7 @@ const WeatherIndicator = ({ hour, date, location = "Bucharest" }) => {
     return () => {
       setVisible(false);
     };
-  }, [hour, dateStr, location, cacheKey]);
+  }, [hour, dateStr, location, cacheKey, coordinates]);
 
   if (loading || !weather) {
     return null;

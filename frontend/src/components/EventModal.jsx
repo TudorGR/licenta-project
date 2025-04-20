@@ -345,6 +345,9 @@ export default function EventModal() {
       if (!e.target.closest(".category-select")) {
         setIsSelectOpen(false);
       }
+      if (!e.target.closest(".reminder-select")) {
+        setIsReminderSelectOpen(false);
+      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);

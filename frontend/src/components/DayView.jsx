@@ -2,21 +2,6 @@ import React, { useContext, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast"; // Add this import
 import Context from "../context/Context";
 import dayjs from "dayjs";
-import workoutIcon from "../assets/workout.svg";
-import meetingIcon from "../assets/meeting.svg";
-import studyIcon from "../assets/study.svg";
-import personalIcon from "../assets/personal.svg";
-import workIcon from "../assets/work.svg";
-import socialIcon from "../assets/social.svg";
-import familyIcon from "../assets/family.svg";
-import healthIcon from "../assets/health.svg";
-import hobbyIcon from "../assets/hobby.svg";
-import choresIcon from "../assets/chores.svg";
-import travelIcon from "../assets/travel.svg";
-import financeIcon from "../assets/finance.svg";
-import learningIcon from "../assets/learning.svg";
-import selfCareIcon from "../assets/self-care.svg";
-import eventsIcon from "../assets/event.svg";
 import pinIcon from "../assets/lock.svg";
 import deleteIcon from "../assets/delete_icon.svg";
 import bellIcon from "../assets/bell.svg";
@@ -30,6 +15,7 @@ import {
   lightCategoryColors,
   darkCategoryColors,
 } from "../utils/categoryColors";
+import { getCategoryIcon } from "../utils/categoryIcons"; // Add this import
 
 const TIME_SLOT_HEIGHT = 50;
 const TOTAL_HEIGHT = TIME_SLOT_HEIGHT * 24;
@@ -652,107 +638,9 @@ const DayView = () => {
                             />
                           ) : null}
 
-                          {event.category === "Workout" && (
+                          {event.category && (
                             <img
-                              src={workoutIcon}
-                              alt={event.category}
-                              className="absolute round top-1 right-0 w-3 h-3 opacity-50"
-                            />
-                          )}
-                          {event.category === "Meeting" && (
-                            <img
-                              src={meetingIcon}
-                              alt={event.category}
-                              className="absolute round top-1 right-0 w-3 h-3 opacity-50"
-                            />
-                          )}
-                          {event.category === "Study" && (
-                            <img
-                              src={studyIcon}
-                              alt={event.category}
-                              className="absolute round top-1 right-0 w-3 h-3 opacity-50"
-                            />
-                          )}
-                          {event.category === "Personal" && (
-                            <img
-                              src={personalIcon}
-                              alt={event.category}
-                              className="absolute round top-1 right-0 w-3 h-3 opacity-50"
-                            />
-                          )}
-                          {event.category === "Work" && (
-                            <img
-                              src={workIcon}
-                              alt={event.category}
-                              className="absolute round top-1 right-0 w-3 h-3 opacity-50"
-                            />
-                          )}
-                          {event.category === "Social" && (
-                            <img
-                              src={socialIcon}
-                              alt={event.category}
-                              className="absolute round top-1 right-0 w-3 h-3 opacity-50"
-                            />
-                          )}
-                          {event.category === "Family" && (
-                            <img
-                              src={familyIcon}
-                              alt={event.category}
-                              className="absolute round top-1 right-0 w-3 h-3 opacity-50"
-                            />
-                          )}
-                          {event.category === "Health" && (
-                            <img
-                              src={healthIcon}
-                              alt={event.category}
-                              className="absolute round top-1 right-0 w-3 h-3 opacity-50"
-                            />
-                          )}
-                          {event.category === "Hobby" && (
-                            <img
-                              src={hobbyIcon}
-                              alt={event.category}
-                              className="absolute round top-1 right-0 w-3 h-3 opacity-50"
-                            />
-                          )}
-                          {event.category === "Chores" && (
-                            <img
-                              src={choresIcon}
-                              alt={event.category}
-                              className="absolute round top-1 right-0 w-3 h-3 opacity-50"
-                            />
-                          )}
-                          {event.category === "Travel" && (
-                            <img
-                              src={travelIcon}
-                              alt={event.category}
-                              className="absolute round top-1 right-0 w-3 h-3 opacity-50"
-                            />
-                          )}
-                          {event.category === "Finance" && (
-                            <img
-                              src={financeIcon}
-                              alt={event.category}
-                              className="absolute round top-1 right-0 w-3 h-3 opacity-50"
-                            />
-                          )}
-                          {event.category === "Learning" && (
-                            <img
-                              src={learningIcon}
-                              alt={event.category}
-                              className="absolute round top-1 right-0 w-3 h-3 opacity-50"
-                            />
-                          )}
-                          {event.category === "Self-care" && (
-                            <img
-                              src={selfCareIcon}
-                              alt={event.category}
-                              className="absolute round top-1 right-0 w-3 h-3 opacity-50"
-                            />
-                          )}
-                          {event.category === "Events" && (
-                            <img
-                              src={eventsIcon}
+                              src={getCategoryIcon(event.category)}
                               alt={event.category}
                               className="absolute round top-1 right-0 w-3 h-3 opacity-50"
                             />
@@ -852,8 +740,17 @@ const DayView = () => {
         <ContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
-          onLock={() => {
-            handleLock(contextMenu.eventId);
+          onEdit={() => {
+            const eventToEdit = savedEvents.find(
+              (e) => e.id === contextMenu.eventId
+            );
+            if (eventToEdit) {
+              setSelectedEvent(eventToEdit);
+              setTimeStart(eventToEdit.timeStart);
+              setTimeEnd(eventToEdit.timeEnd);
+              setSelectedDay(dayjs(eventToEdit.day));
+              setShowEventModal(true);
+            }
             setContextMenu({ isOpen: false, x: 0, y: 0, eventId: null });
           }}
           onDelete={() => {

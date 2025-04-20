@@ -5,12 +5,15 @@ import dayjs from "dayjs";
 import sendIcon from "../assets/send-icon.svg";
 import searchIcon from "../assets/search.svg";
 import micIcon from "../assets/mic.svg";
+import arrowRightIcon from "../assets/arrow-right.svg";
+import editIcon from "../assets/edit.svg";
 import { api } from "../services/api.js";
 // Import the speech recognition library
 import SpeechRecognition, {
   useSpeechRecognition,
 } from "react-speech-recognition";
 import AudioWaveform from "./AudioWaveform";
+import { categoryColors } from "../utils/categoryColors";
 
 const AIChatBox = () => {
   const [messages, setMessages] = useState([
@@ -22,8 +25,18 @@ const AIChatBox = () => {
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const [suggestions, setSuggestions] = useState([]);
-  const { dispatchEvent, setSelectedEvent, setShowEventModal, savedEvents } =
-    useContext(Context);
+  const {
+    dispatchEvent,
+    setSelectedEvent,
+    setShowEventModal,
+    savedEvents,
+    setSelectedDay,
+    setMonthIndex,
+    setSelectedWeek,
+    setIsMonthView,
+    setIsWeekView,
+    setIsDayView,
+  } = useContext(Context);
 
   const initialLoadDone = useRef(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -181,9 +194,10 @@ const AIChatBox = () => {
     return newArray;
   };
 
-  // Generate static event query suggestions
+  // Generate static event query suggestions - update this function to include find event suggestions
   const generateEventQuerySuggestions = () => {
     const queryTemplates = [
+      // Local events queries
       {
         template: `Show me local events for this week`,
         values: { query: "events week" },
@@ -200,19 +214,44 @@ const AIChatBox = () => {
         template: `Any interesting events this week?`,
         values: { query: "events week" },
       },
-    ];
 
-    // Select just 1 random template instead of 2
-    const randomIndex = Math.floor(Math.random() * queryTemplates.length);
-    const selectedTemplate = queryTemplates[randomIndex];
-
-    return [
+      // New find event queries for personal calendar
       {
-        ...selectedTemplate,
-        messageTemplate: selectedTemplate,
-        formattedMessage: selectedTemplate.template,
+        template: `When is my next meeting?`,
+        values: { query: "find meetings" },
+      },
+      {
+        template: `When was the last time I went to the gym?`,
+        values: { query: "find appointments" },
+      },
+      {
+        template: `When did I go to see the dentist?`,
+        values: { query: "find events tomorrow" },
+      },
+      {
+        template: `Find my next workout.`,
+        values: { query: "find category work" },
+      },
+      {
+        template: `When was my last meeting?`,
+        values: { query: "find presentations" },
       },
     ];
+
+    // Select 2 random templates - one from local events (0-3) and one from find events (4-8)
+    const localEventIndex = Math.floor(Math.random() * 4);
+    const findEventIndex = Math.floor(Math.random() * 5) + 4;
+
+    const selectedTemplates = [
+      queryTemplates[localEventIndex],
+      queryTemplates[findEventIndex],
+    ];
+
+    return selectedTemplates.map((template) => ({
+      ...template,
+      messageTemplate: template,
+      formattedMessage: template.template,
+    }));
   };
 
   // Message templates for suggestions with formatted parts
@@ -332,6 +371,28 @@ const AIChatBox = () => {
         query: "local concerts",
       },
     }),
+
+    // New templates for find event functionality
+    (suggestion) => ({
+      template: `When is my next meeting?`,
+      values: { query: "find meetings" },
+    }),
+    (suggestion) => ({
+      template: `When was the last time I went to the gym?`,
+      values: { query: "find appointments" },
+    }),
+    (suggestion) => ({
+      template: `When did I go to see the dentist?`,
+      values: { query: "find events tomorrow" },
+    }),
+    (suggestion) => ({
+      template: `Find my next workout.`,
+      values: { query: "find category work" },
+    }),
+    (suggestion) => ({
+      template: `When was my last meeting?`,
+      values: { query: "find presentations" },
+    }),
   ];
 
   // Helper function to format the message text from template and values
@@ -369,6 +430,26 @@ const AIChatBox = () => {
   const handleEventClick = (event) => {
     setSelectedEvent(event);
     setShowEventModal(true);
+  };
+
+  // Function to navigate to the event's date while preserving current view
+  const handleGoToEvent = (event) => {
+    const eventDay = dayjs(event.day);
+
+    // Set the selected day
+    setSelectedDay(eventDay);
+
+    // Set the month index
+    setMonthIndex(eventDay.month());
+
+    // Calculate and set the week index for week view
+    const firstDayOfMonth = eventDay.startOf("month");
+    const firstDayOfWeek = firstDayOfMonth.startOf("week").add(1, "day");
+    const weekIndex = Math.floor(eventDay.diff(firstDayOfWeek, "day") / 7);
+    setSelectedWeek(Math.max(0, weekIndex));
+
+    // Don't change the view mode - keep whatever view the user is currently in
+    // This will preserve month/week/day view
   };
 
   const handleSendMessage = async (customMessage = null) => {
@@ -453,15 +534,60 @@ const AIChatBox = () => {
         // Handle list events response
         const { events, timeframe, city } = response.data;
 
+        // Debug the response data
+        console.log("Local events response:", response.data);
+
+        // Make sure events is always an array
+        const eventsList = Array.isArray(events) ? events : [];
+
         setMessages((prev) => [
           ...prev,
           {
             type: "system",
             content: {
               type: "localEvents",
-              events,
+              events: eventsList,
               timeframe,
               city,
+            },
+          },
+        ]);
+      } else if (response.data.intent === "local_events") {
+        // Handle list events response
+        const { events, timeframe, city } = response.data;
+
+        // Debug the response data
+        console.log("Local events response:", response.data);
+
+        // Make sure events is always an array
+        const eventsList = Array.isArray(events) ? events : [];
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: "system",
+            content: {
+              type: "localEvents",
+              events: eventsList,
+              timeframe,
+              city,
+            },
+          },
+        ]);
+      } else if (response.data.intent === "find_event_result") {
+        // Handle find event results
+        const { events, selectedEvent, category, message } = response.data;
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: "system",
+            content: {
+              type: "eventSearch",
+              events: events,
+              selectedEvent: selectedEvent,
+              category: category,
+              message: message,
             },
           },
         ]);
@@ -513,7 +639,9 @@ const AIChatBox = () => {
           </li>
         ))}
       </ul>
-      <div>Click on any event to edit it or choose a different time.</div>
+      <div className="text-xs text-gray-500">
+        Click on any event to edit it or choose a different time.
+      </div>
     </div>
   );
 
@@ -584,7 +712,7 @@ const AIChatBox = () => {
               <button
                 key={index}
                 onClick={() => handleSelectSlot(slot)}
-                className={`py-1 px-2 rounded-full cursor-pointer transition-all ${
+                className={`py-1 px-2 rounded cursor-pointer transition-all ${
                   index === 0
                     ? "bg-black hover:bg-gray-700 text-white"
                     : "bg-gray-100 hover:bg-gray-200 transition-all text-gray-800"
@@ -599,7 +727,7 @@ const AIChatBox = () => {
               <div className="relative inline-block">
                 <button
                   onClick={() => setShowAllSlots(!showAllSlots)}
-                  className="py-1 overflow-x-scroll rounded-full  text-gray-800 flex items-center"
+                  className="py-1 overflow-x-scroll rounded  text-gray-800 flex items-center"
                 >
                   {suggestedSlots.slice(3).length}
                   {showAllSlots ? "▲" : "▼"}
@@ -638,15 +766,20 @@ const AIChatBox = () => {
   const LocalEventsMessage = ({ events, timeframe, city }) => {
     const [expandedEvent, setExpandedEvent] = useState(null);
 
+    // Add console.log to debug the events data
+    console.log("Local events data:", { events, timeframe, city });
+
     return (
       <div className="flex flex-col">
-        <div className=" mb-2">
+        <div className="mb-2">
           Here are some events I found in {city} {timeframe && `(${timeframe})`}
           :
         </div>
 
-        {events.length === 0 ? (
-          <div className="text-gray-500">No events found.</div>
+        {!events || events.length === 0 ? (
+          <div className="text-gray-500">
+            No events found. Try a different timeframe or check back later.
+          </div>
         ) : (
           <div className="space-y-2 max-h-72 overflow-y-auto">
             {events.map((event, index) => (
@@ -658,7 +791,7 @@ const AIChatBox = () => {
                 }
               >
                 <div className="flex justify-between items-center">
-                  <span>{event.title}</span>
+                  <span className="font-medium">{event.title}</span>
                   <span className="text-xs text-gray-500">
                     {dayjs(event.day).format("MMM D")}
                   </span>
@@ -687,6 +820,177 @@ const AIChatBox = () => {
                 )}
               </div>
             ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Updated EventSearchMessage component
+  const EventSearchMessage = ({ events, selectedEvent, category, message }) => {
+    const [showAllEvents, setShowAllEvents] = useState(false);
+
+    // Function to navigate to the event's date
+    const handleGoToEvent = (event) => {
+      const eventDay = dayjs(event.day);
+
+      // Set the selected day
+      setSelectedDay(eventDay);
+
+      // Set the month index
+      setMonthIndex(eventDay.month());
+
+      // Calculate and set the week index
+      const firstDayOfMonth = eventDay.startOf("month");
+      const firstDayOfWeek = firstDayOfMonth.startOf("week").add(1, "day");
+      const weekIndex = Math.floor(eventDay.diff(firstDayOfWeek, "day") / 7);
+      setSelectedWeek(Math.max(0, weekIndex));
+    };
+
+    // If no events or no selected event, just show the message
+    if (events.length === 0) {
+      return (
+        <div className="flex flex-col">
+          <div className="mb-2">{message}</div>
+          <div className="text-gray-500">No matching events found.</div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-col">
+        <div className="mb-2">{message}</div>
+
+        {selectedEvent && (
+          <div className="mb-3 p-3 bg-gray-100 rounded-lg border border-gray-200">
+            <div className="flex justify-between items-center mb-1">
+              <span className="font-medium text-lg">{selectedEvent.title}</span>
+              <span className="text-sm text-gray-600">
+                {dayjs(selectedEvent.day).format("ddd, MMM D")}
+              </span>
+            </div>
+            <div className="text-sm mb-1 flex flex-wrap gap-1">
+              <span className="inline-block text-nowrap bg-gray-200 px-2 py-0.5 rounded text-xs mr-2">
+                {selectedEvent.timeStart} - {selectedEvent.timeEnd}
+              </span>
+              {selectedEvent.category && (
+                <span
+                  className="inline-block text-nowrap px-2 py-0.5 rounded text-xs text-white mr-2"
+                  style={{
+                    backgroundColor:
+                      categoryColors[selectedEvent.category] || "#9E9E9E",
+                  }}
+                >
+                  {selectedEvent.category}
+                </span>
+              )}
+            </div>
+            {selectedEvent.location && (
+              <div className="text-sm">📍 {selectedEvent.location}</div>
+            )}
+            {selectedEvent.description && (
+              <div className="text-sm mt-1 italic">
+                {selectedEvent.description}
+              </div>
+            )}
+            <div className="flex justify-end mt-2 gap-2">
+              <button
+                onClick={() => handleGoToEvent(selectedEvent)}
+                className="px-3 flex gap-1 transition-all justify-center py-1 bg-gray-200 text-gray-800 text-xs rounded hover:bg-gray-300"
+              >
+                Go to
+                <img src={arrowRightIcon} className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => handleEventClick(selectedEvent)}
+                className="px-3 flex justify-center gap-1 py-1 bg-black text-white text-xs rounded transition-all hover:bg-gray-800"
+              >
+                Edit
+                <img src={editIcon} className="h-3 w-3 alter invert" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {events.length > 1 && (
+          <div className="mb-2">
+            <button
+              onClick={() => setShowAllEvents(!showAllEvents)}
+              className="flex items-center gap-1 px-3 py-1 bg-gray-200 transition-all text-gray-800 text-sm rounded hover:bg-gray-300"
+            >
+              {showAllEvents ? (
+                <>
+                  <span>Hide similar events</span>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="m18 15-6-6-6 6" />
+                  </svg>
+                </>
+              ) : (
+                <>
+                  <span>Show {events.length - 1} similar events</span>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+        {showAllEvents && events.length > 1 && (
+          <div className="space-y-2 max-h-72 overflow-y-auto">
+            {events
+              .filter((event) => event.id !== selectedEvent?.id)
+              .map((event) => (
+                <div
+                  key={event.id}
+                  className="p-2.5 rounded-md cursor-pointer transition-all hover:bg-gray-200 transition-colors bg-gray-100"
+                  onClick={() => handleEventClick(event)}
+                >
+                  <div className="flex justify-between items-center">
+                    <span>{event.title}</span>
+                    <span className="text-xs text-gray-500">
+                      {dayjs(event.day).format("MMM D")}
+                    </span>
+                  </div>
+                  <div className="flex mt-1">
+                    <span className="text-xs text-gray-600 mr-2">
+                      {event.timeStart} - {event.timeEnd}
+                    </span>
+                    {event.category && (
+                      <span
+                        className="inline-block px-1.5 py-0.5 rounded-sm text-xs text-white"
+                        style={{
+                          backgroundColor:
+                            categoryColors[event.category] || "#9E9E9E",
+                        }}
+                      >
+                        {event.category}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
           </div>
         )}
       </div>
@@ -826,6 +1130,16 @@ const AIChatBox = () => {
           events={msg.content.events}
           timeframe={msg.content.timeframe}
           city={msg.content.city}
+        />
+      );
+    } else if (msg.content && msg.content.type === "eventSearch") {
+      // Event search results
+      content = (
+        <EventSearchMessage
+          events={msg.content.events}
+          selectedEvent={msg.content.selectedEvent}
+          category={msg.content.category}
+          message={msg.content.message}
         />
       );
     }

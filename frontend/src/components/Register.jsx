@@ -38,7 +38,7 @@ const Register = () => {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className=" bg-white rounded-xl shadow-xl border border-gray-200 w-full max-w-sm">
+      <div className=" bg-white rounded-3xl shadow-xl border border-gray-200 w-full max-w-sm">
         <header className="border-b-1 border-gray-200 h-14 flex justify-between items-center">
           <h1 className="ml-4 text-lg">Sign Up</h1>
         </header>
