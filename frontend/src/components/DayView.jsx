@@ -518,21 +518,21 @@ const DayView = () => {
 
             {isDragging && dragStart && dragEnd && (
               <div
-                className="eventt border-1 border-gray-500 min-h-3 opacity-50 absolute left-0 w-full rounded-sm bg-gray-200"
+                className="eventt border-1 border-gray-500 min-h-3 opacity-50 absolute left-0 w-full  bg-gray-200"
                 style={positionEvent(dragStart, dragEnd)}
               />
             )}
 
             {isDraggingEvent && draggedEvent && (
               <div
-                className="absolute left-0 w-full z-20 pointer-events-none"
+                className="absolute  left-0 w-full z-20 pointer-events-none"
                 style={positionEvent(
                   draggedEvent.timeStart,
                   draggedEvent.timeEnd
                 )}
               >
                 <div
-                  className="relative rounded-sm h-full "
+                  className="relative  h-[calc(100%-1px)]"
                   style={{
                     backgroundColor:
                       lightCategoryColors[draggedEvent.category || "None"],
@@ -572,7 +572,7 @@ const DayView = () => {
                   onContextMenu={(e) => handleContextMenu(e, event)}
                   onMouseEnter={() => setHoveredEventId(event.id)}
                   onMouseLeave={() => setHoveredEventId(null)}
-                  className={`transition-opacity pb-0.5 px-0.5 eventt absolute left-0 ${
+                  className={`transition-opacity  eventt absolute left-0 ${
                     showWeather ? "w-[calc(100%-64px)]" : "w-full"
                   } cursor-pointer ${
                     draggedEvent && draggedEvent.id === event.id
@@ -582,7 +582,7 @@ const DayView = () => {
                   style={{ top, height }}
                 >
                   <div
-                    className="h-full rounded-sm relative overflow-hidden"
+                    className="h-[calc(100%-1px)] mb-px mx-px border-white relative overflow-hidden"
                     style={{
                       backgroundColor:
                         lightCategoryColors[event.category || "None"],

@@ -74,7 +74,7 @@ const CategoryStats = ({ view = "week", onCategoryClick }) => {
         : dailyWorkingMinutes * endDate.diff(startDate, "day");
 
     filteredEvents.forEach((event) => {
-      const category = event.category || "None";
+      const category = event.category || "Other"; // Change from "None" to "Other"
       if (!categoryStats[category]) {
         categoryStats[category] = { minutes: 0, percentage: 0 };
       }

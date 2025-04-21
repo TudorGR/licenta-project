@@ -47,22 +47,18 @@ app.post("/api/parse-event", async (req, res) => {
   - If no time is specified, use 10:00-11:00 for morning activities (study, meeting, work) and 18:00-19:00 for evening activities (workout, personal)
   - If no date is specified, assume today
   - Common activity categories mapping:
-    - "workout", "gym", "training", "exercise" -> "Workout"
-    - "meeting", "call", "interview" -> "Meeting"
-    - "study", "homework", "research", "class" -> "Study"
+    - "workout", "gym", "training", "exercise" -> "Health & Wellness"
+    - "meeting", "call", "interview" -> "Work"
+    - "study", "homework", "research", "class" -> "Education"
     - "work", "project", "deadline" -> "Work"
-    - "personal", "appointment" -> "Personal"
-    - "party", "hangout", "meetup", "date" -> "Social"
-    - "family", "relatives", "parents", "kids" -> "Family"
-    - "doctor", "dentist", "checkup", "medicine" -> "Health"
-    - "hobby", "gaming", "reading", "painting" -> "Hobby"
-    - "cleaning", "laundry", "grocery", "errands" -> "Chores"
-    - "trip", "flight", "vacation", "journey" -> "Travel"
-    - "banking", "budget", "investment", "bills" -> "Finance"
-    - "course", "tutorial", "workshop", "training" -> "Learning"
-    - "meditation", "spa", "relaxation", "wellness" -> "Self-care"
-    - "concert", "festival", "conference", "show" -> "Events"
-    - anything else -> "None"
+    - "personal", "appointment" -> "Personal Tasks"
+    - "party", "hangout", "meetup", "date" -> "Social & Family"
+    - "family", "relatives", "parents", "kids" -> "Social & Family"
+    - "doctor", "dentist", "checkup", "medicine" -> "Health & Wellness"
+    - "hobby", "gaming", "reading", "painting" -> "Leisure & Hobbies"
+    - "cleaning", "laundry", "grocery", "errands" -> "Personal Tasks"
+    - "trip", "flight", "vacation", "journey" -> "Travel & Commute"
+    - "banking", "budget", "investment", "bills" -> "Finance & Bills"
 
   Return ONLY a valid JSON object without any markdown formatting or additional text.
   The response must exactly match this structure and use the current date as reference for relative dates like "tomorrow" or "next week":

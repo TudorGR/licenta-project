@@ -197,7 +197,7 @@ const Day = ({ day, index, showMiniDayView = false }) => {
       <div className="flex-1 flex">
         {/* Left column - original events list */}
         <div
-          className="w-3/5 cursor-pointer overflow-hidden"
+          className="w-3/5 border-r border-gray-100 cursor-pointer overflow-hidden"
           onClick={() => {
             setSelectedDay(day);
             setTimeStart("08:00");
@@ -210,16 +210,16 @@ const Day = ({ day, index, showMiniDayView = false }) => {
               key={idx}
               onClick={() => setSelectedEvent(event)}
               onContextMenu={(e) => handleContextMenu(e, event)}
-              className="px-1 ml-0.5 mr-0.5 text-sm rounded mb-1 truncate text-black"
+              className="pl-1   text-sm  mb-1 truncate text-black"
               style={{
-                backgroundColor: lightCategoryColors[event.category || "None"],
+                backgroundColor: lightCategoryColors[event.category || "Other"],
               }}
             >
               <div
                 style={{
-                  color: darkCategoryColors[event.category || "None"],
+                  color: darkCategoryColors[event.category || "Other"],
                 }}
-                className="font-medium relative text-xs"
+                className="font-medium relative text-xs truncate"
               >
                 {event.title}
               </div>
@@ -264,13 +264,13 @@ const Day = ({ day, index, showMiniDayView = false }) => {
                     setShowEventModal(true);
                   }}
                   onContextMenu={(e) => handleContextMenu(e, event)}
-                  className="absolute rounded-sm border border-white overflow-hidden"
+                  className="absolute  border-y border-white overflow-hidden"
                   style={{
                     top: `${topPercent}%`,
                     height: `${heightPercent}%`,
                     left: `${column * columnWidth}%`,
-                    width: `${columnWidth - 2}%`,
-                    backgroundColor: categoryColors[event.category || "None"],
+                    width: `${columnWidth}%`,
+                    backgroundColor: categoryColors[event.category || "Other"],
                     zIndex: 2,
                   }}
                 ></div>

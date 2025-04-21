@@ -23,25 +23,19 @@ import learningIcon from "../assets/learning.svg";
 import selfCareIcon from "../assets/self-care.svg";
 import clockIcon from "../assets/clock.svg";
 import eventsIcon from "../assets/event.svg";
+import otherIcon from "../assets/other.svg";
 import { categoryColors } from "../utils/categoryColors";
 
 const categoryIcons = {
-  None: null,
-  Workout: workoutIcon,
-  Meeting: meetingIcon,
-  Study: studyIcon,
-  Personal: personalIcon,
+  Other: otherIcon,
   Work: workIcon,
-  Social: socialIcon,
-  Family: familyIcon,
-  Health: healthIcon,
-  Hobby: hobbyIcon,
-  Chores: choresIcon,
-  Travel: travelIcon,
-  Finance: financeIcon,
-  Learning: learningIcon,
-  "Self-care": selfCareIcon,
-  Events: eventsIcon,
+  Education: learningIcon,
+  "Health & Wellness": healthIcon,
+  "Finance & Bills": financeIcon,
+  "Social & Family": socialIcon,
+  "Travel & Commute": travelIcon,
+  "Personal Tasks": personalIcon,
+  "Leisure & Hobbies": hobbyIcon,
 };
 
 const reminderOptions = [
@@ -146,7 +140,7 @@ export default function EventModal() {
         description,
         timeStart: finalStartTime,
         timeEnd: finalEndTime,
-        category: selectedCategory || "None",
+        category: selectedCategory || "Other", // Changed from "None" to "Other"
         location,
         reminderEnabled,
         reminderTime,

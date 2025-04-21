@@ -589,7 +589,7 @@ const DayWeek = ({
                     key={`bar-${category}`}
                     style={{
                       backgroundColor:
-                        categoryColors[category] || categoryColors.None,
+                        categoryColors[category] || categoryColors.Other,
                       height: barHeight,
                       width: barWidth,
                       opacity: 0.4,
@@ -694,7 +694,7 @@ const DayWeek = ({
           ))}
           {isDragging && dragStart && dragEnd && (
             <div
-              className="z-2 border-1 border-gray-500 min-h-3 opacity-50 absolute left-0 w-full rounded-sm bg-gray-200"
+              className="z-2 border-1 border-gray-500 min-h-3 opacity-50 absolute left-0 w-full  bg-gray-200"
               style={{
                 ...positionEvent(dragStart, dragEnd),
                 pointerEvents: "none",
@@ -714,7 +714,7 @@ const DayWeek = ({
                 }}
               >
                 <div
-                  className="relative rounded-sm h-full"
+                  className="relative  h-full"
                   style={{
                     backgroundColor:
                       lightCategoryColors[draggedEvent.category || "None"],
@@ -756,8 +756,8 @@ const DayWeek = ({
                       top: eventPosition.top,
                       height: eventPosition.height,
                       left: 0,
-                      width: "100%",
-                      padding: "0px 4px 0px 0px",
+                      width: "calc(100% - 0px)",
+                      padding: "0px",
                       boxSizing: "border-box",
                       cursor: "pointer",
                       borderRadius: "6px",
@@ -767,10 +767,10 @@ const DayWeek = ({
                     onContextMenu={(e) => handleContextMenu(e, event)}
                   >
                     <div
-                      className="relative rounded-sm pr-0.5 py-0 overflow-hidden"
+                      className="relative  pr-0.5 py-0 overflow-hidden"
                       style={{
                         backgroundColor:
-                          lightCategoryColors[event.category || "None"],
+                          lightCategoryColors[event.category || "Other"],
                         height: "100%",
                         position: "relative",
                       }}
@@ -779,7 +779,7 @@ const DayWeek = ({
                         className=" relative flex items-start h-full"
                         style={{
                           borderLeft: `3px ${
-                            categoryColors[event.category || "None"]
+                            categoryColors[event.category || "Other"]
                           } ${event.locked ? "dashed" : "solid"}`,
                         }}
                       >
@@ -840,7 +840,7 @@ const DayWeek = ({
                                   darkCategoryColors[event.category || "None"]
                                 }`,
                               }}
-                              className="w-[80%] text-xs font-medium ml-1 mt-0.5 overflow-clip truncate"
+                              className="w-[75%] text-xs font-medium mx-1 mt-0.5 overflow-clip truncate"
                             >
                               {event.title}
                             </div>
@@ -900,7 +900,7 @@ const DayWeek = ({
                       }}
                     >
                       <div
-                        className="relative rounded-sm pr-0.5 py-0 overflow-hidden"
+                        className="relative  pr-0.5 py-0 overflow-hidden"
                         style={{
                           backgroundColor: "#f3f4f6", // Lighter background
                           height: "100%",
@@ -950,7 +950,7 @@ const DayWeek = ({
               pointerEvents: "none",
             }}
           >
-            <div className="absolute -left-1 -top-0.75 w-2 h-2 rounded-full bg-black" />
+            {/* <div className="absolute -left-1 -top-0.75 w-2 h-2 rounded-full bg-black" /> */}
           </div>
         ) : (
           <div></div>

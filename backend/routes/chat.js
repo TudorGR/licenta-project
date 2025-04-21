@@ -96,7 +96,7 @@ unknownFuntion()"
               day: dayValue,
               timeStart: timeStart,
               timeEnd: timeEnd,
-              category: category,
+              category: category || "Other", // Add default "Other" category
             },
             overlappingEvents: overlappingEvents.map((event) => ({
               id: event.id,

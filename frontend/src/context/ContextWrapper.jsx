@@ -173,22 +173,15 @@ export default function ContextWrapper(props) {
 
   const [loading, setLoading] = useState(true);
   const [categories] = useState([
-    "None",
-    "Meeting",
-    "Workout",
-    "Study",
-    "Personal",
+    "Other",
     "Work",
-    "Social",
-    "Family",
-    "Health",
-    "Hobby",
-    "Chores",
-    "Travel",
-    "Finance",
-    "Learning",
-    "Self-care",
-    "Events",
+    "Education",
+    "Health & Wellness",
+    "Finance & Bills",
+    "Social & Family",
+    "Travel & Commute",
+    "Personal Tasks",
+    "Leisure & Hobbies",
   ]);
   const [selectedHeatmapCategories, setSelectedHeatmapCategories] = useState(
     () => new Set(categories)
