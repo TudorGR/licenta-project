@@ -124,7 +124,7 @@ const savedEventsReducer = (state, { type, payload }) => {
   }
 };
 
-export default function ContextWrapper(props) {
+const ContextProvider = ({ children }) => {
   const [monthIndex, setMonthIndex] = useState(dayjs().month());
   const [smallCalendarMonth, setSmallCalendarMonth] = useState(null);
   const [selectedDay, setSelectedDay] = useState(dayjs());
@@ -188,6 +188,7 @@ export default function ContextWrapper(props) {
   );
   const [selectedCategory, setSelectedCategory] = useState("");
   const [showHeatmap, setShowHeatmap] = useState(false);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -310,9 +311,12 @@ export default function ContextWrapper(props) {
         setShowLocalEvents,
         userCity,
         setUserCity,
+        user,
       }}
     >
-      {props.children}
+      {children}
     </Context.Provider>
   );
-}
+};
+
+export default ContextProvider;

@@ -12,7 +12,7 @@ const Month = ({ month }) => {
           <React.Fragment key={index}>
             {row.map((day, i) => {
               return (
-                <Day day={day} key={i} index={index} showMiniDayView={true} />
+                <Day day={day} key={i} index={index} showMiniDayView={false} />
               );
             })}
           </React.Fragment>

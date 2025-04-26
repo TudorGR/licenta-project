@@ -8,7 +8,7 @@ import familyIcon from "../assets/family.svg"; // Alternative for Social & Famil
 import travelIcon from "../assets/travel.svg";
 import personalIcon from "../assets/personal.svg";
 import hobbyIcon from "../assets/hobby.svg";
-import otherIcon from "../assets/event.svg"; // Default icon for Other
+import otherIcon from "../assets/other.svg"; // Default icon for Other
 
 // Map categories to their respective icons
 export const categoryIcons = {

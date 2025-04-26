@@ -8,23 +8,16 @@ import micIcon from "../assets/mic.svg";
 import arrowRightIcon from "../assets/arrow-right.svg";
 import editIcon from "../assets/edit.svg";
 import { api } from "../services/api.js";
+import zapIcon from "../assets/zap.svg";
 // Import the speech recognition library
 import SpeechRecognition, {
   useSpeechRecognition,
 } from "react-speech-recognition";
 import AudioWaveform from "./AudioWaveform";
-import { categoryColors } from "../utils/categoryColors";
+import { categoryColors, darkCategoryColors } from "../utils/categoryColors";
+import { AuthContext } from "../context/AuthContext";
 
 const AIChatBox = () => {
-  const [messages, setMessages] = useState([
-    { type: "system", text: "Hi! How can I help you with your calendar?" },
-  ]);
-
-  const [input, setInput] = useState("");
-  const inputRef = useRef(null);
-  const [loading, setLoading] = useState(false);
-  const messagesEndRef = useRef(null);
-  const [suggestions, setSuggestions] = useState([]);
   const {
     dispatchEvent,
     setSelectedEvent,
@@ -37,6 +30,25 @@ const AIChatBox = () => {
     setIsWeekView,
     setIsDayView,
   } = useContext(Context);
+
+  // Get currentUser from AuthContext instead
+  const { currentUser } = useContext(AuthContext);
+
+  // Update the initial message using currentUser instead of user
+  const [messages, setMessages] = useState([
+    {
+      type: "system",
+      text: currentUser?.name
+        ? `Hi ${currentUser.name}! How can I help you with your calendar?`
+        : "Hi! How can I help you with your calendar?",
+    },
+  ]);
+
+  const [input, setInput] = useState("");
+  const inputRef = useRef(null);
+  const [loading, setLoading] = useState(false);
+  const messagesEndRef = useRef(null);
+  const [suggestions, setSuggestions] = useState([]);
 
   const initialLoadDone = useRef(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -131,6 +143,21 @@ const AIChatBox = () => {
   const handleCloseVoiceInput = () => {
     SpeechRecognition.stopListening();
     setShowVoiceInput(false);
+  };
+
+  // Add a new function to handle resetting the chat
+  const handleStartOver = () => {
+    setMessages([
+      {
+        type: "system",
+        text: currentUser?.name
+          ? `Hi ${currentUser.name}! How can I help you with your calendar?`
+          : "Hi! How can I help you with your calendar?",
+      },
+    ]);
+    setInput("");
+    setSuggestions([]);
+    fetchEventSuggestions(); // Fetch fresh suggestions
   };
 
   // Update the fetchEventSuggestions function to randomly select categories
@@ -634,7 +661,7 @@ const AIChatBox = () => {
           >
             <span className="font-medium">{event.title}</span>
             <span className="text-gray-600">
-              {event.timeStart} - {event.timeEnd}
+              {event.timeStart} · {event.timeEnd}
             </span>
           </li>
         ))}
@@ -742,7 +769,7 @@ const AIChatBox = () => {
                         onClick={() => handleSelectSlot(slot)}
                         className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       >
-                        {slot.timeStart} - {slot.timeEnd}
+                        {slot.timeStart} · {slot.timeEnd}
                       </button>
                     ))}
                   </div>
@@ -803,7 +830,7 @@ const AIChatBox = () => {
                       {dayjs(event.day).format("dddd, MMMM D")}
                     </div>
                     <div>
-                      {event.timeStart} - {event.timeEnd}
+                      {event.timeStart} · {event.timeEnd}
                     </div>
                     {event.location && <div>📍 {event.location}</div>}
                     {event.description && (
@@ -862,7 +889,7 @@ const AIChatBox = () => {
         <div className="mb-2">{message}</div>
 
         {selectedEvent && (
-          <div className="mb-3 p-3 bg-gray-100 rounded-lg border border-gray-200">
+          <div className="mb-3 p-3 bg-gray-100 rounded-xl border border-gray-200">
             <div className="flex justify-between items-center mb-1">
               <span className="font-medium text-lg">{selectedEvent.title}</span>
               <span className="text-sm text-gray-600">
@@ -870,15 +897,15 @@ const AIChatBox = () => {
               </span>
             </div>
             <div className="text-sm mb-1 flex flex-wrap gap-1">
-              <span className="inline-block text-nowrap bg-gray-200 px-2 py-0.5 rounded text-xs mr-2">
-                {selectedEvent.timeStart} - {selectedEvent.timeEnd}
+              <span className="inline-block text-nowrap bg-gray-200 px-2 py-0.5 rounded text-xs ">
+                {selectedEvent.timeStart} · {selectedEvent.timeEnd}
               </span>
               {selectedEvent.category && (
                 <span
-                  className="inline-block text-nowrap px-2 py-0.5 rounded text-xs text-white mr-2"
+                  className="inline-block text-nowrap px-2 py-0.5 rounded text-xs text-white "
                   style={{
                     backgroundColor:
-                      categoryColors[selectedEvent.category] || "#9E9E9E",
+                      darkCategoryColors[selectedEvent.category] || "#9E9E9E",
                   }}
                 >
                   {selectedEvent.category}
@@ -893,7 +920,7 @@ const AIChatBox = () => {
                 {selectedEvent.description}
               </div>
             )}
-            <div className="flex justify-end mt-2 gap-2">
+            <div className="flex justify-end mt-2 gap-1">
               <button
                 onClick={() => handleGoToEvent(selectedEvent)}
                 className="px-3 flex gap-1 transition-all justify-center py-1 bg-gray-200 text-gray-800 text-xs rounded hover:bg-gray-300"
@@ -975,7 +1002,7 @@ const AIChatBox = () => {
                   </div>
                   <div className="flex mt-1">
                     <span className="text-xs text-gray-600 mr-2">
-                      {event.timeStart} - {event.timeEnd}
+                      {event.timeStart} · {event.timeEnd}
                     </span>
                     {event.category && (
                       <span
@@ -1000,10 +1027,8 @@ const AIChatBox = () => {
   // Render suggestions as command texts with highlighted parts
   const SuggestionsSection = () => (
     <div className="flex flex-col justify-end items-end mb-4 mt-3 w-full">
-      <div className="text-xs text-gray-500 mb-2 ml-1 font-medium">
-        Suggested commands:
-      </div>
-      <div className="w-[85%] flex flex-col gap-2">
+      <div className="text-xs opacity-50 mb-2 ml-1">Suggested commands:</div>
+      <div className="w-[85%] flex flex-col gap-1">
         {suggestions.map((suggestion, index) => {
           // Check if this is a time suggestion (no timeStart/timeEnd) or regular suggestion
           const isTimeSuggestion = !suggestion.values.timeStart;
@@ -1020,50 +1045,11 @@ const AIChatBox = () => {
               {/* Icon based on suggestion type */}
               <div
                 className={`
-                rounded-full p-1.5 flex-shrink-0
-                    bg-gray-50 text-gray-600
+                  flex-shrink-0
+                     text-gray-600
               `}
               >
-                {suggestion.values.query ? (
-                  // Events/location icon for event queries
-                  <svg
-                    className="h-3.5 w-3.5"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M5.05 4.05a7 7 0 119.9 9.9l-4.95 4.95a1 1 0 01-1.414 0l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                ) : isTimeSuggestion ? (
-                  // Clock icon for time suggestions
-                  <svg
-                    className="h-3.5 w-3.5"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                ) : (
-                  // Calendar icon for regular events
-                  <svg
-                    className="h-3.5 w-3.5"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                )}
+                <img src={zapIcon} className="w-4 h-4 opacity-50" />
               </div>
 
               {/* Text content with formatted parts */}
@@ -1077,26 +1063,16 @@ const AIChatBox = () => {
     </div>
   );
 
-  // Render a suggestion with bold formatting for key parts
+  // Replace the existing renderFormattedSuggestion function with this simplified version
   const renderFormattedSuggestion = (suggestion) => {
-    const { template, values } = suggestion.messageTemplate;
-
-    // Create parts of the message by splitting on placeholders
-    const parts = template.split(/\{([^}]+)\}/g);
-
-    return parts.map((part, index) => {
-      // Every odd index is a placeholder
-      if (index % 2 === 1) {
-        const key = part;
-        const value = values[key];
-        return (
-          <span key={index} className="font-medium ">
-            {value}
-          </span>
-        );
-      }
-      return <span key={index}>{part}</span>;
-    });
+    // Simply return the formatted message as regular text without any special formatting
+    return (
+      suggestion.formattedMessage ||
+      formatMessageText(
+        suggestion.messageTemplate.template,
+        suggestion.messageTemplate.values
+      )
+    );
   };
 
   // Render different message types
@@ -1150,7 +1126,7 @@ const AIChatBox = () => {
         className={`mb-2 ${msg.type === "user" ? "text-right" : ""}`}
       >
         <div
-          className={`text-sm text-left inline-block p-3 rounded-lg max-w-[85%] ${
+          className={`text-sm text-left inline-block p-3 rounded-xl max-w-[85%] ${
             msg.type === "user"
               ? "bg-gray-100  text-black  border border-gray-200"
               : "bg-white text-black border border-gray-200 "
@@ -1164,11 +1140,17 @@ const AIChatBox = () => {
 
   return (
     <div className="w-80 h-full border-l border-gray-200 flex flex-col bg-white">
-      <div className="p-3.5 border-b border-gray-200">
+      <div className="p-2 border-b border-gray-200 flex justify-between items-center">
         <h2 className="text-lg font-medium">AI Assistant</h2>
+        <button
+          onClick={handleStartOver}
+          className="cursor-pointer px-4 border shadow-customn border-gray-200 h-10 rounded-full text-sm active:bg-gray-50 transition-all"
+        >
+          Start over
+        </button>
       </div>
 
-      <div className="flex-1 p-3 overflow-y-auto">
+      <div className="flex-1 p-2 overflow-y-auto">
         {messages.map((msg, index) => renderMessage(msg, index))}
 
         {/* Show suggestions after messages with delay */}
@@ -1176,7 +1158,7 @@ const AIChatBox = () => {
 
         {loading && (
           <div className="mb-2">
-            <div className="inline-block p-3 rounded-lg max-w-[85%] border border-gray-200 text-black rounded-tl-none">
+            <div className="inline-block p-3 rounded-xl max-w-[85%] border border-gray-200 text-black rounded-tl-none">
               <div className="flex space-x-2">
                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
                 <div
@@ -1194,7 +1176,7 @@ const AIChatBox = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="flex items-center m-2 rounded-xl shadow-custom border border-gray-200">
+      <div className="flex items-center m-2 rounded-full shadow-custom border border-gray-200">
         <button
           onClick={() => handleSendMessage()}
           disabled={loading || !input.trim()}

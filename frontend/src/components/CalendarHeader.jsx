@@ -158,7 +158,7 @@ const CalendarHeader = ({ onOpenAIModal }) => {
           >
             <img src={right} className="w-5 mx-auto" />
           </button>
-          <div className="ml-2 flex items-center">{getHeaderText()}</div>
+          <div className="mx-2 flex items-center">{getHeaderText()}</div>
         </div>
       </div>
       <div className="flex items-center rounded-full shadow-custom">

@@ -236,12 +236,12 @@ const WeatherIndicator = ({ hour, date, location = "Bucharest" }) => {
     <div
       className="weather-indicator flex items-center justify-center"
       style={{
-        opacity: visible ? 1 : 0,
+        opacity: visible ? 0.3 : 0,
         transition: "opacity 0.5s ease-in-out",
       }}
     >
-      <img src={icon} alt="Weather" className="w-8 h-8" />
-      <span className="text-xs text-gray-500 ml-1">
+      <img src={icon} alt="Weather" className="w-10 h-10" />
+      <span className=" text-sm text-gray-500 ml-1">
         {Math.round(weather.temperature)}°C
       </span>
     </div>

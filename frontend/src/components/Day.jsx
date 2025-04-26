@@ -195,9 +195,9 @@ const Day = ({ day, index, showMiniDayView = false }) => {
       </header>
 
       <div className="flex-1 flex">
-        {/* Left column - original events list */}
+        {/* Events list - now full width */}
         <div
-          className="w-3/5 border-r border-gray-100 cursor-pointer overflow-hidden"
+          className="w-full cursor-pointer overflow-hidden"
           onClick={() => {
             setSelectedDay(day);
             setTimeStart("08:00");
@@ -210,7 +210,7 @@ const Day = ({ day, index, showMiniDayView = false }) => {
               key={idx}
               onClick={() => setSelectedEvent(event)}
               onContextMenu={(e) => handleContextMenu(e, event)}
-              className="pl-1   text-sm  mb-1 truncate text-black"
+              className="pl-1 text-sm mb-1 truncate text-black"
               style={{
                 backgroundColor: lightCategoryColors[event.category || "Other"],
               }}
@@ -232,52 +232,7 @@ const Day = ({ day, index, showMiniDayView = false }) => {
           )}
         </div>
 
-        {/* Right column - mini day view */}
-        {showMiniDayView && (
-          <div
-            className="w-2/5 relative cursor-pointer h-full min-h-[100px]"
-            onClick={() => {
-              setSelectedDay(day);
-              setTimeStart("08:00");
-              setTimeEnd("09:00");
-              setShowEventModal(true);
-            }}
-          >
-            {/* Events with improved layout */}
-            {eventLayout.map(({ event, column, totalColumns }, idx) => {
-              const { top, height } = positionEvent(
-                event.timeStart,
-                event.timeEnd
-              );
-              const columnWidth = 100 / totalColumns;
-
-              // Use percentage for top position instead of fixed pixels
-              const topPercent = top;
-              const heightPercent = height;
-
-              return (
-                <div
-                  key={`mini-event-${idx}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedEvent(event);
-                    setShowEventModal(true);
-                  }}
-                  onContextMenu={(e) => handleContextMenu(e, event)}
-                  className="absolute  border-y border-white overflow-hidden"
-                  style={{
-                    top: `${topPercent}%`,
-                    height: `${heightPercent}%`,
-                    left: `${column * columnWidth}%`,
-                    width: `${columnWidth}%`,
-                    backgroundColor: categoryColors[event.category || "Other"],
-                    zIndex: 2,
-                  }}
-                ></div>
-              );
-            })}
-          </div>
-        )}
+        {/* Removed the mini day view section */}
       </div>
 
       {contextMenu.isOpen && (

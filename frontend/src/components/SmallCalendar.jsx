@@ -85,7 +85,7 @@ export default function SmallCalendar() {
   return (
     <div className="bg-white rounded-sm p-0 w-[90%]">
       <header className="flex justify-between">
-        <p className="text-sm my-auto">
+        <p className="text-lg font-medium my-auto">
           {dayjs(new Date(dayjs().year(), currentMonthIndex)).format(
             "MMMM YYYY"
           )}

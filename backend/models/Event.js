@@ -51,6 +51,19 @@ Event.init(
   {
     sequelize,
     modelName: "Event",
+    indexes: [
+      // Add index for the day field which is used in almost all queries
+      { fields: ["day"] },
+
+      // Composite index for day+timeStart for time range queries
+      { fields: ["day", "timeStart"] },
+
+      // Composite index for category+day for pattern analysis
+      { fields: ["category", "day"] },
+
+      // Composite index for userId+day for user-specific queries
+      { fields: ["userId", "day"] },
+    ],
   }
 );
 

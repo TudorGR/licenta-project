@@ -43,7 +43,7 @@ unknownFuntion()"
   - if the user asks about what events are happening, local events, or similar queries, use local_events function
   - if the user asks about when an event will happen, or when was the last time, or to find specific events, use findEvent function
   - for local_events, timeframe can be "today", "this week", "this month"
-  - for findEvent, category is gonna be the event category and timeframe must be "future", "past", or "both"
+  - for findEvent, category is gonna be the event category and timeframe must be "future" or "past"
   - the parameters should be in the order: title(string), startTime(24hr format), endTime(24hr format), date(YYYY-MM-DD)
   - date parameter is by default ${currentDate} if it is not specified
   - if a parameter is not specified ask for it and make the parameter empty in the list
@@ -208,7 +208,7 @@ unknownFuntion()"
 
     // Add this condition after the other function checks
     if (assistantResponse.function === "findEvent") {
-      const timeframe = params[1] || "both";
+      const timeframe = params.includes("future") ? "future" : "past";
 
       try {
         // Get events matching the category and timeframe
@@ -247,11 +247,7 @@ unknownFuntion()"
         The user asked: "${text}"
         
         Here are the events that match the category "${category}" in the ${
-          timeframe === "future"
-            ? "next 3 months"
-            : timeframe === "past"
-            ? "past 3 months"
-            : "3 months around now"
+          timeframe === "future" ? "next 3 months" : "past 3 months"
         }:
         ${JSON.stringify(formattedEvents, null, 2)}
         
@@ -407,14 +403,14 @@ async function findFreeSlotsForDay(day) {
 async function getCategoryPatterns(category) {
   try {
     const today = dayjs();
-    const oneMonthAgo = today.subtract(1, "month").valueOf();
+    const threeMonthsAgo = today.subtract(3, "month").valueOf();
 
     // Get all events in this category from past month
     const pastEvents = await Event.findAll({
       where: {
         category: category,
         day: {
-          [Op.between]: [oneMonthAgo, today.valueOf()],
+          [Op.between]: [threeMonthsAgo, today.valueOf()],
         },
       },
     });
@@ -584,13 +580,10 @@ async function findEventsByCategory(category, timeframe) {
     if (timeframe === "future") {
       startDate = today.valueOf();
       endDate = today.add(3, "month").valueOf();
-    } else if (timeframe === "past") {
+    } else {
+      // Default to "past" for any other value
       startDate = today.subtract(3, "month").valueOf();
       endDate = today.valueOf();
-    } else {
-      // "both"
-      startDate = today.subtract(3, "month").valueOf();
-      endDate = today.add(3, "month").valueOf();
     }
 
     // Fetch events in the specified time range with exact category matching only

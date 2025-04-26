@@ -47,7 +47,7 @@ const CalendarApp = () => {
       <Toaster position="top-right" />
       <div className="p-2 h-screen bg-gray-100 flex flex-col">
         <CalendarMainHeader />
-        <div className="h-[calc(100vh-65px)] overflow-clip flex border-1 border-gray-200 bg-white rounded-xl">
+        <div className="h-[calc(100vh-65px)] overflow-clip flex border-1 border-gray-200 bg-white rounded-3xl">
           <Sidebar />
           <div className="flex flex-col flex-1 h-full">
             <CalendarHeader />

@@ -21,6 +21,7 @@ import deleteIcon from "../assets/delete_icon.svg";
 import lockIcon from "../assets/lock.svg";
 import bellIcon from "../assets/bell.svg";
 import ContextMenu from "./ContextMenu";
+import locationIcon from "../assets/location.svg";
 import TravelTimeIndicator, {
   clearTravelTimeCache,
 } from "./TravelTimeIndicator";
@@ -402,73 +403,6 @@ const DayWeek = ({
     );
   };
 
-  const getTimeUntil = (event) => {
-    const now = dayjs();
-    const eventDay = dayjs(parseInt(event.day));
-    const eventStartTime = eventDay
-      .hour(parseInt(event.timeStart.split(":")[0]))
-      .minute(parseInt(event.timeStart.split(":")[1]));
-    const eventEndTime = eventDay
-      .hour(parseInt(event.timeEnd.split(":")[0]))
-      .minute(parseInt(event.timeEnd.split(":")[1]));
-
-    if (now.isBefore(eventStartTime)) {
-      const diffMinutes = eventStartTime.diff(now, "minute");
-
-      if (diffMinutes < 60) {
-        return `${diffMinutes}m until`;
-      } else if (diffMinutes < 60 * 24) {
-        const hours = Math.floor(diffMinutes / 60);
-        const mins = diffMinutes % 60;
-        return `${hours}h${mins > 0 ? ` ${mins}m` : ""} until`;
-      } else if (diffMinutes < 60 * 24 * 7) {
-        const days = Math.floor(diffMinutes / (60 * 24));
-        const hours = Math.floor((diffMinutes % (60 * 24)) / 60);
-        return `${days}d${hours > 0 ? ` ${hours}h` : ""} until`;
-      } else {
-        const weeks = Math.floor(diffMinutes / (60 * 24 * 7));
-        const days = Math.floor((diffMinutes % (60 * 24 * 7)) / (60 * 24));
-        return `${weeks}w${days > 0 ? ` ${days}d` : ""} until`;
-      }
-    } else if (now.isAfter(eventEndTime)) {
-      const diffMinutes = now.diff(eventEndTime, "minute");
-
-      if (diffMinutes < 60) {
-        return `${diffMinutes}m since`;
-      } else if (diffMinutes < 60 * 24) {
-        const hours = Math.floor(diffMinutes / 60);
-        const mins = diffMinutes % 60;
-        return `${hours}h${mins > 0 ? ` ${mins}m` : ""} since`;
-      } else if (diffMinutes < 60 * 24 * 7) {
-        const days = Math.floor(diffMinutes / (60 * 24));
-        const hours = Math.floor((diffMinutes % (60 * 24)) / 60);
-        return `${days}d${hours > 0 ? ` ${hours}h` : ""} since`;
-      } else {
-        const weeks = Math.floor(diffMinutes / (60 * 24 * 7));
-        const days = Math.floor((diffMinutes % (60 * 24 * 7)) / (60 * 24));
-        return `${weeks}w${days > 0 ? ` ${days}d` : ""} since`;
-      }
-    } else {
-      const diffMinutes = eventEndTime.diff(now, "minute");
-
-      if (diffMinutes < 60) {
-        return `Ends ${diffMinutes}m`;
-      } else if (diffMinutes < 60 * 24) {
-        const hours = Math.floor(diffMinutes / 60);
-        const mins = diffMinutes % 60;
-        return `Ends ${hours}h${mins > 0 ? ` ${mins}m` : ""}`;
-      } else if (diffMinutes < 60 * 24 * 7) {
-        const days = Math.floor(diffMinutes / (60 * 24));
-        const hours = Math.floor((diffMinutes % (60 * 24)) / 60);
-        return `Ends ${days}d${hours > 0 ? ` ${hours}h` : ""}`;
-      } else {
-        const weeks = Math.floor(diffMinutes / (60 * 24 * 7));
-        const days = Math.floor((diffMinutes % (60 * 24 * 7)) / (60 * 24));
-        return `Ends ${weeks}w${days > 0 ? ` ${days}d` : ""}`;
-      }
-    }
-  };
-
   const getCategoryCounts = () => {
     if (!dayEvents || dayEvents.length === 0) return [];
 
@@ -676,7 +610,7 @@ const DayWeek = ({
           {Array.from({ length: 24 }, (_, i) => (
             <div
               key={`timeslot-${i}`}
-              className=" time-slot gray-border-bottom "
+              className="time-slot gray-border-bottom flex items-center justify-center"
               style={{
                 position: "absolute",
                 top: `${i * TIME_SLOT_HEIGHT}px`,
@@ -685,11 +619,7 @@ const DayWeek = ({
                 zIndex: 1,
               }}
             >
-              {showWeather && (
-                <div className="absolute right-1 top-1 opacity-50">
-                  <WeatherIndicator hour={i} date={day} />
-                </div>
-              )}
+              {showWeather && <WeatherIndicator hour={i} date={day} />}
             </div>
           ))}
           {isDragging && dragStart && dragEnd && (
@@ -785,94 +715,181 @@ const DayWeek = ({
                       >
                         {isSmallEvent ? (
                           <div className="text-xs ml-0.5 overflow-hidden whitespace-nowrap flex justify-between items-center gap-1 h-full">
-                            <div className="flex items-center">
+                            <div className="flex truncate items-center w-[calc(100%-16px)]">
                               <span
                                 style={{
                                   color: `${
                                     darkCategoryColors[event.category || "None"]
                                   }`,
                                 }}
-                                className="truncate font-medium ml-0.5"
+                                className="font-medium ml-0.5"
                               >
                                 {event.title}
                               </span>
                               <div
                                 style={{
                                   color: `${
-                                    darkCategoryColors[event.category || "None"]
+                                    categoryColors[event.category || "None"]
                                   }`,
                                 }}
-                                className="opacity-80 font-medium ml-1 text-xs text-nowrap overflow-clip text-gray-600"
+                                className="ml-1 text-xs text-nowrap text-gray-600"
                               >
-                                {`${timeStart} - ${timeEnd}`}
+                                {`${timeStart} · ${timeEnd}`}
                               </div>
                             </div>
                             {event.reminderEnabled ? (
-                              <img
-                                src={bellIcon}
-                                className="w-2 h-2 opacity-50 mr-1"
-                                alt="Reminder"
-                                style={{ marginLeft: "auto" }}
-                              />
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                stroke={`${
+                                  darkCategoryColors[event.category || "None"]
+                                }`}
+                                fill="none"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                class="feather feather-bell"
+                                className="absolute  right-0 w-3 h-3"
+                              >
+                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                              </svg>
                             ) : null}
                           </div>
                         ) : (
-                          <div className="absolute w-full">
-                            {event.reminderEnabled ? (
-                              <img
-                                src={bellIcon}
-                                className="absolute round top-5 right-0 w-3 h-3 opacity-50"
-                                alt="Reminder"
-                              />
-                            ) : null}
+                          // For events with more space, show additional details
+                          (() => {
+                            const showLocation =
+                              event.location &&
+                              parseInt(eventPosition.height) >= 60;
+                            const showDescription =
+                              event.description &&
+                              parseInt(eventPosition.height) >= 80;
 
-                            {category && (
-                              <img
-                                src={getCategoryIcon(category)}
-                                alt={category}
-                                className="absolute round top-1 right-0 w-3 h-3 opacity-50"
-                              />
-                            )}
+                            return (
+                              <div className="relative w-full">
+                                {event.reminderEnabled ? (
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="24"
+                                    height="24"
+                                    viewBox="0 0 24 24"
+                                    stroke={`${
+                                      darkCategoryColors[
+                                        event.category || "None"
+                                      ]
+                                    }`}
+                                    fill="none"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    class="feather feather-bell"
+                                    className="absolute round top-5 right-0 w-3 h-3"
+                                  >
+                                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                                  </svg>
+                                ) : null}
 
-                            <div
-                              style={{
-                                color: `${
-                                  darkCategoryColors[event.category || "None"]
-                                }`,
-                              }}
-                              className="w-[75%] text-xs font-medium mx-1 mt-0.5 overflow-clip truncate"
-                            >
-                              {event.title}
-                            </div>
-                            <div
-                              style={{
-                                color: `${
-                                  darkCategoryColors[event.category || "None"]
-                                }`,
-                              }}
-                              className="opacity-80  w-[80%] font-medium truncate ml-1 text-xs text-nowrap overflow-clip text-gray-600"
-                            >
-                              {`${timeStart} - ${timeEnd}`}
-                            </div>
-                          </div>
+                                {category && (
+                                  <img
+                                    src={getCategoryIcon(category)}
+                                    alt={category}
+                                    className="absolute round top-1 right-0 w-3 h-3"
+                                  />
+                                )}
+
+                                {/* Add location icon to the right side, below reminder icon */}
+                                {showLocation && (
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="24"
+                                    height="24"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke={`${
+                                      darkCategoryColors[
+                                        event.category || "None"
+                                      ]
+                                    }`}
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    className="absolute round top-9 right-0 w-3 h-3 "
+                                  >
+                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                    <circle cx="12" cy="10" r="3"></circle>
+                                  </svg>
+                                )}
+
+                                <div
+                                  style={{
+                                    color: `${
+                                      darkCategoryColors[
+                                        event.category || "None"
+                                      ]
+                                    }`,
+                                  }}
+                                  className="mt-0.5 w-[calc(100%-16px)] text-xs font-medium ml-1 overflow-clip truncate"
+                                >
+                                  {event.title}
+                                </div>
+
+                                <div
+                                  style={{
+                                    color: `${
+                                      darkCategoryColors[
+                                        event.category || "None"
+                                      ]
+                                    }`,
+                                  }}
+                                  className={`${
+                                    event.reminderEnabled
+                                      ? "w-[calc(100%-16px)]"
+                                      : "w-[calc(100%-4px)]"
+                                  } opacity-50 truncate ml-1 text-xs text-nowrap overflow-clip text-gray-600`}
+                                >
+                                  {`${timeStart} · ${timeEnd}`}
+                                </div>
+
+                                {/* Keep location text on left side without the icon */}
+                                {showLocation && (
+                                  <div
+                                    style={{
+                                      color: `${
+                                        darkCategoryColors[
+                                          event.category || "None"
+                                        ]
+                                      }`,
+                                    }}
+                                    className="ml-1 w-[calc(100%-16px)] text-xs opacity-50 truncate "
+                                  >
+                                    {event.location}
+                                  </div>
+                                )}
+
+                                {/* Show description if available and there's enough space */}
+                                {showDescription && (
+                                  <div
+                                    style={{
+                                      color: `${
+                                        darkCategoryColors[
+                                          event.category || "None"
+                                        ]
+                                      }`,
+                                    }}
+                                    className="italic ml-1 text-xs opacity-50 truncate  line-clamp-2"
+                                  >
+                                    {event.description}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()
                         )}
                       </div>
-                      {eventDuration > 60 && (
-                        <div
-                          style={{
-                            color: `${
-                              darkCategoryColors[event.category || "None"]
-                            }`,
-                          }}
-                          className={`font-medium absolute bottom-0 left-1 w-full text-black text-xs px-1 py-0.5 z-10 transition-opacity ${
-                            hoveredEventId === event.id
-                              ? "opacity-80"
-                              : "opacity-0"
-                          }`}
-                        >
-                          {getTimeUntil(event)}
-                        </div>
-                      )}
                     </div>
                   </div>
                 );
@@ -922,7 +939,7 @@ const DayWeek = ({
                                 <div className="w-2 h-2 rounded-full bg-gray-500"></div>{" "}
                                 {/* Indicator dot */}
                                 <div className="font-medium text-xs text-nowrap overflow-clip text-gray-700">
-                                  {`${timeStart} - ${timeEnd}`}
+                                  {`${timeStart} · ${timeEnd}`}
                                 </div>
                               </div>
                               {event.location && (

@@ -647,9 +647,7 @@ export default function EventModal() {
                       <img
                         src={categoryIcons[suggestion.category]}
                         alt={suggestion.category}
-                        className={`w-4 h-4  ${
-                          index === currentSuggestionIndex ? "alter invert" : ""
-                        }`}
+                        className={`w-4 h-4`}
                       />
                     )}
                     <span

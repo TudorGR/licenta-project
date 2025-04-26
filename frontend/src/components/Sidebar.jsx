@@ -107,7 +107,7 @@ const Sidebar = () => {
 
           <div className="w-full rounded-sm p-0 overflow-clip">
             {(isWeekView || isDayView) && (
-              <div className="flex items-center justify-between border-b-1 border-gray-200 px-4 h-12">
+              <div className="flex items-center justify-between border-b-1 border-gray-200 px-4 h-10 pb-2">
                 <span className="text-sm">Show weather</span>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
