@@ -9,6 +9,8 @@ import arrowRightIcon from "../assets/arrow-right.svg";
 import editIcon from "../assets/edit.svg";
 import { api } from "../services/api.js";
 import zapIcon from "../assets/zap.svg";
+import mapPinIcon from "../assets/map-pin.svg";
+import clockIcon from "../assets/clock.svg";
 // Import the speech recognition library
 import SpeechRecognition, {
   useSpeechRecognition,
@@ -165,47 +167,53 @@ const AIChatBox = () => {
     if (!savedEvents || savedEvents.length === 0) return;
 
     try {
-      const rawSuggestions = await api.getEventSuggestions(savedEvents);
+      // Get current date
+      const currentDate = dayjs().format("YYYY-MM-DD");
 
-      // Assign a random template to each suggestion
-      const enhancedSuggestions = rawSuggestions.map((suggestion) => {
-        // Only select from event creation templates (first 10 templates)
-        const templateIndex = Math.floor(Math.random() * 10);
-        const messageTemplate = suggestionTemplates[templateIndex];
-        const template = messageTemplate(suggestion);
-
-        return {
-          ...suggestion,
-          messageTemplate: template,
-          formattedMessage: formatMessageText(
-            template.template,
-            template.values
-          ),
-          template: template.template,
-          values: template.values,
-        };
-      });
-
-      // Get event query suggestions
-      const queryEventSuggestions = generateEventQuerySuggestions();
-
-      // Create a pool of all possible suggestions
-      const allSuggestions = [...enhancedSuggestions, ...queryEventSuggestions];
-
-      // Pick a random number between 3-5 for total suggestions
-      const totalSuggestions = Math.floor(Math.random() * 3) + 3;
-
-      // Randomly select suggestions from the combined pool
-      const finalSuggestions = shuffleArray(allSuggestions).slice(
-        0,
-        totalSuggestions
+      // Get past 3 months events
+      const threeMonthsAgo = dayjs().subtract(3, "month").valueOf();
+      const pastEvents = savedEvents.filter(
+        (event) => event.day >= threeMonthsAgo && event.day <= dayjs().valueOf()
       );
 
-      setSuggestions(finalSuggestions);
-    } catch (error) {
-      console.error("Failed to fetch event suggestions:", error);
+      // Get next 3 months events
+      const threeMonthsAhead = dayjs().add(3, "month").valueOf();
+      const futureEvents = savedEvents.filter(
+        (event) =>
+          event.day >= dayjs().valueOf() && event.day <= threeMonthsAhead
+      );
 
-      // Even if event suggestions fail, show a query suggestion
+      // Call new GROQ-powered endpoint
+      const response = await axios.post(
+        "http://localhost:5000/api/suggestions/smart-suggestions",
+        {
+          pastEvents,
+          futureEvents,
+          currentDate,
+        }
+      );
+
+      console.log(response);
+
+      // Transform suggestions into the format needed by the component
+      const transformedSuggestions = response.data.suggestions.map(
+        (suggestion) => ({
+          formattedMessage: suggestion.suggestion,
+          messageTemplate: {
+            template: suggestion.suggestion,
+            values: {},
+          },
+          template: suggestion.suggestion,
+          values: {},
+          type: suggestion.type,
+        })
+      );
+
+      setSuggestions(transformedSuggestions);
+    } catch (error) {
+      console.error("Failed to fetch smart suggestions:", error);
+
+      // Fallback to static suggestions
       const queryEventSuggestions = generateEventQuerySuggestions();
       setSuggestions(queryEventSuggestions);
     }
@@ -434,7 +442,7 @@ const AIChatBox = () => {
 
   // Handle suggestion click - convert to conversation input
   const handleSuggestionClick = (suggestion) => {
-    // Use the pre-formatted message
+    // Use the suggestion directly from the GROQ response
     const message = suggestion.formattedMessage;
 
     // Set the message as input and send it
@@ -446,10 +454,7 @@ const AIChatBox = () => {
 
       // Remove this suggestion to avoid duplicates
       setSuggestions((prev) =>
-        prev.filter(
-          (s) =>
-            s.day !== suggestion.day || s.timeStart !== suggestion.timeStart
-        )
+        prev.filter((s) => s.formattedMessage !== suggestion.formattedMessage)
       );
     }, 0);
   };
@@ -1030,31 +1035,37 @@ const AIChatBox = () => {
       <div className="text-xs opacity-50 mb-2 ml-1">Suggested commands:</div>
       <div className="w-[85%] flex flex-col gap-1">
         {suggestions.map((suggestion, index) => {
-          // Check if this is a time suggestion (no timeStart/timeEnd) or regular suggestion
-          const isTimeSuggestion = !suggestion.values.timeStart;
+          // Choose icon based on suggestion type
+          const getIcon = (type) => {
+            switch (type) {
+              case "CREATE_EVENT":
+                return <img src={zapIcon} className="w-4 h-4 opacity-50" />;
+              case "FIND_EVENT":
+                return <img src={searchIcon} className="w-4 h-4" />;
+              case "LOCAL_EVENTS":
+                return <img src={mapPinIcon} className="w-4 h-4 opacity-50" />;
+              case "TIME_SUGGESTIONS":
+                return <img src={clockIcon} className="w-4 h-4 opacity-50" />;
+              default:
+                return <img src={zapIcon} className="w-4 h-4 opacity-50" />;
+            }
+          };
 
           return (
             <button
               key={index}
               onClick={() => handleSuggestionClick(suggestion)}
               className={`
-                text-left px-2 py-2  w-full
-                flex items-center gap-2 rounded-xl  bg-gray-50  hover:bg-gray-100 transition-all
+                text-left px-2 py-2 w-full
+                flex items-center gap-2 rounded-xl bg-gray-50 hover:bg-gray-100 transition-all
               `}
             >
               {/* Icon based on suggestion type */}
-              <div
-                className={`
-                  flex-shrink-0
-                     text-gray-600
-              `}
-              >
-                <img src={zapIcon} className="w-4 h-4 opacity-50" />
+              <div className="flex-shrink-0 text-gray-600">
+                {getIcon(suggestion.type)}
               </div>
-
-              {/* Text content with formatted parts */}
-              <div className={`text-xs leading-tight text-gray-600`}>
-                {renderFormattedSuggestion(suggestion)}
+              <div className="flex-grow text-xs text-gray-600">
+                {suggestion.formattedMessage}
               </div>
             </button>
           );

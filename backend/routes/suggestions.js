@@ -2,9 +2,11 @@ import express from "express";
 import dayjs from "dayjs";
 import axios from "axios";
 import dotenv from "dotenv";
+import { Groq } from "groq-sdk";
 
 dotenv.config();
 const router = express.Router();
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
@@ -210,6 +212,121 @@ router.post("/event-suggestions", async (req, res) => {
   } catch (error) {
     console.error("Error generating event suggestions:", error);
     res.status(500).json({ error: "Failed to generate event suggestions" });
+  }
+});
+
+// New endpoint for GROQ-powered suggestions
+router.post("/smart-suggestions", async (req, res) => {
+  try {
+    const { pastEvents, futureEvents, currentDate } = req.body;
+
+    // Enhanced current date with day of week
+    const enhancedCurrentDate = {
+      date: currentDate,
+      dayOfWeek: dayjs(currentDate).format("dddd"),
+    };
+
+    // Format past events with enhanced metadata
+    const pastEventsFormatted = pastEvents.map((event) => {
+      // Calculate duration in minutes
+      const startTimeParts = event.timeStart.split(":").map(Number);
+      const endTimeParts = event.timeEnd.split(":").map(Number);
+      const startMinutes = startTimeParts[0] * 60 + startTimeParts[1];
+      const endMinutes = endTimeParts[0] * 60 + endTimeParts[1];
+      const durationMinutes = endMinutes - startMinutes;
+
+      const eventDay = dayjs(event.day);
+
+      return {
+        title: event.title,
+        day: eventDay.format("YYYY-MM-DD"),
+        dayOfWeek: eventDay.format("dddd"),
+        timeStart: event.timeStart,
+        timeEnd: event.timeEnd,
+        durationMinutes: durationMinutes,
+        category: event.category || "None",
+      };
+    });
+
+    // Format future events with enhanced metadata
+    const futureEventsFormatted = futureEvents.map((event) => {
+      // Calculate duration in minutes
+      const startTimeParts = event.timeStart.split(":").map(Number);
+      const endTimeParts = event.timeEnd.split(":").map(Number);
+      const startMinutes = startTimeParts[0] * 60 + startTimeParts[1];
+      const endMinutes = endTimeParts[0] * 60 + endTimeParts[1];
+      const durationMinutes = endMinutes - startMinutes;
+
+      const eventDay = dayjs(event.day);
+
+      return {
+        title: event.title,
+        day: eventDay.format("YYYY-MM-DD"),
+        dayOfWeek: eventDay.format("dddd"),
+        timeStart: event.timeStart,
+        timeEnd: event.timeEnd,
+        durationMinutes: durationMinutes,
+        category: event.category || "None",
+      };
+    });
+
+    const prompt = `
+You are an AI assistant for a smart calendar app. Generate 3-5 natural language command suggestions that anticipate what the user might want to do based on their past behavior patterns.
+
+CURRENT DATE: ${enhancedCurrentDate.date} (${enhancedCurrentDate.dayOfWeek})
+
+PAST 3 MONTHS EVENTS (for reference):
+${JSON.stringify(pastEventsFormatted, null, 2)}
+
+NEXT 3 MONTHS EVENTS (for reference):
+${JSON.stringify(futureEventsFormatted, null, 2)}
+
+Generate suggestions in these categories:
+1. CREATE_EVENT: Example: "Schedule a [event] [day of week]/[date] from 2PM to 4PM"
+2. FIND_EVENT: Example: "When is my next/was my last [event]?"
+3. LOCAL_EVENTS: Example: "What events are happening in the city today/this week/this month?"
+4. TIME_SUGGESTIONS: Example: "When is the best time to schedule/add/create a [event] on [day of week/date]?"
+
+IMPORTANT:
+- Analyze the user's calendar to identify clear patterns and preferences:
+  * Recurring event titles or topics
+  * Preferred times of day for specific activities
+  * Typical event durations by category
+  * Weekly patterns (specific days of week for certain activities)
+  * Monthly patterns and upcoming gaps
+- Predict what the user is most likely to want based on their established patterns
+- Suggest creating events similar to ones they've scheduled before
+- Suggest reasonable times based on:
+  * When they typically schedule similar events (day of week, time of day)
+  * How long they typically schedule these events for (use duration data)
+  * Gaps in their upcoming schedule
+- Use actual event titles from their past (or very similar themes)
+- CREATE_EVENT cannot create if it is overlapping with another event
+- Make suggestions sound natural, as if typed by a user
+- Each suggestion should be complete enough to be processed by the calendar
+- Provide exactly 3-5 suggestions total, ensuring good variety across categories
+
+Format your response as a JSON array of suggestion objects:
+[
+  {
+    "type": "CREATE_EVENT|FIND_EVENT|LOCAL_EVENTS|TIME_SUGGESTIONS",
+    "suggestion": "The complete natural language suggestion"
+  }
+]`;
+
+    const response = await groq.chat.completions.create({
+      messages: [{ role: "user", content: prompt }],
+      model: "llama3-70b-8192",
+      response_format: { type: "json_object" },
+      temperature: 0,
+    });
+
+    const suggestions = JSON.parse(response.choices[0].message.content);
+
+    res.json(suggestions);
+  } catch (error) {
+    console.error("Error generating smart suggestions:", error);
+    res.status(500).json({ error: "Failed to generate smart suggestions" });
   }
 });
 
