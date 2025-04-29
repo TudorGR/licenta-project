@@ -195,7 +195,7 @@ class ReminderService {
       if (Notification.permission === "granted") {
         new Notification(`Event Reminder: ${reminder.title}`, {
           body: message,
-          icon: "/vite.svg", // You can replace this with a custom icon
+          icon: "/logo.png",
         });
       } else if (Notification.permission !== "denied") {
         Notification.requestPermission().then((permission) => {

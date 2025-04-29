@@ -573,26 +573,28 @@ async function getLocalEvents(city, timeframe) {
 // Helper function to find events by category and time range
 async function findEventsByCategory(category, timeframe) {
   try {
-    const today = dayjs();
+    const now = dayjs(); // Current date and time
+    const today = now.startOf("day"); // Start of today
+    const currentTime = now.format("HH:mm"); // Current time in HH:MM format
+
     let startDate, endDate;
 
     // Determine time range based on timeframe
     if (timeframe === "future") {
-      startDate = today.valueOf();
+      startDate = today.subtract(1, "day").valueOf(); // Include today
       endDate = today.add(3, "month").valueOf();
     } else {
-      // Default to "past" for any other value
       startDate = today.subtract(3, "month").valueOf();
-      endDate = today.valueOf();
+      endDate = today.add(1, "day").valueOf(); // Include today
     }
 
-    // Fetch events in the specified time range with exact category matching only
+    // Fetch events in the specified time range
     const events = await Event.findAll({
       where: {
         day: {
           [Op.between]: [startDate, endDate],
         },
-        category: category, // Exact match only
+        category: category,
       },
       order: [
         ["day", "ASC"],
@@ -600,7 +602,26 @@ async function findEventsByCategory(category, timeframe) {
       ],
     });
 
-    return events;
+    // Filter events based on current time for today's events
+    return events.filter((event) => {
+      const eventDay = dayjs(parseInt(event.day));
+      const isToday =
+        eventDay.format("YYYY-MM-DD") === today.format("YYYY-MM-DD");
+
+      if (!isToday) {
+        // If not today, just check if it's before or after today
+        return timeframe === "future"
+          ? eventDay.isAfter(today)
+          : eventDay.isBefore(today);
+      }
+
+      // For today's events, compare with current time
+      if (timeframe === "future") {
+        return event.timeStart >= currentTime;
+      } else {
+        return event.timeStart < currentTime;
+      }
+    });
   } catch (error) {
     console.error("Error finding events by category:", error);
     return [];
