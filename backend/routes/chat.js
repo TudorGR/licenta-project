@@ -42,7 +42,7 @@ unknownFuntion()"
   - if the user asks to find the best time or when to schedule it refers to createEvent function
   - if the user asks about what events are happening, local events, or similar queries, use local_events function
   - if the user asks about when an event will happen, or when was the last time, or to find specific events, use findEvent function
-  - for local_events, timeframe can be "today", "this week", "this month"
+  - for local_events, timeframe can be "today", "this week", "this month", day of week or a date
   - for findEvent, category is gonna be the event category and timeframe must be "future" or "past"
   - the parameters should be in the order: title(string), startTime(24hr format), endTime(24hr format), date(YYYY-MM-DD)
   - date parameter is by default ${currentDate} if it is not specified

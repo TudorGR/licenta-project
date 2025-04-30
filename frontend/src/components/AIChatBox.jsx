@@ -56,6 +56,7 @@ const AIChatBox = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestionTimer = useRef(null);
   const [showVoiceInput, setShowVoiceInput] = useState(false);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
   // Replace the speech recognition implementation with react-speech-recognition
   const {
@@ -162,11 +163,14 @@ const AIChatBox = () => {
     fetchEventSuggestions(); // Fetch fresh suggestions
   };
 
-  // Update the fetchEventSuggestions function to randomly select categories
+  // Update the fetchEventSuggestions function
   const fetchEventSuggestions = async () => {
     if (!savedEvents || savedEvents.length === 0) return;
 
     try {
+      // Set loading state to true before API call
+      setSuggestionsLoading(true);
+
       // Get current date
       const currentDate = dayjs().format("YYYY-MM-DD");
 
@@ -183,7 +187,7 @@ const AIChatBox = () => {
           event.day >= dayjs().valueOf() && event.day <= threeMonthsAhead
       );
 
-      // Call new GROQ-powered endpoint
+      // Call smart suggestions endpoint
       const response = await axios.post(
         "http://localhost:5000/api/suggestions/smart-suggestions",
         {
@@ -193,21 +197,17 @@ const AIChatBox = () => {
         }
       );
 
-      console.log(response);
-
       // Transform suggestions into the format needed by the component
-      const transformedSuggestions = response.data.suggestions.map(
-        (suggestion) => ({
-          formattedMessage: suggestion.suggestion,
-          messageTemplate: {
-            template: suggestion.suggestion,
-            values: {},
-          },
+      const transformedSuggestions = response.data.map((suggestion) => ({
+        formattedMessage: suggestion.suggestion,
+        messageTemplate: {
           template: suggestion.suggestion,
           values: {},
-          type: suggestion.type,
-        })
-      );
+        },
+        template: suggestion.suggestion,
+        values: {},
+        type: suggestion.type,
+      }));
 
       setSuggestions(transformedSuggestions);
     } catch (error) {
@@ -216,6 +216,9 @@ const AIChatBox = () => {
       // Fallback to static suggestions
       const queryEventSuggestions = generateEventQuerySuggestions();
       setSuggestions(queryEventSuggestions);
+    } finally {
+      // Set loading state to false when done
+      setSuggestionsLoading(false);
     }
   };
 
@@ -527,6 +530,9 @@ const AIChatBox = () => {
             )} at ${event.timeStart}.`,
           },
         ]);
+
+        // Refresh suggestions after getting a response
+        fetchEventSuggestions();
       } else if (response.data.intent === "event_overlap") {
         // Handle event overlap case with interactive list
         const eventData = response.data.eventData;
@@ -544,6 +550,9 @@ const AIChatBox = () => {
             },
           },
         ]);
+
+        // Refresh suggestions after getting a response
+        fetchEventSuggestions();
       } else if (response.data.intent === "time_suggestions") {
         // Handle time suggestions
         const eventData = response.data.eventData;
@@ -562,7 +571,13 @@ const AIChatBox = () => {
             },
           },
         ]);
-      } else if (response.data.intent === "list_events") {
+
+        // Refresh suggestions after getting a response
+        fetchEventSuggestions();
+      } else if (
+        response.data.intent === "list_events" ||
+        response.data.intent === "local_events"
+      ) {
         // Handle list events response
         const { events, timeframe, city } = response.data;
 
@@ -584,28 +599,9 @@ const AIChatBox = () => {
             },
           },
         ]);
-      } else if (response.data.intent === "local_events") {
-        // Handle list events response
-        const { events, timeframe, city } = response.data;
 
-        // Debug the response data
-        console.log("Local events response:", response.data);
-
-        // Make sure events is always an array
-        const eventsList = Array.isArray(events) ? events : [];
-
-        setMessages((prev) => [
-          ...prev,
-          {
-            type: "system",
-            content: {
-              type: "localEvents",
-              events: eventsList,
-              timeframe,
-              city,
-            },
-          },
-        ]);
+        // Refresh suggestions after getting a response
+        fetchEventSuggestions();
       } else if (response.data.intent === "find_event_result") {
         // Handle find event results
         const { events, selectedEvent, category, message } = response.data;
@@ -623,12 +619,18 @@ const AIChatBox = () => {
             },
           },
         ]);
+
+        // Refresh suggestions after getting a response
+        fetchEventSuggestions();
       } else {
         // For other intents (existing code)
         setMessages((prev) => [
           ...prev,
           { type: "system", text: response.data.message },
         ]);
+
+        // Refresh suggestions after getting a response
+        fetchEventSuggestions();
       }
     } catch (error) {
       console.error("Error processing message:", error);
@@ -639,13 +641,11 @@ const AIChatBox = () => {
           text: "Sorry, I encountered an error processing your request.",
         },
       ]);
+
+      // Still refresh suggestions on error responses
+      fetchEventSuggestions();
     } finally {
       setLoading(false);
-
-      // Fetch new suggestions after processing a message
-      if (suggestions.length <= 2) {
-        fetchEventSuggestions();
-      }
     }
   };
 
@@ -1032,45 +1032,55 @@ const AIChatBox = () => {
   // Render suggestions as command texts with highlighted parts
   const SuggestionsSection = () => (
     <div className="flex flex-col justify-end items-end mb-4 mt-3 w-full">
-      <div className="text-xs opacity-50 mb-2 ml-1">Suggested commands:</div>
-      <div className="w-[85%] flex flex-col gap-1">
-        {suggestions.map((suggestion, index) => {
-          // Choose icon based on suggestion type
-          const getIcon = (type) => {
-            switch (type) {
-              case "CREATE_EVENT":
-                return <img src={zapIcon} className="w-4 h-4 opacity-50" />;
-              case "FIND_EVENT":
-                return <img src={searchIcon} className="w-4 h-4" />;
-              case "LOCAL_EVENTS":
-                return <img src={mapPinIcon} className="w-4 h-4 opacity-50" />;
-              case "TIME_SUGGESTIONS":
-                return <img src={clockIcon} className="w-4 h-4 opacity-50" />;
-              default:
-                return <img src={zapIcon} className="w-4 h-4 opacity-50" />;
-            }
-          };
-
-          return (
-            <button
-              key={index}
-              onClick={() => handleSuggestionClick(suggestion)}
-              className={`
-                text-left px-2 py-2 w-full
-                flex items-center gap-2 rounded-xl bg-gray-50 hover:bg-gray-100 transition-all
-              `}
-            >
-              {/* Icon based on suggestion type */}
-              <div className="flex-shrink-0 text-gray-600">
-                {getIcon(suggestion.type)}
-              </div>
-              <div className="flex-grow text-xs text-gray-600">
-                {suggestion.formattedMessage}
-              </div>
-            </button>
-          );
-        })}
+      <div className="text-xs opacity-50 mb-2 ml-1 flex items-center">
+        {suggestionsLoading && <span className="spinner-loader mr-2"></span>}
+        {suggestionsLoading ? "Getting suggestions..." : "Suggested commands:"}
       </div>
+
+      {suggestionsLoading ? (
+        <></>
+      ) : (
+        <div className="w-[85%] flex flex-col gap-1">
+          {suggestions.map((suggestion, index) => {
+            // Choose icon based on suggestion type
+            const getIcon = (type) => {
+              switch (type) {
+                case "CREATE_EVENT":
+                  return <img src={zapIcon} className="w-4 h-4 opacity-50" />;
+                case "FIND_EVENT":
+                  return <img src={searchIcon} className="w-4 h-4" />;
+                case "LOCAL_EVENTS":
+                  return (
+                    <img src={mapPinIcon} className="w-4 h-4 opacity-50" />
+                  );
+                case "TIME_SUGGESTIONS":
+                  return <img src={clockIcon} className="w-4 h-4 opacity-50" />;
+                default:
+                  return <img src={zapIcon} className="w-4 h-4 opacity-50" />;
+              }
+            };
+
+            return (
+              <button
+                key={index}
+                onClick={() => handleSuggestionClick(suggestion)}
+                className={`
+                  text-left px-2 py-2 w-full
+                  flex items-center gap-2 rounded-xl bg-gray-50 hover:bg-gray-100 transition-all
+                `}
+              >
+                {/* Icon based on suggestion type */}
+                <div className="flex-shrink-0 text-gray-600">
+                  {getIcon(suggestion.type)}
+                </div>
+                <div className="flex-grow text-xs text-gray-600">
+                  {suggestion.formattedMessage}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 
@@ -1165,21 +1175,16 @@ const AIChatBox = () => {
         {messages.map((msg, index) => renderMessage(msg, index))}
 
         {/* Show suggestions after messages with delay */}
-        {!loading && showSuggestions && <SuggestionsSection />}
+        {!loading && (showSuggestions || suggestionsLoading) && (
+          <SuggestionsSection />
+        )}
 
         {loading && (
           <div className="mb-2">
             <div className="inline-block p-3 rounded-xl max-w-[85%] border border-gray-200 text-black rounded-tl-none">
-              <div className="flex space-x-2">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                <div
-                  className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                  style={{ animationDelay: "0.2s" }}
-                ></div>
-                <div
-                  className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                  style={{ animationDelay: "0.4s" }}
-                ></div>
+              <div className="flex items-center space-x-2">
+                <span className="spinner-loader"></span>
+                <span className="text-sm text-gray-500">Thinking...</span>
               </div>
             </div>
           </div>
@@ -1187,7 +1192,7 @@ const AIChatBox = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="flex items-center m-2 rounded-full shadow-custom border border-gray-200">
+      <div className="flex items-center m-2 mt-0 rounded-full shadow-custom border border-gray-200">
         <button
           onClick={() => handleSendMessage()}
           disabled={loading || !input.trim()}

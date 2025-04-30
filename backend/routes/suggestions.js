@@ -215,120 +215,297 @@ router.post("/event-suggestions", async (req, res) => {
   }
 });
 
-// New endpoint for GROQ-powered suggestions
+// New endpoint for smart suggestions (without LLM)
 router.post("/smart-suggestions", async (req, res) => {
   try {
     const { pastEvents, futureEvents, currentDate } = req.body;
+    const today = dayjs(currentDate);
+    const suggestions = [];
 
-    // Enhanced current date with day of week
-    const enhancedCurrentDate = {
-      date: currentDate,
-      dayOfWeek: dayjs(currentDate).format("dddd"),
-    };
+    // Get events from the past month
+    const oneMonthAgo = today.subtract(1, "month");
+    const pastMonthEvents = pastEvents.filter(
+      (event) =>
+        dayjs(event.day).isAfter(oneMonthAgo) ||
+        dayjs(event.day).isSame(oneMonthAgo)
+    );
 
-    // Format past events with enhanced metadata
-    const pastEventsFormatted = pastEvents.map((event) => {
-      // Calculate duration in minutes
-      const startTimeParts = event.timeStart.split(":").map(Number);
-      const endTimeParts = event.timeEnd.split(":").map(Number);
-      const startMinutes = startTimeParts[0] * 60 + startTimeParts[1];
-      const endMinutes = endTimeParts[0] * 60 + endTimeParts[1];
-      const durationMinutes = endMinutes - startMinutes;
+    // 1. CREATE_EVENT suggestions
+    createEventSuggestions(suggestions, pastMonthEvents, futureEvents, today);
 
-      const eventDay = dayjs(event.day);
+    // 2. FIND_EVENT suggestions
+    findEventSuggestions(suggestions, pastMonthEvents);
 
-      return {
-        title: event.title,
-        day: eventDay.format("YYYY-MM-DD"),
-        dayOfWeek: eventDay.format("dddd"),
-        timeStart: event.timeStart,
-        timeEnd: event.timeEnd,
-        durationMinutes: durationMinutes,
-        category: event.category || "None",
-      };
-    });
+    // 3. LOCAL_EVENTS suggestions
+    localEventSuggestions(suggestions, pastMonthEvents, today);
 
-    // Format future events with enhanced metadata
-    const futureEventsFormatted = futureEvents.map((event) => {
-      // Calculate duration in minutes
-      const startTimeParts = event.timeStart.split(":").map(Number);
-      const endTimeParts = event.timeEnd.split(":").map(Number);
-      const startMinutes = startTimeParts[0] * 60 + startTimeParts[1];
-      const endMinutes = endTimeParts[0] * 60 + endTimeParts[1];
-      const durationMinutes = endMinutes - startMinutes;
+    // 4. TIME_SUGGESTIONS
+    timeEventSuggestions(suggestions, pastMonthEvents, today);
 
-      const eventDay = dayjs(event.day);
+    // Ensure we have 3-5 suggestions total with diversity
+    const finalSuggestions = diversifyAndLimitSuggestions(suggestions);
 
-      return {
-        title: event.title,
-        day: eventDay.format("YYYY-MM-DD"),
-        dayOfWeek: eventDay.format("dddd"),
-        timeStart: event.timeStart,
-        timeEnd: event.timeEnd,
-        durationMinutes: durationMinutes,
-        category: event.category || "None",
-      };
-    });
-
-    const prompt = `
-You are an AI assistant for a smart calendar app. Generate 3-5 natural language command suggestions that anticipate what the user might want to do based on their past behavior patterns.
-
-CURRENT DATE: ${enhancedCurrentDate.date} (${enhancedCurrentDate.dayOfWeek})
-
-PAST 3 MONTHS EVENTS (for reference):
-${JSON.stringify(pastEventsFormatted, null, 2)}
-
-NEXT 3 MONTHS EVENTS (for reference):
-${JSON.stringify(futureEventsFormatted, null, 2)}
-
-Generate suggestions in these categories:
-1. CREATE_EVENT: Example: "Schedule a [event] [day of week]/[date] from 2PM to 4PM"
-2. FIND_EVENT: Example: "When is my next/was my last [event]?"
-3. LOCAL_EVENTS: Example: "What events are happening in the city today/this week/this month?"
-4. TIME_SUGGESTIONS: Example: "When is the best time to schedule/add/create a [event] on [day of week/date]?"
-
-IMPORTANT:
-- Analyze the user's calendar to identify clear patterns and preferences:
-  * Recurring event titles or topics
-  * Preferred times of day for specific activities
-  * Typical event durations by category
-  * Weekly patterns (specific days of week for certain activities)
-  * Monthly patterns and upcoming gaps
-- Predict what the user is most likely to want based on their established patterns
-- Suggest creating events similar to ones they've scheduled before
-- Suggest reasonable times based on:
-  * When they typically schedule similar events (day of week, time of day)
-  * How long they typically schedule these events for (use duration data)
-  * Gaps in their upcoming schedule
-- Use actual event titles from their past (or very similar themes)
-- CREATE_EVENT cannot create if it is overlapping with another event
-- Make suggestions sound natural, as if typed by a user
-- Each suggestion should be complete enough to be processed by the calendar
-- Provide exactly 3-5 suggestions total, ensuring good variety across categories
-
-Format your response as a JSON array of suggestion objects:
-[
-  {
-    "type": "CREATE_EVENT|FIND_EVENT|LOCAL_EVENTS|TIME_SUGGESTIONS",
-    "suggestion": "The complete natural language suggestion"
-  }
-]`;
-
-    const response = await groq.chat.completions.create({
-      messages: [{ role: "user", content: prompt }],
-      model: "llama3-70b-8192",
-      response_format: { type: "json_object" },
-      temperature: 0,
-    });
-
-    const suggestions = JSON.parse(response.choices[0].message.content);
-
-    res.json(suggestions);
+    res.json(finalSuggestions);
   } catch (error) {
     console.error("Error generating smart suggestions:", error);
     res.status(500).json({ error: "Failed to generate smart suggestions" });
   }
 });
+
+// Helper functions for each suggestion type
+function createEventSuggestions(
+  suggestions,
+  pastMonthEvents,
+  futureEvents,
+  today
+) {
+  // Group past events by category to find common event types
+  const eventsByCategory = {};
+  pastMonthEvents.forEach((event) => {
+    const category = event.category || "None";
+    if (!eventsByCategory[category]) {
+      eventsByCategory[category] = [];
+    }
+    eventsByCategory[category].push(event);
+  });
+
+  // Find the most common categories
+  const categoryCounts = Object.entries(eventsByCategory)
+    .map(([category, events]) => ({ category, count: events.length }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3); // Get top 3 categories
+
+  categoryCounts.forEach(({ category }) => {
+    if (category === "None") return;
+
+    const categoryEvents = eventsByCategory[category];
+    const titleCounts = {};
+
+    // Count occurrences of each title
+    categoryEvents.forEach((event) => {
+      titleCounts[event.title] = (titleCounts[event.title] || 0) + 1;
+    });
+
+    // Find most common title
+    const mostCommonTitle =
+      Object.entries(titleCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ||
+      category;
+
+    // Find typical day of week and time
+    const dayOfWeekCounts = {};
+    categoryEvents.forEach((event) => {
+      const dayOfWeek = dayjs(event.day).format("dddd");
+      dayOfWeekCounts[dayOfWeek] = (dayOfWeekCounts[dayOfWeek] || 0) + 1;
+    });
+
+    const mostCommonDay = Object.entries(dayOfWeekCounts).sort(
+      (a, b) => b[1] - a[1]
+    )[0]?.[0];
+
+    // Find next occurrence of this day
+    let nextDay = today;
+    for (let i = 0; i < 7; i++) {
+      if (nextDay.format("dddd") === mostCommonDay) break;
+      nextDay = nextDay.add(1, "day");
+    }
+
+    suggestions.push({
+      type: "CREATE_EVENT",
+      suggestion: `Schedule a ${mostCommonTitle} on ${nextDay.format(
+        "dddd"
+      )} ${nextDay.format("MMM D")}`,
+    });
+  });
+}
+
+function findEventSuggestions(suggestions, pastMonthEvents) {
+  // Get unique titles from past month events
+  const uniqueTitles = [
+    ...new Set(pastMonthEvents.map((event) => event.title)),
+  ];
+
+  // If we have titles, randomly select up to 2 to suggest searching for
+  if (uniqueTitles.length > 0) {
+    const shuffledTitles = uniqueTitles.sort(() => 0.5 - Math.random());
+    const selectedTitles = shuffledTitles.slice(
+      0,
+      Math.min(2, uniqueTitles.length)
+    );
+
+    selectedTitles.forEach((title) => {
+      const randomChoice = Math.random();
+
+      if (randomChoice < 0.5) {
+        suggestions.push({
+          type: "FIND_EVENT",
+          suggestion: `When is my next ${title}?`,
+        });
+      } else {
+        suggestions.push({
+          type: "FIND_EVENT",
+          suggestion: `When was my last ${title}?`,
+        });
+      }
+    });
+  }
+}
+
+function localEventSuggestions(suggestions, pastMonthEvents, today) {
+  // Find "Social & Family" events
+  const socialEvents = pastMonthEvents.filter(
+    (event) => event.category === "Social & Family"
+  );
+
+  // If we have social events, find common days of week
+  if (socialEvents.length > 0) {
+    const dayOfWeekCounts = {};
+    socialEvents.forEach((event) => {
+      const dayOfWeek = dayjs(event.day).format("dddd");
+      dayOfWeekCounts[dayOfWeek] = (dayOfWeekCounts[dayOfWeek] || 0) + 1;
+    });
+
+    const sortedDays = Object.entries(dayOfWeekCounts)
+      .sort((a, b) => b[1] - a[1])
+      .map((entry) => entry[0]);
+
+    if (sortedDays.length > 0) {
+      const commonDay = sortedDays[0];
+      suggestions.push({
+        type: "LOCAL_EVENTS",
+        suggestion: `What events are happening in the city this ${commonDay.toLowerCase()}?`,
+      });
+    }
+  }
+
+  // Add hardcoded suggestions
+  const hardcodedOptions = [
+    "What events are happening in the city today?",
+    "Show me local events for this week",
+    "Any interesting events this weekend?",
+  ];
+
+  // Add one hardcoded option
+  const randomIndex = Math.floor(Math.random() * hardcodedOptions.length);
+  suggestions.push({
+    type: "LOCAL_EVENTS",
+    suggestion: hardcodedOptions[randomIndex],
+  });
+}
+
+function timeEventSuggestions(suggestions, pastMonthEvents, today) {
+  // Group events by day of week
+  const eventsByDayOfWeek = {};
+  pastMonthEvents.forEach((event) => {
+    const dayOfWeek = dayjs(event.day).format("dddd");
+    if (!eventsByDayOfWeek[dayOfWeek]) {
+      eventsByDayOfWeek[dayOfWeek] = [];
+    }
+    eventsByDayOfWeek[dayOfWeek].push(event);
+  });
+
+  // For each day, find the most common event types
+  const dayOptions = [];
+
+  Object.entries(eventsByDayOfWeek).forEach(([dayOfWeek, events]) => {
+    // Count event titles
+    const titleCounts = {};
+    events.forEach((event) => {
+      titleCounts[event.title] = (titleCounts[event.title] || 0) + 1;
+    });
+
+    // Get the top 2 most common events for this day
+    const topEvents = Object.entries(titleCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 2)
+      .map((entry) => entry[0]);
+
+    topEvents.forEach((title) => {
+      // Find the next occurrence of this day of week
+      let nextDay = today;
+      for (let i = 0; i < 7; i++) {
+        if (nextDay.format("dddd") === dayOfWeek) break;
+        nextDay = nextDay.add(1, "day");
+      }
+
+      dayOptions.push({
+        title,
+        dayOfWeek,
+        nextDate: nextDay.format("MMM D"),
+      });
+    });
+  });
+
+  // Randomly select up to 2 day-event combinations
+  if (dayOptions.length > 0) {
+    const shuffledOptions = dayOptions.sort(() => 0.5 - Math.random());
+    const selectedOptions = shuffledOptions.slice(
+      0,
+      Math.min(2, dayOptions.length)
+    );
+
+    selectedOptions.forEach((option) => {
+      suggestions.push({
+        type: "TIME_SUGGESTIONS",
+        suggestion: `When is the best time to schedule a ${option.title} on ${option.dayOfWeek} ${option.nextDate}?`,
+      });
+    });
+  }
+}
+
+function diversifyAndLimitSuggestions(suggestions) {
+  // Ensure we have a diverse set of suggestions with at least one of each type
+  const result = [];
+  const types = [
+    "CREATE_EVENT",
+    "FIND_EVENT",
+    "LOCAL_EVENTS",
+    "TIME_SUGGESTIONS",
+  ];
+
+  // Shuffle the suggestion types to randomize their priority
+  const shuffledTypes = [...types].sort(() => 0.5 - Math.random());
+
+  // Randomly decide how many different types to include (2-4)
+  const typesToInclude = Math.floor(Math.random() * 3) + 2; // Random number between 2-4
+  const selectedTypes = shuffledTypes.slice(0, typesToInclude);
+
+  // Get suggestions for our randomly selected types
+  selectedTypes.forEach((type) => {
+    const typeOptions = suggestions.filter((s) => s.type === type);
+    if (typeOptions.length > 0) {
+      // Add 1-2 suggestions of this type depending on availability
+      const numToAdd = Math.min(
+        1 + Math.floor(Math.random() * 2), // 1 or 2
+        typeOptions.length
+      );
+
+      // Shuffle the options to get random ones
+      const shuffledOptions = [...typeOptions].sort(() => 0.5 - Math.random());
+
+      // Add the randomly selected suggestions
+      for (let i = 0; i < numToAdd && result.length < 5; i++) {
+        result.push(shuffledOptions[i]);
+      }
+    }
+  });
+
+  // Ensure we have at least 3 suggestions by adding more if needed
+  if (result.length < 3) {
+    // Get all suggestions that aren't already in result
+    const remainingSuggestions = suggestions.filter(
+      (s) => !result.some((r) => r.suggestion === s.suggestion)
+    );
+
+    // Shuffle and add them until we reach at least 3
+    const shuffled = remainingSuggestions.sort(() => 0.5 - Math.random());
+    for (let i = 0; i < shuffled.length && result.length < 3; i++) {
+      result.push(shuffled[i]);
+    }
+  }
+
+  // Final shuffle to randomize the order
+  return result.sort(() => 0.5 - Math.random()).slice(0, 5);
+}
 
 // Helper function to find most common item in array
 const findMostCommon = (arr) => {

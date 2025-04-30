@@ -13,6 +13,8 @@ import weekday from "dayjs/plugin/weekday.js";
 import isoWeek from "dayjs/plugin/isoWeek";
 import { categoryColors } from "../utils/categoryColors";
 import SmallCalendar from "./SmallCalendar";
+import xIcon from "../assets/x.svg";
+import tickIcon from "../assets/tick.svg";
 
 dayjs.extend(weekday);
 dayjs.extend(isoWeek);
@@ -86,9 +88,9 @@ const Sidebar = () => {
             />
           </div>
 
-          <div className="w-full rounded-sm p-0 overflow-clip">
+          <div className="w-full rounded-sm p-0">
             <h3 className="mb-2 mx-4">Working Hours</h3>
-            <div className="flex items-center border-y-1 border-gray-200">
+            <div className="flex items-center border-t-1 border-gray-200">
               <input
                 type="time"
                 value={workingHoursStart}
@@ -103,38 +105,67 @@ const Sidebar = () => {
                 className="h-12 relative text-gray-500 text-sm outline-0 w-full px-2  workingHours"
               />
             </div>
-          </div>
+            <div className="w-full rounded-sm p-0">
+              {(isWeekView || isDayView) && (
+                <div className="flex items-center justify-between border-y-1 border-gray-200 pl-4 h-12 ">
+                  <span className="text-sm">Show weather</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showWeather}
+                      onChange={() => setShowWeather(!showWeather)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-24 h-12 border-t overflow-clip border-l border-b border-gray-200 bg-gray-100 peer-focus:outline-none peer peer-checked:after:translate-x-full peer-checked:after:border-l-0  peer-checked:after:border-r-0 after:content-[''] after:absolute after:top-0 after:left-0 after:bg-white after:border-gray-200   after:h-12 after:w-12 after:transition-all flex items-center justify-between px-4 relative">
+                      {/* X icon (visible when unchecked) */}
+                      <img
+                        src={xIcon}
+                        className={`w-5 h-5 z-5 absolute left-4 top-1/2 transform -translate-y-1/2 transition-opacity ${
+                          showWeather ? "opacity-10" : "opacity-100"
+                        }`}
+                      />
+                      {/* Tick icon (visible when checked) */}
+                      <img
+                        src={tickIcon}
+                        className={`w-5 h-5 z-5 absolute right-4 top-1/2 transform -translate-y-1/2 transition-opacity ${
+                          showWeather ? "opacity-100" : "opacity-10"
+                        }`}
+                      />
+                    </div>
+                  </label>
+                </div>
+              )}
 
-          <div className="w-full rounded-sm p-0 overflow-clip">
-            {(isWeekView || isDayView) && (
-              <div className="flex items-center justify-between border-b-1 border-gray-200 px-4 h-10 pb-2">
-                <span className="text-sm">Show weather</span>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={showWeather}
-                    onChange={() => setShowWeather(!showWeather)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
-                </label>
-              </div>
-            )}
-
-            {isWeekView && (
-              <div className="flex items-center justify-between border-b-1 border-gray-200 px-4 h-12">
-                <span className="text-sm">Show heatmap</span>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={showHeatmap}
-                    onChange={() => setShowHeatmap(!showHeatmap)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
-                </label>
-              </div>
-            )}
+              {isWeekView && (
+                <div className="flex items-center justify-between border-b-1 border-gray-200 pl-4 h-12">
+                  <span className="text-sm">Show heatmap</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showHeatmap}
+                      onChange={() => setShowHeatmap(!showHeatmap)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-24 h-12  overflow-clip border-l border-b border-gray-200 bg-gray-100 peer-focus:outline-none peer peer-checked:after:translate-x-full peer-checked:after:border-l-0  peer-checked:after:border-r-0 after:content-[''] after:absolute after:top-0 after:left-0 after:bg-white after:border-gray-200   after:h-12 after:w-12 after:transition-all flex items-center justify-between px-4 relative">
+                      {/* X icon (visible when unchecked) */}
+                      <img
+                        src={xIcon}
+                        className={`w-5 h-5 z-5 absolute left-4 top-1/2 transform -translate-y-1/2 transition-opacity ${
+                          showHeatmap ? "opacity-10" : "opacity-100"
+                        }`}
+                      />
+                      {/* Tick icon (visible when checked) */}
+                      <img
+                        src={tickIcon}
+                        className={`w-5 h-5 z-5 absolute right-4 top-1/2 transform -translate-y-1/2 transition-opacity ${
+                          showHeatmap ? "opacity-100" : "opacity-10"
+                        }`}
+                      />
+                    </div>
+                  </label>
+                </div>
+              )}
+            </div>
           </div>
         </>
       )}
