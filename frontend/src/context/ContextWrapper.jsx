@@ -130,9 +130,13 @@ const ContextProvider = ({ children }) => {
   const [selectedDay, setSelectedDay] = useState(dayjs());
   const [showEventModal, setShowEventModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [isMonthView, setIsMonthView] = useState(false);
-  const [isWeekView, setIsWeekView] = useState(true);
-  const [isDayView, setIsDayView] = useState(false);
+
+  // Initialize view states from localStorage or use defaults
+  const savedView = localStorage.getItem("calendarView") || "week";
+  const [isMonthView, setIsMonthView] = useState(savedView === "month");
+  const [isWeekView, setIsWeekView] = useState(savedView === "week");
+  const [isDayView, setIsDayView] = useState(savedView === "day");
+
   const [timeStart, setTimeStart] = useState("08:00");
   const [timeEnd, setTimeEnd] = useState("09:00");
   const [selectedWeek, setSelectedWeek] = useState(() => {
@@ -189,6 +193,34 @@ const ContextProvider = ({ children }) => {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [user, setUser] = useState(null);
+
+  // Create wrapped setter functions to persist the view mode
+  const setIsMonthViewWithStorage = (value) => {
+    setIsMonthView(value);
+    if (value) {
+      localStorage.setItem("calendarView", "month");
+      setIsWeekView(false);
+      setIsDayView(false);
+    }
+  };
+
+  const setIsWeekViewWithStorage = (value) => {
+    setIsWeekView(value);
+    if (value) {
+      localStorage.setItem("calendarView", "week");
+      setIsMonthView(false);
+      setIsDayView(false);
+    }
+  };
+
+  const setIsDayViewWithStorage = (value) => {
+    setIsDayView(value);
+    if (value) {
+      localStorage.setItem("calendarView", "day");
+      setIsMonthView(false);
+      setIsWeekView(false);
+    }
+  };
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -282,9 +314,9 @@ const ContextProvider = ({ children }) => {
         selectedEvent,
         setSelectedEvent,
         isMonthView,
-        setIsMonthView,
+        setIsMonthView: setIsMonthViewWithStorage,
         isWeekView,
-        setIsWeekView,
+        setIsWeekView: setIsWeekViewWithStorage,
         selectedWeek,
         setSelectedWeek,
         timeStart,
@@ -292,7 +324,7 @@ const ContextProvider = ({ children }) => {
         setTimeStart,
         setTimeEnd,
         isDayView,
-        setIsDayView,
+        setIsDayView: setIsDayViewWithStorage,
         categories,
         selectedHeatmapCategories,
         setSelectedHeatmapCategories,

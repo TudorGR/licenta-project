@@ -8,10 +8,10 @@ export default function CreateEventButton() {
   return (
     <button
       onClick={() => setShowEventModal(true)}
-      className="transition-all shadow-custom active:bg-gray-700 cursor-pointer px-4 h-10 text-white bg-black rounded-full"
+      className="shrink-0 transition-all shadow-custom active:bg-gray-700 cursor-pointer px-4 h-10 text-white bg-black rounded-full"
     >
-      <div className="flex items-center justify-center">
-        <img src={plus} className="w-5 h-5" />
+      <div className="flex items-center gap-1 justify-center">
+        <img src={plus} className="w-4 h-4 " />
         <p>New</p>
       </div>
     </button>

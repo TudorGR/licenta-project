@@ -60,7 +60,7 @@ const getEventLayout = (events) => {
     layout.push({
       event,
       column,
-      totalColumns: 1, // Will be updated later
+      totalColumns: 1,
     });
   }
 
@@ -76,6 +76,9 @@ const getEventLayout = (events) => {
 
 const Day = ({ day, index, showMiniDayView = false }) => {
   const [dayEvents, setDayEvents] = useState([]);
+  const dayRef = useRef(null);
+  const [maxEvents, setMaxEvents] = useState(index === 0 ? 4 : 5);
+  const [isSmallScreen, setIsSmallScreen] = useState(false);
   const {
     setSelectedDay,
     setShowEventModal,
@@ -93,7 +96,51 @@ const Day = ({ day, index, showMiniDayView = false }) => {
     eventId: null,
   });
 
-  const dayRef = useRef(null);
+  function getCurrentDay() {
+    return day.format("DD-MM-YY") === dayjs().format("DD-MM-YY");
+  }
+
+  // Add screen size detection
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsSmallScreen(window.innerWidth < 768);
+    };
+
+    // Check initially
+    checkScreenSize();
+
+    // Set up event listener for resize events
+    window.addEventListener("resize", checkScreenSize);
+
+    // Clean up
+    return () => window.removeEventListener("resize", checkScreenSize);
+  }, []);
+
+  // Calculate available space and adjust max events
+  useEffect(() => {
+    const calculateMaxEvents = () => {
+      if (dayRef.current) {
+        const headerHeight = 40; // Approximate height for the day header
+        const availableHeight = dayRef.current.clientHeight - headerHeight;
+        const eventHeight = 20; // Approximate height of each event item
+        const plusIndicatorHeight = 16; // Height of the "+X more" indicator
+
+        // Calculate how many events can fit, leaving room for the "+X" indicator if needed
+        const calculatedMaxEvents = Math.floor(
+          (availableHeight - plusIndicatorHeight) / eventHeight
+        );
+
+        // Set minimum of 1 event
+        setMaxEvents(Math.max(calculatedMaxEvents, 1));
+      }
+    };
+
+    calculateMaxEvents();
+
+    // Add resize listener to recalculate when window size changes
+    window.addEventListener("resize", calculateMaxEvents);
+    return () => window.removeEventListener("resize", calculateMaxEvents);
+  }, []);
 
   function getCurrentDay() {
     return day.format("DD-MM-YY") === dayjs().format("DD-MM-YY");
@@ -180,18 +227,43 @@ const Day = ({ day, index, showMiniDayView = false }) => {
       }`}
     >
       <header className="flex flex-col items-center">
-        {index === 0 && (
-          <p className="text-sm mt-1">{day.format("ddd").toUpperCase()}</p>
-        )}
-        <p
-          className={`calendar-day-number text-sm p-1 my-1 text-center ${
-            getCurrentDay()
-              ? "bg-black text-white rounded-full w-7"
-              : " rounded-full w-7"
-          }`}
+        <div
+          className={`flex ${
+            getCurrentDay() ? "gap-1" : ""
+          } text-xs text-gray-500 justify-center items-center calendar-day-number h-11 text-center `}
         >
-          {day.format("DD")}
-        </p>
+          {isSmallScreen ? (
+            // Compact format for small screens
+            <div className="flex flex-col">
+              {index === 0 && <p className="text-xs">{day.format("dd")[0]}</p>}
+              <p
+                className={`text-xs flex items-center justify-center ${
+                  getCurrentDay()
+                    ? "bg-black text-white rounded-full w-5 h-5"
+                    : "rounded-full w-5 h-5"
+                }`}
+              >
+                {day.format("DD")}
+              </p>
+            </div>
+          ) : (
+            // Original format for larger screens
+            <>
+              {index === 0 && (
+                <p className="text-xs mr-1">{day.format("ddd")}</p>
+              )}
+              <p
+                className={`text-xs text-gray-500 flex items-center justify-center ${
+                  getCurrentDay()
+                    ? "bg-black text-white rounded-full w-6 h-6"
+                    : "rounded-full w-6 h-6"
+                }`}
+              >
+                {day.format("DD")}
+              </p>
+            </>
+          )}
+        </div>
       </header>
 
       <div className="flex-1 flex">
@@ -205,14 +277,15 @@ const Day = ({ day, index, showMiniDayView = false }) => {
             setShowEventModal(true);
           }}
         >
-          {dayEvents.slice(0, index === 0 ? 4 : 5).map((event, idx) => (
+          {dayEvents.slice(0, maxEvents).map((event, idx) => (
             <div
               key={idx}
               onClick={() => setSelectedEvent(event)}
               onContextMenu={(e) => handleContextMenu(e, event)}
-              className="pl-1 text-sm mb-1 truncate text-black"
+              className="border-l-3 pl-1 text-sm mb-px truncate text-black"
               style={{
                 backgroundColor: lightCategoryColors[event.category || "Other"],
+                borderColor: categoryColors[event.category || "Other"],
               }}
             >
               <div
@@ -225,14 +298,10 @@ const Day = ({ day, index, showMiniDayView = false }) => {
               </div>
             </div>
           ))}
-          {dayEvents.length > (index === 0 ? 4 : 5) && (
-            <p className="text-xs ml-1">
-              +{dayEvents.length - (index === 0 ? 4 : 5)}
-            </p>
+          {dayEvents.length > maxEvents && (
+            <p className="text-xs ml-1">+{dayEvents.length - maxEvents}</p>
           )}
         </div>
-
-        {/* Removed the mini day view section */}
       </div>
 
       {contextMenu.isOpen && (

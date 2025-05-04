@@ -167,7 +167,7 @@ const Week = ({ month, weekIndex }) => {
   return (
     <div ref={timeGridRef} className="w-full overflow-y-auto">
       <div
-        className="grid border-b w-full"
+        className="grid w-full"
         style={{ gridTemplateColumns: "60px repeat(7, 1fr)" }}
       >
         <div className="relative mt-12">
@@ -177,7 +177,7 @@ const Week = ({ month, weekIndex }) => {
               className="absolute text-xs text-gray-300"
               style={{
                 top: `${i * TIME_SLOT_HEIGHT}px`,
-                transform: "translateY(-55%)",
+                transform: "translateY(-60%)",
                 right: "0",
                 background: "white",
                 width: "100%",
@@ -187,10 +187,9 @@ const Week = ({ month, weekIndex }) => {
               {`${i.toString().padStart(2, "0")}:00`}
             </div>
           ))}
-
-          <div className="sticky top-0 z-13 mt-[-48px] w-full h-[45px] border-b-1 border-b-gray-100 bg-white"></div>
+          <div className="sticky top-0 z-13 mt-[-48px] w-full h-[45px] bg-gradient-to-b from-white to-transparent"></div>
           <div
-            className="absolute text-xs bg-black text-white"
+            className="absolute text-xs font-medium"
             style={{
               top: `${currentTime}px`, // Use state instead of calculateTimePosition()
               transform: "translateY(-55%)",

@@ -4,12 +4,6 @@
   font-family: "Sora", sans-serif;
 }
 
-.calendar-day:hover .calendar-day-number {
-  color: black;
-  background-color: rgb(240, 240, 240);
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition: 0.15s all;
-}
 .time-grid {
   position: relative;
   height: 100%;
@@ -50,13 +44,15 @@
 .gray-border {
   border-top: 1px dashed gray;
 }
-.gray-border-axis {
-  /* background-color: var(--color-gray-100); */
-  border-top: 1px solid var(--color-gray-100);
-  border-left: 1px solid var(--color-gray-100);
-}
+
 .gray-border-bottom {
   border-bottom: 1px solid var(--color-gray-100);
+}
+.gray-border-bottom2 {
+  border-bottom: 1px solid var(--color-gray-100);
+}
+.gray-border-bottom2:first-child {
+  border-top: 1px solid var(--color-gray-100);
 }
 .backIcon {
   max-height: 100%;
@@ -156,4 +152,39 @@
   100% {
     transform: rotate(360deg);
   }
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0%;
+  }
+  to {
+    opacity: 100%;
+  }
+}
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.2s ease-out forwards;
+}
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out forwards;
+}
+.animate-slide-in-right {
+  animation: slide-in-right 0.2s ease-out forwards;
 }

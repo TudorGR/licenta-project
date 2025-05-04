@@ -19,7 +19,7 @@ import tickIcon from "../assets/tick.svg";
 dayjs.extend(weekday);
 dayjs.extend(isoWeek);
 
-const Sidebar = () => {
+const Sidebar = ({ onClose }) => {
   const {
     setIsMonthView,
     setIsWeekView,
@@ -75,7 +75,20 @@ const Sidebar = () => {
   };
 
   return (
-    <aside className="pt-2 shrink-0 w-70 border-gray-200 border-r flex flex-col items-center gap-2">
+    <aside className="relative pt-2 shrink-0 w-70 h-full bg-white border-gray-200 md:border-r flex flex-col items-center gap-2 overflow-y-auto">
+      {/* Small Calendar Header with Close Button */}
+      <div className=" absolute top-4 right-4 justify-between items-center">
+        <div className="flex items-center">
+          <button
+            onClick={onClose}
+            className="cursor-pointer"
+            aria-label="Close Sidebar"
+          >
+            <img src={xIcon} alt="" />
+          </button>
+        </div>
+      </div>
+
       {/* Small Calendar */}
       <SmallCalendar />
 

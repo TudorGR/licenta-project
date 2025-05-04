@@ -420,7 +420,7 @@ const DayView = () => {
     <div className="flex-1 flex flex-col">
       <div ref={timeGridRef} className="flex-1 overflow-y-auto">
         <div
-          className="relative h-full"
+          className="relative h-full mt-[45px]"
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
@@ -433,7 +433,7 @@ const DayView = () => {
             {Array.from({ length: 24 }, (_, i) => (
               <div
                 key={i}
-                className="border-gray-100 border-l absolute w-full gray-border-bottom"
+                className=" absolute w-full gray-border-bottom2"
                 style={{
                   top: `${i * TIME_SLOT_HEIGHT}px`,
                   height: `${TIME_SLOT_HEIGHT}px`,
@@ -516,7 +516,7 @@ const DayView = () => {
                   style={{ top, height }}
                 >
                   <div
-                    className="h-[calc(100%-1px)] mb-px mx-px border-white relative overflow-hidden"
+                    className="h-[calc(100%-1px)] mb-px  border-white relative overflow-hidden"
                     style={{
                       backgroundColor:
                         lightCategoryColors[event.category || "None"],
@@ -577,7 +577,6 @@ const DayView = () => {
                               stroke-width="2"
                               stroke-linecap="round"
                               stroke-linejoin="round"
-                              class="feather feather-bell"
                               className="absolute round top-5 right-0.5 w-3 h-3"
                             >
                               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
@@ -711,7 +710,8 @@ const DayView = () => {
                   zIndex: 13,
                 }}
               >
-                <div className="absolute -left-15 -top-1.75 text-xs text-white w-15 px-[15.5px] bg-black">
+                <div className="absolute -left-1 -top-0.75 w-2 h-2 rounded-full bg-black" />
+                <div className="absolute -left-15 -top-1.75 text-xs font-medium w-15 px-[15.5px] ">
                   {currentTimeString}
                 </div>
               </div>

@@ -11,6 +11,7 @@ import { api } from "../services/api.js";
 import zapIcon from "../assets/zap.svg";
 import mapPinIcon from "../assets/map-pin.svg";
 import clockIcon from "../assets/clock.svg";
+import xIcon from "../assets/x.svg";
 // Import the speech recognition library
 import SpeechRecognition, {
   useSpeechRecognition,
@@ -19,7 +20,7 @@ import AudioWaveform from "./AudioWaveform";
 import { categoryColors, darkCategoryColors } from "../utils/categoryColors";
 import { AuthContext } from "../context/AuthContext";
 
-const AIChatBox = () => {
+const AIChatBox = ({ onClose }) => {
   const {
     dispatchEvent,
     setSelectedEvent,
@@ -57,6 +58,16 @@ const AIChatBox = () => {
   const suggestionTimer = useRef(null);
   const [showVoiceInput, setShowVoiceInput] = useState(false);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  // Add a flag to track initial render
+  const initialRenderRef = useRef(true);
+  // Add a function to detect mobile devices
+  const isMobileDevice = () => {
+    return (
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      ) || window.innerWidth <= 768
+    );
+  };
 
   // Replace the speech recognition implementation with react-speech-recognition
   const {
@@ -71,9 +82,15 @@ const AIChatBox = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, showSuggestions]);
 
+  // Modified useEffect for input focus - don't focus on initial render for mobile
   useEffect(() => {
     if (!loading) {
-      inputRef.current?.focus();
+      // Only focus if this is not the initial render or if it's not a mobile device
+      if (!initialRenderRef.current || !isMobileDevice()) {
+        inputRef.current?.focus();
+      }
+      // Mark initial render as complete
+      initialRenderRef.current = false;
     }
   }, [loading]);
 
@@ -996,7 +1013,7 @@ const AIChatBox = () => {
               .map((event) => (
                 <div
                   key={event.id}
-                  className="p-2.5 rounded-md cursor-pointer transition-all hover:bg-gray-200 transition-colors bg-gray-100"
+                  className="p-2.5 rounded-md cursor-pointer transition-all hover:bg-gray-200  bg-gray-100"
                   onClick={() => handleEventClick(event)}
                 >
                   <div className="flex justify-between items-center">
@@ -1161,17 +1178,26 @@ const AIChatBox = () => {
 
   return (
     <div className="w-80 h-full border-l border-gray-200 flex flex-col bg-white">
-      <div className="p-2 border-b border-gray-200 flex justify-between items-center">
-        <h2 className="text-lg font-medium">AI Assistant</h2>
-        <button
-          onClick={handleStartOver}
-          className="cursor-pointer px-4 border shadow-customn border-gray-200 h-10 rounded-full text-sm active:bg-gray-50 transition-all"
-        >
-          Start over
-        </button>
+      <div className="py-2 border-b border-gray-200 flex justify-between items-center">
+        <h2 className="shrink-0 ml-2 text-lg font-medium">AI Assistant</h2>
+        <div className="flex items-center">
+          <button
+            onClick={handleStartOver}
+            className="shrink-0 mx-3 cursor-pointer px-4 border shadow-custom border-gray-200 h-10 rounded-full text-sm active:bg-gray-50 transition-all"
+          >
+            Start over
+          </button>
+          <button
+            onClick={onClose}
+            className="cursor-pointer  shrink-0 mr-4"
+            aria-label="Close AI Assistant"
+          >
+            <img src={xIcon} className="w-5 h-5 " />
+          </button>
+        </div>
       </div>
 
-      <div className="flex-1 p-2 overflow-y-auto">
+      <div className="flex-1 p-2 overflow-y-auto h-full">
         {messages.map((msg, index) => renderMessage(msg, index))}
 
         {/* Show suggestions after messages with delay */}
@@ -1202,7 +1228,7 @@ const AIChatBox = () => {
         </button>
 
         {isListening ? (
-          <div className="flex-1 min-h-[30px] py-1 flex items-center justify-center">
+          <div className="flex-1 min-h-[40px] py-1 flex items-center justify-center">
             <AudioWaveform isListening={isListening} />
           </div>
         ) : (

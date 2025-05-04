@@ -37,7 +37,7 @@ createEvent(title,startTime,endTime,date)
 local_events(timeframe)
 findEvent(category,timeframe)
 unknownFuntion()"
-  Example format: {function: '', parameters: ['','',...], category: "", message: ""}.
+  Format: {function: '', parameters: ['','',...], category: "", message: ""}.
   RULES:
   - if the user asks to find the best time or when to schedule it refers to createEvent function
   - if the user asks about what events are happening, local events, or similar queries, use local_events function
@@ -68,11 +68,22 @@ unknownFuntion()"
     });
 
     const assistantResponse = JSON.parse(response.choices[0].message.content);
-    const params = assistantResponse.parameters;
+
+    // Create params array from direct properties if parameters doesn't exist
+    let params = assistantResponse.parameters;
+    if (!params && assistantResponse.function === "createEvent") {
+      params = [
+        assistantResponse.title,
+        assistantResponse.startTime,
+        assistantResponse.endTime,
+        assistantResponse.date,
+      ];
+    }
+
     const category = assistantResponse.category;
 
     if (assistantResponse.function === "createEvent") {
-      if (params.every(Boolean)) {
+      if (params && params.every(Boolean)) {
         const title = params[0];
         const timeStart = params[1];
         const timeEnd = params[2];

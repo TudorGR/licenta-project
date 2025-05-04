@@ -91,6 +91,7 @@ const DayWeek = ({
   const [mouseDownPos, setMouseDownPos] = useState(null);
   const [hasMoved, setHasMoved] = useState(false);
   const [localEvents, setLocalEvents] = useState([]);
+  const [isSmallScreen, setIsSmallScreen] = useState(false);
 
   const handleLock = async (eventId) => {
     try {
@@ -289,6 +290,21 @@ const DayWeek = ({
       setLocalEvents([]);
     }
   }, [showLocalEvents, userCity]);
+
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsSmallScreen(window.innerWidth < 768);
+    };
+
+    // Check initially
+    checkScreenSize();
+
+    // Set up event listener for resize events
+    window.addEventListener("resize", checkScreenSize);
+
+    // Clean up
+    return () => window.removeEventListener("resize", checkScreenSize);
+  }, []);
 
   function getCurrentDay() {
     return day.format("DD-MM-YY") === dayjs().format("DD-MM-YY");
@@ -499,59 +515,41 @@ const DayWeek = ({
 
   return (
     <div className="calendar-day flex flex-col">
-      <header className="sticky top-0 z-15 bg-white border-b border-gray-100">
+      <header className="sticky top-0 z-15 bg-gradient-to-b from-white to-transparent ">
         <div
-          className={`relative flex justify-center items-center gap-1.5 text-nowrap h-11 w-full border-gray-100 border-l mx-auto text-sm text-center ${
+          className={`relative flex justify-center items-center gap-1 text-nowrap h-11 w-full mx-auto text-sm text-center ${
             getCurrentDay() ? "text-black" : "text-gray-500"
           }`}
         >
-          <div className="absolute inset-0 flex justify-center items-end w-full">
-            {getCategoryCounts().map(
-              (
-                { category, count, duration, workingHoursPercentage },
-                index,
-                array
-              ) => {
-                const barHeight = `${Math.min(
-                  workingHoursPercentage * 100,
-                  100
-                )}%`;
-                const barWidth = `${100 / array.length}%`;
-
-                return (
-                  <div
-                    key={`bar-${category}`}
-                    style={{
-                      backgroundColor:
-                        categoryColors[category] || categoryColors.Other,
-                      height: barHeight,
-                      width: barWidth,
-                      opacity: 0.4,
-                      transition: "height 0.5s ease-in-out",
-                    }}
-                    title={`${category}: ${count} events (${Math.round(
-                      duration / 60
-                    )} hours, ${Math.round(
-                      workingHoursPercentage * 100
-                    )}% of working hours)`}
-                  />
-                );
-              }
-            )}
-          </div>
-
-          <div className="z-10 flex flex-row gap-1 items-center text-xs text-gray-500">
-            <p>{day.format("ddd")}</p>
-            <div
-              className={`flex items-center justify-center ${
-                getCurrentDay()
-                  ? "bg-black rounded-full w-6 h-6 shadow-custom text-white"
-                  : ""
-              }`}
-            >
-              <p>{day.format("DD")}</p>
+          {isSmallScreen ? (
+            // Compact format for small screens
+            <div className="flex flex-col gap-1 items-center text-xs text-gray-500">
+              <p>{day.format("dd")[0]}</p>
+              <div
+                className={`flex items-center justify-center ${
+                  getCurrentDay()
+                    ? "bg-black rounded-full w-5 h-5 shadow-custom text-white"
+                    : "text-gray-500"
+                }`}
+              >
+                <p className="text-xs">{day.format("DD")}</p>
+              </div>
             </div>
-          </div>
+          ) : (
+            // Original format for larger screens
+            <div className="flex flex-row gap-1 items-center text-xs text-gray-500">
+              <p>{day.format("ddd")}</p>
+              <div
+                className={`flex items-center justify-center ${
+                  getCurrentDay()
+                    ? "bg-black rounded-full w-6 h-6 shadow-custom text-white"
+                    : ""
+                }`}
+              >
+                <p>{day.format("DD")}</p>
+              </div>
+            </div>
+          )}
         </div>
       </header>
       <div
@@ -604,7 +602,11 @@ const DayWeek = ({
           style={{ height: `${TOTAL_HEIGHT}px` }}
         ></div>
         <div
-          className="gray-border-axis "
+          className={`${
+            day.day() === 0
+              ? "border-t  border-gray-100"
+              : "border-t border-r border-gray-100"
+          }`}
           style={{ height: `${TOTAL_HEIGHT}px`, position: "relative" }}
         >
           {Array.from({ length: 24 }, (_, i) => (
@@ -750,7 +752,6 @@ const DayWeek = ({
                                 stroke-width="2"
                                 stroke-linecap="round"
                                 stroke-linejoin="round"
-                                class="feather feather-bell"
                                 className="absolute  right-0 w-3 h-3"
                               >
                                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
@@ -785,7 +786,6 @@ const DayWeek = ({
                                     stroke-width="2"
                                     stroke-linecap="round"
                                     stroke-linejoin="round"
-                                    class="feather feather-bell"
                                     className="absolute round top-5 right-0 w-3 h-3"
                                   >
                                     <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
@@ -967,10 +967,18 @@ const DayWeek = ({
               pointerEvents: "none",
             }}
           >
-            {/* <div className="absolute -left-1 -top-0.75 w-2 h-2 rounded-full bg-black" /> */}
+            <div className="absolute -left-1 -top-0.75 w-2 h-2 rounded-full bg-black" />
           </div>
         ) : (
-          <div></div>
+          <div
+            className="absolute left-0 w-full bg-black/10 rounded-full"
+            style={{
+              top: `${currentTimePosition}px`,
+              height: "2px",
+              zIndex: 10,
+              pointerEvents: "none",
+            }}
+          ></div>
         )}
       </div>
       {contextMenu.isOpen && (
