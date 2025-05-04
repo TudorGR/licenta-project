@@ -120,15 +120,6 @@ const AIChatBox = ({ onClose }) => {
     }
   }, [transcript]);
 
-  // Auto-send message when speech recognition stops
-  useEffect(() => {
-    if (!isListening && transcript) {
-      // Wait a bit to ensure state is updated
-      handleSendMessage();
-      resetTranscript();
-    }
-  }, [isListening, transcript]);
-
   // Check for browser support
   useEffect(() => {
     if (!browserSupportsSpeechRecognition) {
@@ -1258,16 +1249,67 @@ const AIChatBox = ({ onClose }) => {
         )}
 
         <button
-          onClick={toggleListening}
+          onMouseDown={() => {
+            resetTranscript();
+            setShowVoiceInput(true);
+            SpeechRecognition.startListening({
+              continuous: true,
+              language: "en-US",
+            });
+          }}
+          onMouseUp={() => {
+            SpeechRecognition.stopListening();
+            setShowVoiceInput(false);
+            // Small delay to ensure transcript is complete
+            setTimeout(() => {
+              if (transcript) {
+                // Send directly instead of transferring to input
+                handleSendMessage(transcript);
+              }
+            }, 300);
+          }}
+          onMouseLeave={() => {
+            if (isListening) {
+              SpeechRecognition.stopListening();
+              setShowVoiceInput(false);
+            }
+          }}
+          onTouchStart={() => {
+            resetTranscript();
+            setShowVoiceInput(true);
+            SpeechRecognition.startListening({
+              continuous: true,
+              language: "en-US",
+            });
+          }}
+          onTouchEnd={() => {
+            SpeechRecognition.stopListening();
+            setShowVoiceInput(false);
+            // Small delay to ensure transcript is complete
+            setTimeout(() => {
+              if (transcript) {
+                // Send directly instead of transferring to input
+                handleSendMessage(transcript);
+              }
+            }, 300);
+          }}
           disabled={loading || !browserSupportsSpeechRecognition}
-          className={`transition align-self-end ${
+          className={`transition align-self-end relative ${
             isListening ? "text-blue-500" : ""
           }`}
+          title="Press and hold to record voice message"
         >
           <img
             src={micIcon}
-            className="hover:opacity-50 transition-all cursor-pointer h-6 w-6 mx-2"
+            className={`h-6 w-6 mx-2 ${
+              isListening ? "animate-pulse" : "hover:opacity-50"
+            } transition-all cursor-pointer`}
           />
+          {isListening && (
+            <span className="absolute bottom-full mb-1 left-1/2 transform -translate-x-1/2 text-xs bg-black text-white px-2 py-1 rounded whitespace-nowrap">
+              Release to send
+            </span>
+          )}
         </button>
       </div>
     </div>

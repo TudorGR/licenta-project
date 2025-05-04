@@ -574,9 +574,9 @@ const DayView = () => {
                                 darkCategoryColors[event.category || "None"]
                               }`}
                               fill="none"
-                              stroke-width="2"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
                               className="absolute round top-5 right-0.5 w-3 h-3"
                             >
                               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
@@ -603,9 +603,9 @@ const DayView = () => {
                               stroke={`${
                                 darkCategoryColors[event.category || "None"]
                               }`}
-                              stroke-width="2"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
                               className="absolute round top-9 right-0.5 w-3 h-3 "
                             >
                               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>

@@ -255,30 +255,39 @@ unknownFuntion()"
 
         // Create a prompt for Groq to match the events with the user's query
         const matchPrompt = `
-        The user asked: "${text}"
-        
-        Here are the events that match the category "${category}" in the ${
+The user asked: "${text}"
+
+Here are the events that match the category "${category}" in the ${
           timeframe === "future" ? "next 3 months" : "past 3 months"
         }:
-        ${JSON.stringify(formattedEvents, null, 2)}
-        
-        Based on the user's query, identify which event is the most relevant. If the user is asking about:
-        - "next" or "upcoming" event: return the earliest future event
-        - "last" or "previous" event: return the most recent past event
-        - If the user is asking about a specific event title or description, match it with the most relevant event
-        
-        Return only a JSON object with this structure:
-        {
-          "eventId": "id of the most relevant event",
-          "message": "A natural response explaining when the event is/was scheduled"
-        }`;
+${JSON.stringify(formattedEvents, null, 2)}
+
+Based on the user's query, identify which event is the most relevant. If the user is asking about:
+- "next" or "upcoming" event: return the earliest future event
+- "last" or "previous" event: return the most recent past event
+- If the user is asking about a specific event title or description, match it with the most relevant event
+
+Important: output _only_ a single, valid JSON object. Do _not_ wrap it in markdown or add any comments. All strings must be properly quoted, and the object must be closed.
+
+Example output:
+{
+  "eventId": "42",
+  "message": "Your next meeting is scheduled for May 5, 2025 at 10:00 to 11:00."
+}
+
+Return only a JSON object with this structure:
+{
+  "eventId": "id of the most relevant event",
+  "message": "A natural response explaining when the event is/was scheduled"
+}
+`;
 
         // Call Groq to find the most relevant event
         const groqResponse = await groq.chat.completions.create({
           messages: [{ role: "user", content: matchPrompt }],
           model: "llama3-70b-8192",
           response_format: { type: "json_object" },
-          temperature: 0.2,
+          temperature: 0,
         });
 
         const matchResult = JSON.parse(groqResponse.choices[0].message.content);

@@ -163,6 +163,10 @@ const ContextProvider = ({ children }) => {
     localStorage.setItem("userCity", userCity);
   }, [userCity]);
 
+  useEffect(() => {
+    // console.log(monthIndex);
+  }, [monthIndex]);
+
   const [savedEvents, dispatch] = useReducer(savedEventsReducer, []);
 
   const dispatchEvent = useMemo(() => {

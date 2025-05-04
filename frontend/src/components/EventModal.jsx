@@ -572,7 +572,7 @@ export default function EventModal() {
                     ? `Suggestion: ${suggestions[currentSuggestionIndex].suggestedLocation}`
                     : "Add Location..."
                 }
-                value={location}
+                value={location || ""}
                 onChange={(e) => setLocation(e.target.value)}
                 autoComplete="off"
               />
