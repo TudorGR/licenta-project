@@ -4,6 +4,7 @@ import Context from "../context/Context";
 import dayjs from "dayjs";
 import sendIcon from "../assets/send-icon.svg";
 import searchIcon from "../assets/search.svg";
+import searchIcon2 from "../assets/searchInput.svg";
 import micIcon from "../assets/mic.svg";
 import arrowRightIcon from "../assets/arrow-right.svg";
 import editIcon from "../assets/edit.svg";
@@ -1170,7 +1171,7 @@ const AIChatBox = ({ onClose }) => {
   return (
     <div className="w-80 h-full border-l border-gray-200 flex flex-col bg-white">
       <div className="py-2 border-b border-gray-200 flex justify-between items-center">
-        <h2 className="shrink-0 ml-2 text-lg font-medium">AI Assistant</h2>
+        <h2 className="shrink-0 ml-4 text-lg font-medium">AI Assistant</h2>
         <div className="flex items-center">
           <button
             onClick={handleStartOver}
@@ -1215,7 +1216,7 @@ const AIChatBox = ({ onClose }) => {
           disabled={loading || !input.trim()}
           className="text-white hover:opacity-50 transition-all cursor-pointer align-self-end"
         >
-          <img src={searchIcon} className="h-6 w-6 mx-2" />
+          <img src={searchIcon2} className="h-6 w-6 mx-2" />
         </button>
 
         {isListening ? (
