@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import AIChatBox from "./AIChatBox";
 
 const AIChatBoxWrapper = ({ showAIChatBox, onClose }) => {
-  // Add state to detect if we're on mobile
+  //Add state to detect if we're on mobile
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   // Update mobile state when window resizes

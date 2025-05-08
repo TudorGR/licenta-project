@@ -2,7 +2,6 @@ import React, { useContext, useMemo } from "react";
 import Context from "../context/Context";
 import dayjs from "dayjs";
 import { categoryColors } from "../utils/categoryColors";
-
 const CategoryStats = ({ view = "week", onCategoryClick }) => {
   const {
     savedEvents,

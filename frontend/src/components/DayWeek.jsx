@@ -1,27 +1,7 @@
 import dayjs from "dayjs";
 import React, { useContext, useEffect, useRef, useState, useMemo } from "react";
 import Context from "../context/Context";
-import workoutIcon from "../assets/workout.svg";
-import meetingIcon from "../assets/meeting.svg";
-import studyIcon from "../assets/study.svg";
-import personalIcon from "../assets/personal.svg";
-import workIcon from "../assets/work.svg";
-import socialIcon from "../assets/social.svg";
-import familyIcon from "../assets/family.svg";
-import healthIcon from "../assets/health.svg";
-import hobbyIcon from "../assets/hobby.svg";
-import choresIcon from "../assets/chores.svg";
-import travelIcon from "../assets/travel.svg";
-import financeIcon from "../assets/finance.svg";
-import learningIcon from "../assets/learning.svg";
-import selfCareIcon from "../assets/self-care.svg";
-import eventsIcon from "../assets/event.svg";
-import pinIcon from "../assets/lock.svg";
-import deleteIcon from "../assets/delete_icon.svg";
-import lockIcon from "../assets/lock.svg";
-import bellIcon from "../assets/bell.svg";
 import ContextMenu from "./ContextMenu";
-import locationIcon from "../assets/location.svg";
 import TravelTimeIndicator, {
   clearTravelTimeCache,
 } from "./TravelTimeIndicator";
@@ -53,13 +33,7 @@ const DayWeek = ({
   const [dragStart, setDragStart] = useState(null);
   const [dragEnd, setDragEnd] = useState(null);
   const [currentTimePosition, setCurrentTimePosition] = useState(0);
-  const [selectedWeek, setSelectedWeek] = useState(() => {
-    const today = dayjs();
-    const firstDayOfMonth = today.startOf("month");
-    const firstDayOfWeek = firstDayOfMonth.startOf("week");
-    const weekIndex = Math.floor(today.diff(firstDayOfWeek, "days") / 7);
-    return weekIndex;
-  });
+
   const [contextMenu, setContextMenu] = useState({
     isOpen: false,
     x: 0,
@@ -87,22 +61,10 @@ const DayWeek = ({
   } = useContext(Context);
 
   const [isDraggingEvent, setIsDraggingEvent] = useState(false);
-  const [dragOffset, setDragOffset] = useState(0);
   const [mouseDownPos, setMouseDownPos] = useState(null);
   const [hasMoved, setHasMoved] = useState(false);
   const [localEvents, setLocalEvents] = useState([]);
   const [isSmallScreen, setIsSmallScreen] = useState(false);
-
-  const handleLock = async (eventId) => {
-    try {
-      await dispatchEvent({
-        type: "lock",
-        payload: { id: eventId },
-      });
-    } catch (error) {
-      console.error("Error locking event:", error);
-    }
-  };
 
   const calculateTimePosition = () => {
     const now = dayjs();
@@ -175,7 +137,11 @@ const DayWeek = ({
       setShowEventModal(true);
     } else if (isDraggingAcrossDays) {
       if (hasMoved) {
-        handleEventDrag();
+        try {
+          clearTravelTimeCache();
+        } catch (error) {
+          console.error("Error updating event:", error);
+        }
       } else {
         setTimeStart(draggedEvent.timeStart);
         setTimeEnd(draggedEvent.timeEnd);
@@ -186,17 +152,6 @@ const DayWeek = ({
       setIsDraggingEvent(false);
       setMouseDownPos(null);
       setHasMoved(false);
-    }
-  };
-
-  const handleEventDrag = async () => {
-    try {
-      // Your existing event update code...
-      // Add this line to clear travel time cache when events are moved
-      clearTravelTimeCache();
-      // Rest of your function...
-    } catch (error) {
-      console.error("Error updating event:", error);
     }
   };
 
@@ -248,7 +203,6 @@ const DayWeek = ({
     onStartEventDrag(event, offset, dayIndex);
 
     setIsDraggingEvent(true);
-    setDragOffset(relativeY - eventTop);
   };
 
   useEffect(() => {

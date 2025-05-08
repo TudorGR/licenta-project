@@ -32,19 +32,6 @@ export default function SmallCalendar() {
     setCurrentMonthIndex(monthIndex);
   }, [monthIndex]);
 
-  const getDayEventsCount = (day) => {
-    return savedEvents.filter(
-      (event) =>
-        dayjs(event.day).format("YYYY-MM-DD") === day.format("YYYY-MM-DD")
-    ).length;
-  };
-
-  const getProgress = (day) => {
-    const eventCount = getDayEventsCount(day);
-    const maxEvents = 10; // Adjust this value based on your app's logic
-    return Math.min(eventCount / maxEvents, 1); // Cap the progress at 1 (full circle)
-  };
-
   const getDayClass = (day) => {
     const nowDay = dayjs().format("DD-MM-YY");
     const currentDay = day.format("DD-MM-YY");

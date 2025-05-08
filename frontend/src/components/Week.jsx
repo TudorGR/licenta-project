@@ -217,20 +217,6 @@ const Week = ({ month, weekIndex }) => {
           />
         ))}
       </div>
-
-      {/* Visual overlay for drag event if needed */}
-      {isDraggingEvent && draggedEvent && (
-        <div
-          className="fixed pointer-events-none z-50"
-          style={{
-            // Position with the mouse
-            left: "0",
-            top: "0",
-            width: "100%",
-            height: "100%",
-          }}
-        />
-      )}
     </div>
   );
 };

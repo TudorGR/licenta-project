@@ -17,7 +17,7 @@ const CalendarHeader = ({
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  // Handle clicks outside the dropdown to close it
+  //Handle clicks outside the dropdown to close it
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {

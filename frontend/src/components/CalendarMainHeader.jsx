@@ -27,7 +27,6 @@ const CalendarHeader = ({ onOpenAIModal }) => {
       setIsSmallScreen(window.innerWidth < 640);
     };
 
-    // Check initially
     checkScreenSize();
 
     // Set up event listener for resize events

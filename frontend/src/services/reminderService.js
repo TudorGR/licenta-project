@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
-import axios from "axios"; // Make sure axios is installed
+import axios from "axios";
 
 // Register the relativeTime plugin
 dayjs.extend(relativeTime);
@@ -21,7 +21,6 @@ class ReminderService {
   constructor() {
     this.reminders = new Map();
     this.checkInterval = null;
-    this.debug = false;
     this.weatherCache = new Map(); // Cache for weather data
   }
 
@@ -214,32 +213,6 @@ class ReminderService {
       clearInterval(this.checkInterval);
       this.checkInterval = null;
     }
-  }
-
-  // Add function to create a test reminder that will fire shortly
-  createTestReminder(secondsFromNow = 10, withLocation = true) {
-    const testEvent = {
-      id: "test-" + Date.now(),
-      title: `Test Reminder (in ${secondsFromNow} seconds)`,
-      day: Date.now().toString(),
-      timeStart: dayjs()
-        .add(secondsFromNow + 1, "second")
-        .format("HH:mm"),
-      reminderEnabled: true,
-      reminderTime: 1, // 1 minute before
-      location: withLocation ? "Iasi, Romania" : null,
-    };
-
-    // Force the reminder time to be secondsFromNow from now
-    this.scheduleReminder(testEvent);
-
-    // Override the calculated reminder time to be closer
-    const reminder = this.reminders.get(testEvent.id);
-    if (reminder) {
-      reminder.reminderTime = dayjs().add(secondsFromNow, "second").valueOf();
-    }
-
-    return testEvent.id;
   }
 }
 

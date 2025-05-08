@@ -2,13 +2,11 @@ import React, { useState, useRef, useEffect, useContext } from "react";
 import axios from "axios";
 import Context from "../context/Context";
 import dayjs from "dayjs";
-import sendIcon from "../assets/send-icon.svg";
 import searchIcon from "../assets/search.svg";
 import searchIcon2 from "../assets/searchInput.svg";
 import micIcon from "../assets/mic.svg";
 import arrowRightIcon from "../assets/arrow-right.svg";
 import editIcon from "../assets/edit.svg";
-import { api } from "../services/api.js";
 import zapIcon from "../assets/zap.svg";
 import mapPinIcon from "../assets/map-pin.svg";
 import clockIcon from "../assets/clock.svg";
@@ -30,9 +28,6 @@ const AIChatBox = ({ onClose }) => {
     setSelectedDay,
     setMonthIndex,
     setSelectedWeek,
-    setIsMonthView,
-    setIsWeekView,
-    setIsDayView,
   } = useContext(Context);
 
   // Get currentUser from AuthContext instead
@@ -101,12 +96,18 @@ const AIChatBox = ({ onClose }) => {
       if (suggestionTimer.current) {
         clearTimeout(suggestionTimer.current);
       }
+      // Set suggestionsLoading to true immediately
+      setSuggestionsLoading(true);
+
       suggestionTimer.current = setTimeout(() => {
+        // When timer completes, show suggestions and turn off loading
         setShowSuggestions(true);
+        setSuggestionsLoading(false);
       }, 1000);
     } else {
       setShowSuggestions(false);
     }
+
     return () => {
       if (suggestionTimer.current) {
         clearTimeout(suggestionTimer.current);
@@ -136,27 +137,6 @@ const AIChatBox = ({ onClose }) => {
     }
   }, [savedEvents]);
 
-  // Function to toggle speech recognition
-  const toggleListening = () => {
-    if (isListening) {
-      SpeechRecognition.stopListening();
-      setShowVoiceInput(false);
-    } else {
-      resetTranscript();
-      setShowVoiceInput(true);
-      SpeechRecognition.startListening({
-        continuous: false,
-        language: "en-US",
-      });
-    }
-  };
-
-  // Add a function to handle closing the voice input modal
-  const handleCloseVoiceInput = () => {
-    SpeechRecognition.stopListening();
-    setShowVoiceInput(false);
-  };
-
   // Add a new function to handle resetting the chat
   const handleStartOver = () => {
     setMessages([
@@ -177,9 +157,6 @@ const AIChatBox = ({ onClose }) => {
     if (!savedEvents || savedEvents.length === 0) return;
 
     try {
-      // Set loading state to true before API call
-      setSuggestionsLoading(true);
-
       // Get current date
       const currentDate = dayjs().format("YYYY-MM-DD");
 
@@ -225,20 +202,7 @@ const AIChatBox = ({ onClose }) => {
       // Fallback to static suggestions
       const queryEventSuggestions = generateEventQuerySuggestions();
       setSuggestions(queryEventSuggestions);
-    } finally {
-      // Set loading state to false when done
-      setSuggestionsLoading(false);
     }
-  };
-
-  // Add this helper function to shuffle an array (Fisher-Yates algorithm)
-  const shuffleArray = (array) => {
-    const newArray = [...array];
-    for (let i = newArray.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
-    }
-    return newArray;
   };
 
   // Generate static event query suggestions - update this function to include find event suggestions
@@ -300,147 +264,6 @@ const AIChatBox = ({ onClose }) => {
       formattedMessage: template.template,
     }));
   };
-
-  // Message templates for suggestions with formatted parts
-  const suggestionTemplates = [
-    // Existing templates with specific times
-    (suggestion) => ({
-      template: `Create an event titled "{title}" on {day} from {timeStart} to {timeEnd}`,
-      values: {
-        title: suggestion.title,
-        day: dayjs(suggestion.day).format("MMMM D"),
-        timeStart: suggestion.timeStart,
-        timeEnd: suggestion.timeEnd,
-      },
-    }),
-    (suggestion) => ({
-      template: `Schedule "{title}" for {day} between {timeStart} and {timeEnd}`,
-      values: {
-        title: suggestion.title,
-        day: dayjs(suggestion.day).format("MMMM D"),
-        timeStart: suggestion.timeStart,
-        timeEnd: suggestion.timeEnd,
-      },
-    }),
-    (suggestion) => ({
-      template: `Add "{title}" to my calendar on {day} from {timeStart}-{timeEnd}`,
-      values: {
-        title: suggestion.title,
-        day: dayjs(suggestion.day).format("MMMM D"),
-        timeStart: suggestion.timeStart,
-        timeEnd: suggestion.timeEnd,
-      },
-    }),
-    (suggestion) => ({
-      template: `Put "{title}" from {timeStart} to {timeEnd} on {day}`,
-      values: {
-        title: suggestion.title,
-        day: dayjs(suggestion.day).format("MMMM D"),
-        timeStart: suggestion.timeStart,
-        timeEnd: suggestion.timeEnd,
-      },
-    }),
-    (suggestion) => ({
-      template: `Book time for "{title}" on {day} from {timeStart} until {timeEnd}`,
-      values: {
-        title: suggestion.title,
-        day: dayjs(suggestion.day).format("MMMM D"),
-        timeStart: suggestion.timeStart,
-        timeEnd: suggestion.timeEnd,
-      },
-    }),
-
-    // New templates without specific times (to trigger AI time suggestions)
-    (suggestion) => ({
-      template: `Schedule "{title}" on {day}`,
-      values: {
-        title: suggestion.title,
-        day: dayjs(suggestion.day).format("MMMM D"),
-      },
-    }),
-    (suggestion) => ({
-      template: `Add "{title}" to my calendar for {day}`,
-      values: {
-        title: suggestion.title,
-        day: dayjs(suggestion.day).format("MMMM D"),
-      },
-    }),
-    (suggestion) => ({
-      template: `Book time for "{title}" on {day}`,
-      values: {
-        title: suggestion.title,
-        day: dayjs(suggestion.day).format("MMMM D"),
-      },
-    }),
-    (suggestion) => ({
-      template: `When should I schedule "{title}" on {day}?`,
-      values: {
-        title: suggestion.title,
-        day: dayjs(suggestion.day).format("MMMM D"),
-      },
-    }),
-    (suggestion) => ({
-      template: `Find the best time for "{title}" on {day}`,
-      values: {
-        title: suggestion.title,
-        day: dayjs(suggestion.day).format("MMMM D"),
-      },
-    }),
-
-    // New templates for local events queries
-    (suggestion) => ({
-      template: `Show me local events for this week`,
-      values: {
-        query: "events week",
-      },
-    }),
-    (suggestion) => ({
-      template: `What's happening today in the city?`,
-      values: {
-        query: "events today",
-      },
-    }),
-    (suggestion) => ({
-      template: `What events are going on this month?`,
-      values: {
-        query: "events month",
-      },
-    }),
-    (suggestion) => ({
-      template: `Any interesting events this weekend?`,
-      values: {
-        query: "events weekend",
-      },
-    }),
-    (suggestion) => ({
-      template: `Show me local concerts and performances`,
-      values: {
-        query: "local concerts",
-      },
-    }),
-
-    // New templates for find event functionality
-    (suggestion) => ({
-      template: `When is my next meeting?`,
-      values: { query: "find meetings" },
-    }),
-    (suggestion) => ({
-      template: `When was the last time I went to the gym?`,
-      values: { query: "find appointments" },
-    }),
-    (suggestion) => ({
-      template: `When did I go to see the dentist?`,
-      values: { query: "find events tomorrow" },
-    }),
-    (suggestion) => ({
-      template: `Find my next workout.`,
-      values: { query: "find category work" },
-    }),
-    (suggestion) => ({
-      template: `When was my last meeting?`,
-      values: { query: "find presentations" },
-    }),
-  ];
 
   // Helper function to format the message text from template and values
   const formatMessageText = (template, values) => {
@@ -589,9 +412,6 @@ const AIChatBox = ({ onClose }) => {
       ) {
         // Handle list events response
         const { events, timeframe, city } = response.data;
-
-        // Debug the response data
-        console.log("Local events response:", response.data);
 
         // Make sure events is always an array
         const eventsList = Array.isArray(events) ? events : [];
@@ -806,9 +626,6 @@ const AIChatBox = ({ onClose }) => {
   // Custom component for rendering local events list
   const LocalEventsMessage = ({ events, timeframe, city }) => {
     const [expandedEvent, setExpandedEvent] = useState(null);
-
-    // Add console.log to debug the events data
-    console.log("Local events data:", { events, timeframe, city });
 
     return (
       <div className="flex flex-col">
@@ -1092,18 +909,6 @@ const AIChatBox = ({ onClose }) => {
       )}
     </div>
   );
-
-  // Replace the existing renderFormattedSuggestion function with this simplified version
-  const renderFormattedSuggestion = (suggestion) => {
-    // Simply return the formatted message as regular text without any special formatting
-    return (
-      suggestion.formattedMessage ||
-      formatMessageText(
-        suggestion.messageTemplate.template,
-        suggestion.messageTemplate.values
-      )
-    );
-  };
 
   // Render different message types
   const renderMessage = (msg, index) => {

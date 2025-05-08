@@ -1,9 +1,6 @@
 import dayjs from "dayjs";
 import React, { useContext, useEffect, useState, useRef } from "react";
 import Context from "../context/Context";
-import pinIcon from "../assets/lock.svg";
-import deleteIcon from "../assets/delete_icon.svg";
-import lockIcon from "../assets/lock.svg";
 import ContextMenu from "./ContextMenu";
 import {
   lightCategoryColors,
@@ -11,70 +8,7 @@ import {
   darkCategoryColors,
 } from "../utils/categoryColors";
 
-// Mini day view constants
-const MINI_TIME_SLOT_HEIGHT = 10; // Smaller height for mini view
-const WORKING_HOURS_START = 8; // 8 AM
-const WORKING_HOURS_END = 20; // 8 PM
-const TOTAL_HOURS = WORKING_HOURS_END - WORKING_HOURS_START;
-const MINI_VIEW_HEIGHT = TOTAL_HOURS * MINI_TIME_SLOT_HEIGHT;
-
-// Add this function to handle event layout
-const getEventLayout = (events) => {
-  if (!events.length) return [];
-
-  // Sort events by start time
-  const sortedEvents = [...events].sort((a, b) => {
-    const startA = a.timeStart.split(":").map(Number);
-    const startB = b.timeStart.split(":").map(Number);
-    return startA[0] * 60 + startA[1] - (startB[0] * 60 + startB[1]);
-  });
-
-  // For each event, determine its column and width
-  const layout = [];
-  const columnsOccupied = [];
-
-  for (const event of sortedEvents) {
-    const eventStart =
-      event.timeStart.split(":").map(Number)[0] * 60 +
-      event.timeStart.split(":").map(Number)[1];
-    const eventEnd =
-      event.timeEnd.split(":").map(Number)[0] * 60 +
-      event.timeEnd.split(":").map(Number)[1];
-
-    // Find the first available column
-    let column = 0;
-    while (
-      columnsOccupied[column]?.some(
-        ([start, end]) => eventStart < end && eventEnd > start
-      )
-    ) {
-      column++;
-    }
-
-    if (!columnsOccupied[column]) {
-      columnsOccupied[column] = [];
-    }
-
-    columnsOccupied[column].push([eventStart, eventEnd]);
-
-    layout.push({
-      event,
-      column,
-      totalColumns: 1,
-    });
-  }
-
-  // Determine total columns needed
-  const totalColumns = Math.max(...layout.map((item) => item.column), 0) + 1;
-
-  // Update each event with total columns info
-  return layout.map((item) => ({
-    ...item,
-    totalColumns,
-  }));
-};
-
-const Day = ({ day, index, showMiniDayView = false }) => {
+const Day = ({ day, index }) => {
   const [dayEvents, setDayEvents] = useState([]);
   const dayRef = useRef(null);
   const [maxEvents, setMaxEvents] = useState(index === 0 ? 4 : 5);
@@ -142,10 +76,6 @@ const Day = ({ day, index, showMiniDayView = false }) => {
     return () => window.removeEventListener("resize", calculateMaxEvents);
   }, []);
 
-  function getCurrentDay() {
-    return day.format("DD-MM-YY") === dayjs().format("DD-MM-YY");
-  }
-
   useEffect(() => {
     const events = savedEvents.filter(
       (e) => dayjs(e.day).format("DD-MM-YY") === day.format("DD-MM-YY")
@@ -169,43 +99,6 @@ const Day = ({ day, index, showMiniDayView = false }) => {
     }, 0);
   };
 
-  const handleLock = async (eventId) => {
-    try {
-      await dispatchEvent({
-        type: "lock",
-        payload: { id: eventId },
-      });
-    } catch (error) {
-      console.error("Error locking event:", error);
-    }
-  };
-
-  // For mini day view
-  const getTimeSlot = (time) => {
-    const [hour, minute] = time.split(":");
-    return parseInt(hour) * 60 + parseInt(minute);
-  };
-
-  const positionEvent = (startTime, endTime) => {
-    const [startHour] = startTime.split(":").map(Number);
-    const [endHour, endMinute] = endTime.split(":").map(Number);
-
-    // Adjust to visible hours range
-    const visibleStartHour = Math.max(WORKING_HOURS_START, startHour);
-    const visibleEndHour = Math.min(
-      WORKING_HOURS_END,
-      endMinute > 0 ? endHour + 1 : endHour
-    );
-
-    const totalHours = WORKING_HOURS_END - WORKING_HOURS_START;
-    const top = ((visibleStartHour - WORKING_HOURS_START) / totalHours) * 100;
-    const heightValue =
-      ((visibleEndHour - visibleStartHour) / totalHours) * 100;
-    const height = Math.max(heightValue, 2); // Minimum height percentage
-
-    return { top, height };
-  };
-
   useEffect(() => {
     const handleGlobalClick = (e) => {
       if (!e.target.closest(".context-menu")) {
@@ -216,8 +109,6 @@ const Day = ({ day, index, showMiniDayView = false }) => {
     window.addEventListener("mousedown", handleGlobalClick);
     return () => window.removeEventListener("mousedown", handleGlobalClick);
   }, []);
-
-  const eventLayout = getEventLayout(dayEvents);
 
   return (
     <div

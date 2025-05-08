@@ -2,15 +2,12 @@ import React, { useContext, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast"; // Add this import
 import Context from "../context/Context";
 import dayjs from "dayjs";
-import pinIcon from "../assets/lock.svg";
-import deleteIcon from "../assets/delete_icon.svg";
 import bellIcon from "../assets/bell.svg";
 import ContextMenu from "./ContextMenu";
 import TravelTimeIndicator, {
   clearTravelTimeCache,
 } from "./TravelTimeIndicator"; // Add .clearTravelTimeCache to the import
 import WeatherIndicator from "./WeatherIndicator"; // Add this import
-import locationIcon from "../assets/location.svg";
 import {
   categoryColors,
   lightCategoryColors,
@@ -23,7 +20,6 @@ const TOTAL_HEIGHT = TIME_SLOT_HEIGHT * 24;
 
 const DayView = () => {
   const [currentTimeString, setCurrentTimeString] = useState("");
-  const [justDragged, setJustDragged] = useState(false);
   const [mouseDownPos, setMouseDownPos] = useState(null);
   const [hasMoved, setHasMoved] = useState(false);
   const [selectedEventForClick, setSelectedEventForClick] = useState(null);
@@ -73,7 +69,6 @@ const DayView = () => {
   const [isDraggingEvent, setIsDraggingEvent] = useState(false);
   const [draggedEvent, setDraggedEvent] = useState(null);
   const [dragOffset, setDragOffset] = useState(0);
-  const [initialY, setInitialY] = useState(0);
 
   useEffect(() => {
     const events = savedEvents.filter(
@@ -315,17 +310,6 @@ const DayView = () => {
     }, 0);
   };
 
-  const handleLock = async (eventId) => {
-    try {
-      await dispatchEvent({
-        type: "lock",
-        payload: { id: eventId },
-      });
-    } catch (error) {
-      console.error("Error locking event:", error);
-    }
-  };
-
   const positionEvent = (startTime, endTime) => {
     const startMinutes = getTimeSlot(startTime);
     const endMinutes = getTimeSlot(endTime);
@@ -360,7 +344,6 @@ const DayView = () => {
 
     setIsDraggingEvent(true);
     setDraggedEvent(event);
-    setInitialY(relativeY);
 
     const eventTop = (getTimeSlot(event.timeStart) / 60) * TIME_SLOT_HEIGHT;
     setDragOffset(relativeY - eventTop);

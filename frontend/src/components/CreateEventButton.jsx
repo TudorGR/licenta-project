@@ -1,7 +1,6 @@
 import React, { useContext } from "react";
 import Context from "../context/Context";
 import plus from "../assets/plus.svg";
-
 export default function CreateEventButton() {
   const { setShowEventModal } = useContext(Context);
 

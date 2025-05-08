@@ -9,7 +9,7 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Check if user is logged in on page load
+  //Check if user is logged in on page load
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {

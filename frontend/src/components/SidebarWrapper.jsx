@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import Sidebar from "./Sidebar";
 
 const SidebarWrapper = ({ showSidebar, onClose }) => {
-  // Prevent scrolling when sidebar is open on mobile
+  //Prevent scrolling when sidebar is open on mobile
   useEffect(() => {
     if (showSidebar) {
       document.body.style.overflow = "hidden";

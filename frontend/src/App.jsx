@@ -22,8 +22,6 @@ import "./App.css";
 
 const CalendarApp = () => {
   const [calendarMonth, setCalendarMonth] = useState(getCalendarMonth());
-  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(false);
 
   // Initialize state from localStorage or default to true
   const [showAIChatBox, setShowAIChatBox] = useState(
@@ -112,16 +110,16 @@ function App() {
     <AuthProvider>
       <Router>
         <Routes>
-          {/* <Route path="/login" element={<Login />} /> */}
-          {/* <Route path="/register" element={<Register />} /> */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
           <Route
             path="/"
             element={
-              // <PrivateRoute>
-              <ContextWrapper>
-                <CalendarApp />
-              </ContextWrapper>
-              // </PrivateRoute>
+              <PrivateRoute>
+                <ContextWrapper>
+                  <CalendarApp />
+                </ContextWrapper>
+              </PrivateRoute>
             }
           />
         </Routes>

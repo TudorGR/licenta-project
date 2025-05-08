@@ -10,7 +10,7 @@ export const categoryColors = {
   Other: "#BDBDBD", // Soft Grey
 };
 
-// Paler versions for week view
+//Paler versions for week view
 export const lightCategoryColors = {
   Work: "#E3F2FD",
   Education: "#F3E5F5",

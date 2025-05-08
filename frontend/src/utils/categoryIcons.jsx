@@ -10,7 +10,7 @@ import personalIcon from "../assets/personal.svg";
 import hobbyIcon from "../assets/hobby.svg";
 import otherIcon from "../assets/other.svg"; // Default icon for Other
 
-// Map categories to their respective icons
+//Map categories to their respective icons
 export const categoryIcons = {
   Work: workIcon,
   Education: educationIcon,

@@ -163,10 +163,6 @@ const ContextProvider = ({ children }) => {
     localStorage.setItem("userCity", userCity);
   }, [userCity]);
 
-  useEffect(() => {
-    // console.log(monthIndex);
-  }, [monthIndex]);
-
   const [savedEvents, dispatch] = useReducer(savedEventsReducer, []);
 
   const dispatchEvent = useMemo(() => {
@@ -256,51 +252,6 @@ const ContextProvider = ({ children }) => {
       setSelectedEvent(null);
     }
   }, [showEventModal]);
-
-  const dispatchCalEvent = useCallback(
-    async (action) => {
-      try {
-        switch (action.type) {
-          case "push":
-            // Create event code...
-            const createdEvent = await api.createEvent(action.payload);
-            const eventsAfterPush = await api.getEvents();
-            dispatch({ type: "set", payload: eventsAfterPush });
-
-            // Schedule reminder for new event
-            if (createdEvent.reminderEnabled) {
-              reminderService.scheduleReminder(createdEvent);
-            }
-            break;
-
-          case "update":
-            // Update event code...
-            await api.updateEvent(action.payload.id, action.payload);
-            const eventsAfterUpdate = await api.getEvents();
-            dispatch({ type: "set", payload: eventsAfterUpdate });
-
-            // Update reminder
-            reminderService.updateReminder(action.payload);
-            break;
-
-          case "delete":
-            await api.deleteEvent(action.payload.id);
-            const eventsAfterDelete = await api.getEvents();
-            dispatch({ type: "set", payload: eventsAfterDelete });
-
-            // Remove reminder
-            reminderService.removeReminder(action.payload.id);
-            break;
-
-          // Other cases...
-        }
-      } catch (error) {
-        console.error("Error in dispatch:", error);
-        throw error;
-      }
-    },
-    [dispatch]
-  );
 
   return (
     <Context.Provider

@@ -7,6 +7,26 @@ import bikeIcon from "../assets/bike.svg";
 // TTL for cached data (in milliseconds) - 24 hours
 const CACHE_TTL = 24 * 60 * 60 * 1000;
 
+// Reusable component for centered content
+const CenteredContent = ({
+  children,
+  onMouseEnter,
+  onMouseLeave,
+  className = "",
+  style = {},
+}) => (
+  <div className="absolute inset-0 flex items-center justify-center">
+    <div
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      className={`travel-time-content bg-white px-1 py-0.5 rounded-xl shadow-custom border border-gray-300  z-50 transition-all duration-200 ${className}`}
+      style={{ pointerEvents: "auto", ...style }}
+    >
+      {children}
+    </div>
+  </div>
+);
+
 const TravelTimeIndicator = ({ origin, destination, timeBetween }) => {
   const [travelTimes, setTravelTimes] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -140,15 +160,6 @@ const TravelTimeIndicator = ({ origin, destination, timeBetween }) => {
     return "text-green-500";
   };
 
-  // Fixed component to render the centered content
-  const renderCenteredContent = (children) => (
-    <div className="absolute inset-0 flex items-center justify-center">
-      <div className="travel-time-content bg-white px-2 py-1.5 rounded-lg shadow-md z-50 transition-all duration-200">
-        {children}
-      </div>
-    </div>
-  );
-
   if (loading) {
     return (
       <div
@@ -156,32 +167,27 @@ const TravelTimeIndicator = ({ origin, destination, timeBetween }) => {
         style={{ pointerEvents: "none" }}
       >
         <div className="travel-time-line border-l-2 border-dashed border-gray-300 absolute h-full left-1/2 transform -translate-x-1/2"></div>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div
-            className="travel-time-content bg-white px-2 py-1.5 rounded-lg shadow-md z-50 transition-all duration-200"
-            style={{ pointerEvents: "auto" }}
-          >
-            <div className="flex items-center text-xs">
-              <svg className="animate-spin h-3 w-3 mr-1" viewBox="0 0 24 24">
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                  fill="none"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              Calculating...
-            </div>
+        <CenteredContent>
+          <div className="flex items-center text-xs">
+            <svg className="animate-spin h-3 w-3 mr-1" viewBox="0 0 24 24">
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+                fill="none"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+            Calculating...
           </div>
-        </div>
+        </CenteredContent>
       </div>
     );
   }
@@ -193,29 +199,24 @@ const TravelTimeIndicator = ({ origin, destination, timeBetween }) => {
         style={{ pointerEvents: "none" }}
       >
         <div className="travel-time-line border-l-2 border-dashed border-gray-300 absolute h-full left-1/2 transform -translate-x-1/2"></div>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div
-            className="travel-time-content bg-white px-2 py-1.5 rounded-lg shadow-md z-50 transition-all duration-200"
-            style={{ pointerEvents: "auto" }}
-          >
-            <div className="flex items-center text-xs text-red-500">
-              <svg
-                className="h-3 w-3 mr-1"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              {error}
-            </div>
+        <CenteredContent>
+          <div className="flex items-center text-xs text-red-500">
+            <svg
+              className="h-3 w-3 mr-1"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            {error}
           </div>
-        </div>
+        </CenteredContent>
       </div>
     );
   }
@@ -246,137 +247,126 @@ const TravelTimeIndicator = ({ origin, destination, timeBetween }) => {
       <div
         className={`travel-time-line border-l-2 border-dashed absolute h-full left-1/2 transform -translate-x-1/2 ${lineColor}`}
       ></div>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div
-          onMouseEnter={() => setShowAllModes(true)}
-          onMouseLeave={() => setShowAllModes(false)}
-          style={{ pointerEvents: "auto" }}
-          className={`travel-time-content bg-white px-2 py-1.5 rounded-lg shadow-md z-50 hover:bg-gray-50 transition-all duration-200 ${
-            showAllModes ? "w-auto" : ""
-          }`}
-        >
-          {showAllModes ? (
-            <div className="travel-modes flex flex-col gap-2 text-xs">
-              <div className="font-medium text-center text-gray-600 mb-1">
-                Travel Options
-              </div>
-              {travelTimes.driving !== null && (
-                <div
-                  className={`mode flex items-center justify-between gap-3 ${getModeStatusClass(
-                    travelTimes.driving
-                  )}`}
-                >
-                  <span className="flex items-center">
-                    <img
-                      src={carIcon}
-                      className="w-3 h-3 mr-1.5"
-                      alt="Driving"
-                    />
-                    Driving
-                  </span>
-                  <span className="font-medium">{travelTimes.driving} min</span>
-                </div>
-              )}
-              {travelTimes.transit !== null && (
-                <div
-                  className={`mode flex items-center justify-between gap-3 ${getModeStatusClass(
-                    travelTimes.transit
-                  )}`}
-                >
-                  <span className="flex items-center">
-                    <img
-                      src={busIcon}
-                      className="w-3 h-3 mr-1.5"
-                      alt="Transit"
-                    />
-                    Transit
-                  </span>
-                  <span className="font-medium">{travelTimes.transit} min</span>
-                </div>
-              )}
-              {travelTimes.cycling !== null && (
-                <div
-                  className={`mode flex items-center justify-between gap-3 ${getModeStatusClass(
-                    travelTimes.cycling
-                  )}`}
-                >
-                  <span className="flex items-center">
-                    <img
-                      src={bikeIcon}
-                      className="w-3 h-3 mr-1.5"
-                      alt="Cycling"
-                    />
-                    Cycling
-                  </span>
-                  <span className="font-medium">{travelTimes.cycling} min</span>
-                </div>
-              )}
-              {travelTimes.walking !== null && (
-                <div
-                  className={`mode flex items-center justify-between gap-3 ${getModeStatusClass(
-                    travelTimes.walking
-                  )}`}
-                >
-                  <span className="flex items-center">
-                    <img
-                      src={walkIcon}
-                      className="w-3 h-3 mr-1.5"
-                      alt="Walking"
-                    />
-                    Walking
-                  </span>
-                  <span className="font-medium">{travelTimes.walking} min</span>
-                </div>
-              )}
-              <div className="text-center text-xs text-gray-400 mt-1">
-                {timeBetween && `Gap: ${timeBetween} min`}
-              </div>
+      <CenteredContent
+        onMouseEnter={() => setShowAllModes(true)}
+        onMouseLeave={() => setShowAllModes(false)}
+        className={
+          showAllModes ? "hover:bg-gray-50 w-auto" : "hover:bg-gray-50"
+        }
+      >
+        {showAllModes ? (
+          <div className="travel-modes flex flex-col gap-1 text-xs">
+            <div className="font-medium text-center text-gray-600 mb-1">
+              Travel Options
             </div>
-          ) : (
-            <div className="flex items-center gap-2 text-xs">
-              {fastestMode ? (
-                <div
-                  className={`flex items-center ${getModeStatusClass(
-                    fastestMode[1]
-                  )}`}
-                >
+            {travelTimes.driving !== null && (
+              <div
+                className={`mode flex items-center justify-between gap-3 ${getModeStatusClass(
+                  travelTimes.driving
+                )}`}
+              >
+                <span className="flex items-center">
+                  <img src={carIcon} className="w-3 h-3 mr-1.5" alt="Driving" />
+                  Driving
+                </span>
+                <span className="font-medium">{travelTimes.driving} min</span>
+              </div>
+            )}
+            {travelTimes.transit !== null && (
+              <div
+                className={`mode flex items-center justify-between gap-3 ${getModeStatusClass(
+                  travelTimes.transit
+                )}`}
+              >
+                <span className="flex items-center">
+                  <img src={busIcon} className="w-3 h-3 mr-1.5" alt="Transit" />
+                  Transit
+                </span>
+                <span className="font-medium">{travelTimes.transit} min</span>
+              </div>
+            )}
+            {travelTimes.cycling !== null && (
+              <div
+                className={`mode flex items-center justify-between gap-3 ${getModeStatusClass(
+                  travelTimes.cycling
+                )}`}
+              >
+                <span className="flex items-center">
                   <img
-                    src={
-                      fastestMode[0] === "driving"
-                        ? carIcon
-                        : fastestMode[0] === "walking"
-                        ? walkIcon
-                        : fastestMode[0] === "transit"
-                        ? busIcon
-                        : bikeIcon
-                    }
-                    className="w-3 h-3 mr-1"
-                    alt={fastestMode[0]}
+                    src={bikeIcon}
+                    className="w-3 h-3 mr-1.5"
+                    alt="Cycling"
                   />
-                  <span className="font-medium">{fastestMode[1]} min</span>
-                </div>
-              ) : (
-                <div className="text-red-500 flex items-center">
-                  <svg
-                    className="h-3 w-3 mr-1"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                    />
-                  </svg>
-                  <span>Travel needed</span>
-                </div>
-              )}
+                  Cycling
+                </span>
+                <span className="font-medium">{travelTimes.cycling} min</span>
+              </div>
+            )}
+            {travelTimes.walking !== null && (
+              <div
+                className={`mode flex items-center justify-between gap-3 ${getModeStatusClass(
+                  travelTimes.walking
+                )}`}
+              >
+                <span className="flex items-center">
+                  <img
+                    src={walkIcon}
+                    className="w-3 h-3 mr-1.5"
+                    alt="Walking"
+                  />
+                  Walking
+                </span>
+                <span className="font-medium">{travelTimes.walking} min</span>
+              </div>
+            )}
+            <div className="text-center text-xs text-gray-400 mt-1">
+              {timeBetween && `Gap: ${timeBetween} min`}
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-xs">
+            {fastestMode ? (
+              <div
+                className={`flex items-center ${getModeStatusClass(
+                  fastestMode[1]
+                )}`}
+              >
+                <img
+                  src={
+                    fastestMode[0] === "driving"
+                      ? carIcon
+                      : fastestMode[0] === "walking"
+                      ? walkIcon
+                      : fastestMode[0] === "transit"
+                      ? busIcon
+                      : bikeIcon
+                  }
+                  className="w-3 h-3 mr-1"
+                  alt={fastestMode[0]}
+                />
+                <span className="font-medium">{fastestMode[1]} min</span>
+              </div>
+            ) : (
+              <div className="text-red-500 flex items-center">
+                <svg
+                  className="h-3 w-3 mr-1"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+                <span>Travel needed</span>
+              </div>
+            )}
+          </div>
+        )}
+      </CenteredContent>
     </div>
   );
 };

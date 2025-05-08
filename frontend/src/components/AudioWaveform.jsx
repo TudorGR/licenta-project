@@ -6,7 +6,7 @@ const AudioWaveform = ({ isListening }) => {
   const analyzerRef = useRef(null);
   const dataArrayRef = useRef(null);
   const sourceRef = useRef(null);
-  const previousValuesRef = useRef([]); // Store previous values for smoothing
+  const previousValuesRef = useRef([]); //Store previous values for smoothing
 
   useEffect(() => {
     let audioContext;

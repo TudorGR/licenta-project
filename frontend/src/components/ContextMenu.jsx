@@ -1,7 +1,6 @@
 import React from "react";
 import editIcon from "../assets/edit.svg";
 import deleteIcon from "../assets/delete_icon.svg";
-
 const ContextMenu = ({ x, y, onEdit, onDelete }) => {
   return (
     <div

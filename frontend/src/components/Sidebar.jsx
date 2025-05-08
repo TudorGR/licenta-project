@@ -2,13 +2,9 @@ import React, { useContext, useState } from "react";
 import Context from "../context/Context";
 import { AuthContext } from "../context/AuthContext";
 import checkIcon from "../assets/check.svg";
-import heatmapIcon from "../assets/heatmapIcon.png";
-import weatherIcon from "../assets/partly-cloudy.svg";
 import CategoryStats from "./CategoryStats";
-import CategoryAnalysis from "./CategoryAnalysis";
 import dayjs from "dayjs";
-import upIcon from "../assets/chevron-up.svg";
-import downIcon from "../assets/chevron-down.svg";
+
 import weekday from "dayjs/plugin/weekday.js";
 import isoWeek from "dayjs/plugin/isoWeek";
 import { categoryColors } from "../utils/categoryColors";
@@ -21,9 +17,6 @@ dayjs.extend(isoWeek);
 
 const Sidebar = ({ onClose }) => {
   const {
-    setIsMonthView,
-    setIsWeekView,
-    setIsDayView,
     isMonthView,
     isWeekView,
     isDayView,
@@ -36,21 +29,13 @@ const Sidebar = ({ onClose }) => {
     workingHoursEnd,
     setWorkingHoursStart,
     setWorkingHoursEnd,
-    savedEvents,
     dispatchEvent,
-    selectedDay,
-    monthIndex,
-    selectedWeek,
     autoRescheduleEnabled,
-    setAutoRescheduleEnabled,
     showWeather,
     setShowWeather,
     showLocalEvents,
-    setShowLocalEvents,
   } = useContext(Context);
-  const { currentUser, logout } = useContext(AuthContext);
   const [dropdown, setDropdown] = useState(true);
-  const [showCategoryAdjust, setShowCategoryAdjust] = useState(false);
 
   const handleCategoryToggle = (category) => {
     setSelectedHeatmapCategories((prev) => {

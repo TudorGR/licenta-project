@@ -19,8 +19,7 @@ import rainy7 from "../assets/rainy-7.svg";
 import snowy1 from "../assets/snowy-1.svg";
 import snowy2 from "../assets/snowy-2.svg";
 import snowy3 from "../assets/snowy-3.svg";
-import snowy4 from "../assets/snowy-4.svg";
-import snowy5 from "../assets/snowy-5.svg";
+
 import snowy6 from "../assets/snowy-6.svg";
 import thunder from "../assets/thunder.svg";
 
@@ -33,7 +32,6 @@ const WeatherIndicator = ({ hour, date, location = "Bucharest" }) => {
   const [loading, setLoading] = useState(true);
   const [visible, setVisible] = useState(false);
   const [coordinates, setCoordinates] = useState(null);
-  const [geoError, setGeoError] = useState(null);
 
   // Format the date to YYYY-MM-DD for caching purposes
   const dateStr = date.format("YYYY-MM-DD");
@@ -51,7 +49,6 @@ const WeatherIndicator = ({ hour, date, location = "Bucharest" }) => {
         },
         (error) => {
           console.error("Geolocation error:", error);
-          setGeoError(error.message);
           // Fallback to default coordinates (Bucharest)
           setCoordinates({
             latitude: 44.4268,
@@ -61,7 +58,6 @@ const WeatherIndicator = ({ hour, date, location = "Bucharest" }) => {
         { timeout: 10000 }
       );
     } else {
-      setGeoError("Geolocation is not supported by your browser");
       // Fallback to default coordinates
       setCoordinates({
         latitude: 44.4268,
@@ -69,6 +65,14 @@ const WeatherIndicator = ({ hour, date, location = "Bucharest" }) => {
       });
     }
   }, []);
+
+  // Helper function to determine if a time is during daylight
+  const isTimeInDaylight = (timeStr, sunrise, sunset) => {
+    const time = new Date(timeStr);
+    const sunriseTime = new Date(sunrise);
+    const sunsetTime = new Date(sunset);
+    return time >= sunriseTime && time <= sunsetTime;
+  };
 
   useEffect(() => {
     // Don't fetch until we have coordinates
@@ -143,14 +147,6 @@ const WeatherIndicator = ({ hour, date, location = "Bucharest" }) => {
         console.error("Error fetching weather data:", error);
         setLoading(false);
       }
-    };
-
-    // Helper function to determine if a time is during daylight
-    const isTimeInDaylight = (timeStr, sunrise, sunset) => {
-      const time = new Date(timeStr);
-      const sunriseTime = new Date(sunrise);
-      const sunsetTime = new Date(sunset);
-      return time >= sunriseTime && time <= sunsetTime;
     };
 
     fetchWeatherData();

@@ -2,27 +2,19 @@ import React, { useContext, useEffect, useRef, useState } from "react";
 import Context from "../context/Context";
 import closeIcon from "../assets/close_icon.svg";
 import deleteIcon from "../assets/delete_icon.svg";
-import calendar from "../assets/calendar.svg";
 import dayjs from "dayjs";
 import saveIcon from "../assets/save.svg";
 import categoryIcon from "../assets/category.svg";
 import locationIcon from "../assets/location.svg";
-import workoutIcon from "../assets/workout.svg";
-import meetingIcon from "../assets/meeting.svg";
-import studyIcon from "../assets/study.svg";
 import personalIcon from "../assets/personal.svg";
 import workIcon from "../assets/work.svg";
 import socialIcon from "../assets/social.svg";
-import familyIcon from "../assets/family.svg";
 import healthIcon from "../assets/health.svg";
 import hobbyIcon from "../assets/hobby.svg";
-import choresIcon from "../assets/chores.svg";
 import travelIcon from "../assets/travel.svg";
 import financeIcon from "../assets/finance.svg";
 import learningIcon from "../assets/learning.svg";
-import selfCareIcon from "../assets/self-care.svg";
 import clockIcon from "../assets/clock.svg";
-import eventsIcon from "../assets/event.svg";
 import otherIcon from "../assets/other.svg";
 import { categoryColors } from "../utils/categoryColors";
 
@@ -169,14 +161,6 @@ export default function EventModal() {
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
-
-  useEffect(() => {
-    setTimeStart(startTime);
-  }, [startTime, setTimeStart]);
-
-  useEffect(() => {
-    setTimeEnd(endTime);
-  }, [endTime, setTimeEnd]);
 
   useEffect(() => {
     if (selectedEvent) {
