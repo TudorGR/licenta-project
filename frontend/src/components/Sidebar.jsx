@@ -49,16 +49,6 @@ const Sidebar = ({ onClose }) => {
     });
   };
 
-  const adjustEvents = (category, minutes = 15) => {
-    dispatchEvent({
-      type: "increase",
-      payload: {
-        timeChange: minutes,
-        category,
-      },
-    });
-  };
-
   return (
     <aside className="relative pt-2 shrink-0 w-70 h-full bg-white border-gray-200 md:border-r flex flex-col items-center gap-2 overflow-y-auto">
       {/* Small Calendar Header with Close Button */}
@@ -82,7 +72,6 @@ const Sidebar = ({ onClose }) => {
           <div className="rounded-sm w-full">
             <CategoryStats
               view={isWeekView ? "week" : isMonthView ? "month" : "day"}
-              onCategoryClick={isWeekView ? adjustEvents : null}
             />
           </div>
 

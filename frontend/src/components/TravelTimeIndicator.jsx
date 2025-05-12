@@ -19,7 +19,7 @@ const CenteredContent = ({
     <div
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-      className={`travel-time-content bg-white px-1 py-0.5 rounded-xl shadow-custom border border-gray-300  z-50 transition-all duration-200 ${className}`}
+      className={`travel-time-content bg-white  py-0.5 rounded-xl shadow-custom border border-gray-300  z-50  duration-200 ${className}`}
       style={{ pointerEvents: "auto", ...style }}
     >
       {children}

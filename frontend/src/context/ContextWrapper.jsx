@@ -55,57 +55,6 @@ const asyncDispatchEvent = (dispatch) => async (action, getState) => {
         dispatch(action);
         break;
 
-      case "increase":
-        try {
-          const { category, timeChange } = action.payload;
-          const { savedEvents, workingHoursStart, workingHoursEnd } =
-            getState();
-
-          // Get all events for the current week
-          const startOfWeek = dayjs().isoWeekday(1);
-          const endOfWeek = dayjs().isoWeekday(7);
-
-          const eventsToSend = savedEvents.filter((event) => {
-            const eventDay = dayjs(parseInt(event.day));
-            return eventDay.isBetween(startOfWeek, endOfWeek, "day", "[]");
-          });
-
-          const response = await axios.post("http://localhost:5000/api/algo", {
-            events: eventsToSend,
-            timeChange,
-            category,
-            workingHoursStart,
-            workingHoursEnd,
-          });
-
-          const result = response.data;
-          const modifiedEvents = result.events;
-
-          // Update events in the database
-          for (const event of modifiedEvents) {
-            await api.updateEvent(event.id, event);
-          }
-
-          // Refresh events from the database
-          const eventsAfterIncrease = await api.getEvents();
-          dispatch({ type: "set", payload: eventsAfterIncrease });
-        } catch (error) {
-          console.error("Error increasing event durations:", error);
-          throw error;
-        }
-        break;
-
-      case "lock":
-        try {
-          const updatedEvent = await api.toggleEventLock(action.payload.id);
-          const eventsAfterLock = await api.getEvents();
-          dispatch({ type: "set", payload: eventsAfterLock });
-        } catch (error) {
-          console.error("Error toggling event lock:", error);
-          throw error;
-        }
-        break;
-
       default:
         dispatch(action);
     }
@@ -150,8 +99,12 @@ const ContextProvider = ({ children }) => {
     const totalWeeksInMonth = Math.ceil(lastDayOfMonth.date() / 7);
     return Math.min(Math.max(0, weekIndex), totalWeeksInMonth - 1);
   });
-  const [workingHoursStart, setWorkingHoursStart] = useState("07:00");
-  const [workingHoursEnd, setWorkingHoursEnd] = useState("19:00");
+  const [workingHoursStart, setWorkingHoursStart] = useState(
+    localStorage.getItem("workingHoursStart") || "07:00"
+  );
+  const [workingHoursEnd, setWorkingHoursEnd] = useState(
+    localStorage.getItem("workingHoursEnd") || "19:00"
+  );
   const [showWeather, setShowWeather] = useState(false);
   const [showLocalEvents, setShowLocalEvents] = useState(false);
   const [userCity, setUserCity] = useState(
@@ -162,6 +115,14 @@ const ContextProvider = ({ children }) => {
   useEffect(() => {
     localStorage.setItem("userCity", userCity);
   }, [userCity]);
+
+  useEffect(() => {
+    localStorage.setItem("workingHoursStart", workingHoursStart);
+  }, [workingHoursStart]);
+
+  useEffect(() => {
+    localStorage.setItem("workingHoursEnd", workingHoursEnd);
+  }, [workingHoursEnd]);
 
   const [savedEvents, dispatch] = useReducer(savedEventsReducer, []);
 

@@ -3,8 +3,8 @@ import Groq from "groq-sdk";
 import dotenv from "dotenv";
 import dayjs from "dayjs";
 import Event from "../models/Event.js";
-import { Op } from "sequelize"; // Add this import for Sequelize operators
-import axios from "axios"; // Add this import for axios
+import { Op } from "sequelize";
+import axios from "axios";
 
 dotenv.config();
 const router = express.Router();
@@ -12,7 +12,11 @@ const router = express.Router();
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 router.post("/", async (req, res) => {
-  const { text } = req.body;
+  const {
+    text,
+    workingHoursStart = "08:00",
+    workingHoursEnd = "20:00",
+  } = req.body;
 
   const currentDate = dayjs().format("YYYY-MM-DD");
 
@@ -43,7 +47,7 @@ unknownFuntion()"
   - if the user asks about what events are happening, local events, or similar queries, use local_events function
   - if the user asks about when an event will happen, or when was the last time, or to find specific events, use findEvent function
   - for local_events, timeframe can be "today", "this week", "this month", day of week or a date
-  - for findEvent, category is gonna be the event category and timeframe must be "future" or "past"
+  - for findEvent, category is gonna be the event category and timeframe is gonna be "future" or "past" depending on the users intent
   - the parameters should be in the order: title(string), startTime(24hr format), endTime(24hr format), date(YYYY-MM-DD)
   - date parameter is by default ${currentDate} if it is not specified
   - if a parameter is not specified ask for it and make the parameter empty in the list
@@ -148,7 +152,11 @@ unknownFuntion()"
         const dayOfWeek = dayjs(date).day(); // 0 is Sunday, 6 is Saturday
 
         // Find free slots for the day
-        const freeSlots = await findFreeSlotsForDay(dayValue);
+        const freeSlots = await findFreeSlotsForDay(
+          dayValue,
+          workingHoursStart,
+          workingHoursEnd
+        );
 
         // Get category patterns to find optimal slots
         const categoryPatterns = await getCategoryPatterns(eventCategory);
@@ -242,7 +250,7 @@ unknownFuntion()"
         }
 
         // Prepare the events for sending to Groq
-        const formattedEvents = matchingEvents.map((event) => ({
+        let formattedEvents = matchingEvents.map((event) => ({
           id: event.id,
           title: event.title,
           day: dayjs(parseInt(event.day)).format("YYYY-MM-DD"),
@@ -253,34 +261,43 @@ unknownFuntion()"
           location: event.location || "",
         }));
 
-        // Create a prompt for Groq to match the events with the user's query
-        const matchPrompt = `
-The user asked: "${text}"
+        // Order events based on timeframe direction
+        if (timeframe === "future") {
+          // Soonest first
+          formattedEvents = formattedEvents.sort((a, b) => {
+            if (a.day === b.day) {
+              return a.timeStart.localeCompare(b.timeStart);
+            }
+            return a.day.localeCompare(b.day);
+          });
+        } else {
+          // Most recent first
+          formattedEvents = formattedEvents.sort((a, b) => {
+            if (a.day === b.day) {
+              return b.timeStart.localeCompare(a.timeStart);
+            }
+            return b.day.localeCompare(a.day);
+          });
+        }
 
-Here are the events that match the category "${category}" in the ${
-          timeframe === "future" ? "next 3 months" : "past 3 months"
-        }:
+        // Create a prompt for Groq to match the events with the user's query
+        const matchPrompt = `You are an AI assistant that helps find the most relevant event from a list based on a user's query.
+
+User's original query: "${text}"
+Category: ${category}
+Timeframe: ${timeframe}
+
+Available events:
 ${JSON.stringify(formattedEvents, null, 2)}
 
-Based on the user's query, identify which event is the most relevant. If the user is asking about:
-- "next" or "upcoming" event: return the earliest future event
-- "last" or "previous" event: return the most recent past event
-- If the user is asking about a specific event title or description, match it with the most relevant event
+Please analyze these events and determine which ONE is most relevant to the user's original query.
+Consider factors like event title, timing, description, and any specific details mentioned in the user's query.
 
-Important: output _only_ a single, valid JSON object. Do _not_ wrap it in markdown or add any comments. All strings must be properly quoted, and the object must be closed.
-
-Example output:
+Your response must be a JSON that follows this exact format:
 {
-  "eventId": "42",
-  "message": "Your next meeting is scheduled for May 5, 2025 at 10:00 to 11:00."
-}
-
-Return only a JSON object with this structure:
-{
-  "eventId": "id of the most relevant event",
-  "message": "A natural response explaining when the event is/was scheduled"
-}
-`;
+  "eventId": "id of the selected event",
+  "message": "A short message of when you found the event."
+}`;
 
         // Call Groq to find the most relevant event
         const groqResponse = await groq.chat.completions.create({
@@ -359,7 +376,11 @@ async function checkEventOverlaps(day, timeStart, timeEnd) {
 }
 
 // Helper function to find free slots on a specific day
-async function findFreeSlotsForDay(day) {
+async function findFreeSlotsForDay(
+  day,
+  workingHoursStart = "08:00",
+  workingHoursEnd = "20:00"
+) {
   try {
     // Get all events for the day
     const eventsOnDay = await Event.findAll({
@@ -375,9 +396,9 @@ async function findFreeSlotsForDay(day) {
       })
       .sort((a, b) => a.start - b.start);
 
-    // Define the working day (8:00 AM to 8:00 PM)
-    const dayStart = 8 * 60; // 8:00 AM in minutes
-    const dayEnd = 20 * 60; // 8:00 PM in minutes
+    // Define the working day using the provided parameters
+    const dayStart = getTimeInMinutes(workingHoursStart);
+    const dayEnd = getTimeInMinutes(workingHoursEnd);
 
     // Find free ranges
     const freeRanges = [];

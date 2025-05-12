@@ -205,6 +205,21 @@ const DayWeek = ({
     setIsDraggingEvent(true);
   };
 
+  const handleCloseContextMenu = () => {
+    setContextMenu((prev) => ({ ...prev, isClosing: true }));
+
+    // Wait for animation to complete before fully closing
+    setTimeout(() => {
+      setContextMenu({
+        isOpen: false,
+        x: 0,
+        y: 0,
+        eventId: null,
+        isClosing: false,
+      });
+    }, 150); // Match this with your transition duration
+  };
+
   useEffect(() => {
     const updateTimePosition = () => {
       setCurrentTimePosition(calculateTimePosition());

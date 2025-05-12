@@ -28,6 +28,8 @@ const AIChatBox = ({ onClose }) => {
     setSelectedDay,
     setMonthIndex,
     setSelectedWeek,
+    workingHoursStart,
+    workingHoursEnd,
   } = useContext(Context);
 
   // Get currentUser from AuthContext instead
@@ -335,6 +337,8 @@ const AIChatBox = ({ onClose }) => {
 
       const response = await axios.post("http://localhost:5000/api/chat", {
         text: messageToSend,
+        workingHoursStart,
+        workingHoursEnd,
       });
 
       if (response.data.intent === "create_event") {
@@ -761,7 +765,7 @@ const AIChatBox = ({ onClose }) => {
               </button>
               <button
                 onClick={() => handleEventClick(selectedEvent)}
-                className="px-3 flex justify-center gap-1 py-1 bg-black text-white text-xs rounded transition-all hover:bg-gray-800"
+                className="px-3 flex items-center justify-center gap-1 py-1 bg-black text-white text-xs rounded transition-all hover:bg-gray-800"
               >
                 Edit
                 <img src={editIcon} className="h-3 w-3 alter invert" />

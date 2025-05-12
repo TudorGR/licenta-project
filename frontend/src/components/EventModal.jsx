@@ -392,7 +392,7 @@ export default function EventModal() {
                 autoComplete="off"
               />
               <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2 text-gray-400 select-none">
-                {suggestions.length > 0 && (
+                {title == "" && suggestions.length > 0 && (
                   <>
                     <div className="flex gap-2 items-center">
                       <kbd className="px-2 py-1 bg-gray-100 rounded-sm text-sm border border-gray-300">

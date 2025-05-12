@@ -62,35 +62,12 @@ export const api = {
     }
   },
 
-  toggleEventLock: async (id) => {
-    try {
-      const response = await axios.patch(`${API_URL}/events/${id}/lock`);
-      return response.data;
-    } catch (error) {
-      console.error("Failed to toggle event lock:", error);
-      throw error;
-    }
-  },
-
-  getLocalEvents: async (city = "New York") => {
+  getLocalEvents: async (city = "Iasi") => {
     try {
       const response = await axios.get(`${API_URL}/local-events/${city}`);
       return response.data;
     } catch (error) {
       console.error("Failed to get local events:", error);
-      throw error;
-    }
-  },
-
-  getEventSuggestions: async (events) => {
-    try {
-      const response = await axios.post(
-        `${API_URL}/suggestions/event-suggestions`,
-        { events }
-      );
-      return response.data.suggestions;
-    } catch (error) {
-      console.error("Failed to get event suggestions:", error);
       throw error;
     }
   },

@@ -11,6 +11,28 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
+// Helper function to get JSON response from GROQ API
+async function getGroqJsonResponse(prompt) {
+  const groqResponse = await groq.chat.completions.create({
+    messages: [{ role: "user", content: prompt }],
+    model: "llama3-70b-8192",
+    temperature: 0.1, // Low temperature for more predictable responses
+  });
+
+  const aiResponse = groqResponse.choices[0]?.message?.content;
+  if (!aiResponse) {
+    throw new Error("Empty response from GROQ API");
+  }
+
+  // Extract JSON from response
+  const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error("Could not extract JSON from GROQ response");
+  }
+
+  return JSON.parse(jsonMatch[0]);
+}
+
 router.post("/calculate-travel-time", async (req, res) => {
   try {
     const { origin, destination } = req.body;
@@ -41,46 +63,18 @@ router.post("/calculate-travel-time", async (req, res) => {
     If you cannot estimate for a specific mode, use null for that value. If locations are invalid or cannot be determined, return null for all values.
     `;
 
-    // Call GROQ API
-    const groqResponse = await groq.chat.completions.create({
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      model: "llama3-70b-8192",
-      temperature: 0.1, // Low temperature for more predictable responses
-    });
+    // Get travel time estimates using the helper function
+    const travelTimes = await getGroqJsonResponse(prompt);
 
-    const aiResponse = groqResponse.choices[0]?.message?.content;
+    // Validate the response format
+    const expectedKeys = ["driving", "walking", "transit", "cycling"];
+    const hasAllKeys = expectedKeys.every((key) => key in travelTimes);
 
-    if (!aiResponse) {
-      throw new Error("Empty response from GROQ API");
+    if (!hasAllKeys) {
+      throw new Error("Response is missing required fields");
     }
 
-    // Extract JSON from response
-    const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error("Could not extract JSON from GROQ response");
-    }
-
-    try {
-      const travelTimes = JSON.parse(jsonMatch[0]);
-
-      // Validate the response format
-      const expectedKeys = ["driving", "walking", "transit", "cycling"];
-      const hasAllKeys = expectedKeys.every((key) => key in travelTimes);
-
-      if (!hasAllKeys) {
-        throw new Error("Response is missing required fields");
-      }
-
-      res.json(travelTimes);
-    } catch (error) {
-      console.error("Error parsing GROQ response:", error);
-      throw new Error("Invalid JSON in GROQ response");
-    }
+    res.json(travelTimes);
   } catch (error) {
     console.error("Error calculating travel time:", error);
     res.status(500).json({
@@ -90,7 +84,6 @@ router.post("/calculate-travel-time", async (req, res) => {
   }
 });
 
-// Add a new endpoint to convert location to coordinates
 router.post("/location-to-coords", async (req, res) => {
   const { location } = req.body;
 
@@ -114,31 +107,8 @@ router.post("/location-to-coords", async (req, res) => {
       }
     `;
 
-    // Call GROQ API
-    const groqResponse = await groq.chat.completions.create({
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      model: "llama3-70b-8192",
-      temperature: 0.1, // Low temperature for more predictable responses
-    });
-
-    const aiResponse = groqResponse.choices[0]?.message?.content;
-
-    if (!aiResponse) {
-      throw new Error("Empty response from GROQ API");
-    }
-
-    // Extract JSON from response
-    const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error("Could not extract JSON from GROQ response");
-    }
-
-    const coordinates = JSON.parse(jsonMatch[0]);
+    // Get coordinates using the helper function
+    const coordinates = await getGroqJsonResponse(prompt);
     res.json(coordinates);
   } catch (error) {
     console.error("Error converting location to coordinates:", error);

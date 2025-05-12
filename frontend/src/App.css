@@ -92,12 +92,7 @@
   /* box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); */
   z-index: 40;
   min-width: 80px;
-  transition: all 0.2s ease;
-}
-
-.travel-time-content:hover {
-  transform: translate(-50%, -50%) scale(1.05);
-  /* box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); */
+  /* transition: all 0.2s ease; */
 }
 
 .travel-modes {
