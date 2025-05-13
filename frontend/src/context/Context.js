@@ -35,6 +35,12 @@ const Context = React.createContext({
   setWorkingHoursEnd: (time) => {},
   showWeather: false,
   setShowWeather: () => {},
+
+  // Add analytics-related state
+  showAnalyticsDashboard: false,
+  setShowAnalyticsDashboard: () => {},
+  analyticsTimeframe: "month",
+  setAnalyticsTimeframe: () => {},
 });
 
 export default Context;

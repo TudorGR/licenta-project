@@ -73,7 +73,7 @@ const savedEventsReducer = (state, { type, payload }) => {
   }
 };
 
-const ContextProvider = ({ children }) => {
+export default function ContextWrapper({ children }) {
   const [monthIndex, setMonthIndex] = useState(dayjs().month());
   const [smallCalendarMonth, setSmallCalendarMonth] = useState(null);
   const [selectedDay, setSelectedDay] = useState(dayjs());
@@ -154,6 +154,10 @@ const ContextProvider = ({ children }) => {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [user, setUser] = useState(null);
+
+  // Add analytics-related state
+  const [showAnalyticsDashboard, setShowAnalyticsDashboard] = useState(false);
+  const [analyticsTimeframe, setAnalyticsTimeframe] = useState("month");
 
   // Create wrapped setter functions to persist the view mode
   const setIsMonthViewWithStorage = (value) => {
@@ -260,11 +264,14 @@ const ContextProvider = ({ children }) => {
         userCity,
         setUserCity,
         user,
+        // Add analytics-related values
+        showAnalyticsDashboard,
+        setShowAnalyticsDashboard,
+        analyticsTimeframe,
+        setAnalyticsTimeframe,
       }}
     >
       {children}
     </Context.Provider>
   );
-};
-
-export default ContextProvider;
+}

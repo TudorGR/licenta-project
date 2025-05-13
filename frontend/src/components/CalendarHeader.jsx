@@ -7,12 +7,15 @@ import right from "../assets/chevron-right.svg";
 import chatIcon from "../assets/message-circle.svg";
 import menuIcon from "../assets/menu.svg";
 import chevronDown from "../assets/chevron-down.svg";
+import analyticsIcon from "../assets/bar-chart-2.svg"; // Create or download this icon
 
 const CalendarHeader = ({
   showChat,
   onOpenAIChat,
   showSidebar,
   onOpenSidebar,
+  onOpenAnalytics, // Add this prop
+  showAnalyticsDashboard, // Add this prop
 }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -296,6 +299,18 @@ const CalendarHeader = ({
             )}
           </div>
         </div>
+        {/* Add Analytics button with active state */}
+        <button
+          onClick={onOpenAnalytics}
+          className="shadow-custom shrink-0 active:bg-gray-700 cursor-pointer text-white bg-black rounded-full flex gap-1 items-center transition-all justify-center max-[768px]:w-10 h-10 px-2 md:px-4"
+        >
+          <img
+            src={analyticsIcon}
+            className={`w-4 h-4 md:mr-1`}
+            alt="Analytics"
+          />
+          <span className="text-sm hidden md:inline">Analytics</span>
+        </button>
         {!showChat && (
           <button
             onClick={onOpenAIChat}
