@@ -65,10 +65,6 @@ const CalendarHeader = ({
       setSelectedDay(selectedDay.subtract(1, "day"));
     } else {
       const firstDayOfMonth = dayjs(new Date(dayjs().year(), monthIndex, 1));
-      const weekStart = firstDayOfMonth
-        .startOf("week")
-        .add(1, "day")
-        .add(selectedWeek, "week");
 
       if (selectedWeek === 0) {
         const prevMonth = firstDayOfMonth.subtract(1, "month");
@@ -203,7 +199,7 @@ const CalendarHeader = ({
         {/* View toggle buttons */}
         <div className="relative">
           {/* Desktop view - regular buttons */}
-          <div className="hidden md:flex items-center rounded-full shadow-custom">
+          <div className="hidden sm:flex items-center rounded-full shadow-custom">
             <button
               onClick={() => {
                 setIsMonthView(true);
@@ -243,7 +239,7 @@ const CalendarHeader = ({
           </div>
 
           {/* Mobile view - dropdown */}
-          <div className="md:hidden" ref={dropdownRef}>
+          <div className="sm:hidden" ref={dropdownRef}>
             <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
               className="flex gap-1 items-center shadow-custom border-1 border-gray-200 transition-all rounded-full px-4 h-10 active:bg-gray-50"

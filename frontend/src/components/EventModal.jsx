@@ -49,8 +49,6 @@ export default function EventModal() {
     setSelectedEvent,
     timeStart,
     timeEnd,
-    setTimeStart,
-    setTimeEnd,
     categories,
     selectedCategory,
     setSelectedCategory,
@@ -87,15 +85,7 @@ export default function EventModal() {
   useEffect(() => {
     // Trigger enter animation on mount
     setIsVisible(true);
-
-    return () => {
-      // Clean up not needed here since component unmounts
-    };
   }, []);
-
-  const closeWithAnimation = () => {
-    setShowEventModal(false);
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -246,14 +236,14 @@ export default function EventModal() {
 
       const weekDay = dayjs(selectedDate).day();
       const currentDate = dayjs(selectedDate).format("YYYY-MM-DD");
-      const oneMonthAgo = dayjs(currentDate)
-        .subtract(1, "month")
+      const twoMonthsAgo = dayjs(currentDate)
+        .subtract(2, "month")
         .format("YYYY-MM-DD");
 
       const pastEvents = savedEvents.filter((event) => {
         const eventDate = dayjs(event.day);
         const isBeforeToday = eventDate.isBefore(currentDate, "day");
-        const isAfterOneMonthAgo = eventDate.isAfter(oneMonthAgo, "day");
+        const isAfterTwoMonthsAgo = eventDate.isAfter(twoMonthsAgo, "day");
         const isSameWeekDay = eventDate.day() === weekDay;
 
         const eventStartMinutes = getMinutes(event.timeStart);
@@ -265,26 +255,112 @@ export default function EventModal() {
             selectedEndMinutes > eventStartMinutes);
 
         return (
-          isBeforeToday && isAfterOneMonthAgo && isSameWeekDay && hasTimeOverlap
+          isBeforeToday &&
+          isAfterTwoMonthsAgo &&
+          isSameWeekDay &&
+          hasTimeOverlap
         );
       });
 
+      console.log(pastEvents);
+
+      const calculateEventScore = (event) => {
+        let score = 0;
+
+        // Factor 1: Recența evenimentului - evenimentele mai recente primesc scor mai mare
+        const daysSinceEvent = dayjs(currentDate).diff(dayjs(event.day), "day");
+        const recencyScore = (Math.max(0, 30 - daysSinceEvent) / 30) * 10; // Max 10 puncte
+
+        // Factor 2: Potrivirea intervalului orar
+        const eventStartMinutes = getMinutes(event.timeStart);
+        const eventEndMinutes = getMinutes(event.timeEnd);
+        const timeMatchScore =
+          10 -
+          (Math.abs(eventStartMinutes - selectedStartMinutes) +
+            Math.abs(eventEndMinutes - selectedEndMinutes)) /
+            60; // Max 10 puncte pentru potrivire exactă
+
+        // Factor 3: Ziua din săptămână
+        const isWeekendSelected = [0, 6].includes(weekDay);
+        const isWeekendEvent = [0, 6].includes(dayjs(event.day).day());
+        const weekendMatchScore = isWeekendSelected === isWeekendEvent ? 5 : 0;
+
+        // Factor 4: Durata similară
+        const selectedDuration = selectedEndMinutes - selectedStartMinutes;
+        const eventDuration = eventEndMinutes - eventStartMinutes;
+        const durationMatchScore =
+          5 - Math.min(5, Math.abs(selectedDuration - eventDuration) / 30);
+
+        // Calculează scorul total
+        score =
+          recencyScore +
+          timeMatchScore +
+          weekendMatchScore +
+          durationMatchScore;
+
+        return score;
+      };
+
+      // Procesare și scoring pentru fiecare categorie
       const eventsByCategory = pastEvents.reduce((acc, event) => {
-        const category = event.category || "None";
+        const category = event.category || "Other";
         if (!acc[category]) {
-          acc[category] = [];
+          acc[category] = {
+            events: [],
+            totalScore: 0,
+          };
         }
-        acc[category].push(event);
+
+        // Calculează scorul pentru acest eveniment
+        const eventScore = calculateEventScore(event);
+        event.score = eventScore;
+        acc[category].events.push(event);
+        acc[category].totalScore += eventScore;
+
         return acc;
       }, {});
 
+      // Generează sugestii cu scoring
       const categoryFrequency = Object.entries(eventsByCategory)
-        .map(([category, events]) => {
+        .map(([category, data]) => {
+          const { events, totalScore } = data;
+
+          // Sortează evenimentele după scor în cadrul categoriei
+          const sortedEvents = [...events].sort((a, b) => b.score - a.score);
+
+          // Calculează scorul mediu per eveniment pentru a nu favoriza doar categoriile cu multe evenimente
+          const averageScore =
+            events.length > 0 ? totalScore / events.length : 0;
+
+          // Similar cu codul tău existent pentru a găsi cele mai comune titluri și locații
           const titleCounts = events.reduce((acc, event) => {
             acc[event.title] = (acc[event.title] || 0) + 1;
             return acc;
           }, {});
 
+          // Adaugă factorul de scor la titluri
+          const titleScores = events.reduce((acc, event) => {
+            if (!acc[event.title]) acc[event.title] = 0;
+            acc[event.title] += event.score;
+            return acc;
+          }, {});
+
+          // Calculează un scor combinat pentru titluri (frecvență × scor)
+          const combinedTitleScores = Object.keys(titleCounts).reduce(
+            (acc, title) => {
+              acc[title] =
+                titleCounts[title] * (titleScores[title] / titleCounts[title]);
+              return acc;
+            },
+            {}
+          );
+
+          // Selectează titlul cu cel mai mare scor combinat
+          const mostRelevantTitle = Object.entries(combinedTitleScores).sort(
+            (a, b) => b[1] - a[1]
+          )[0]?.[0];
+
+          // Similar pentru locații
           const locationCounts = events.reduce((acc, event) => {
             if (event.location) {
               acc[event.location] = (acc[event.location] || 0) + 1;
@@ -292,24 +368,46 @@ export default function EventModal() {
             return acc;
           }, {});
 
-          const mostCommonTitle = Object.entries(titleCounts).sort(
-            (a, b) => b[1] - a[1]
-          )[0]?.[0];
-          const mostCommonLocation = Object.entries(locationCounts).sort(
-            (a, b) => b[1] - a[1]
-          )[0]?.[0];
+          const locationScores = events.reduce((acc, event) => {
+            if (event.location) {
+              if (!acc[event.location]) acc[event.location] = 0;
+              acc[event.location] += event.score;
+            }
+            return acc;
+          }, {});
+
+          const combinedLocationScores = Object.keys(locationCounts).reduce(
+            (acc, location) => {
+              acc[location] =
+                locationCounts[location] *
+                (locationScores[location] / locationCounts[location]);
+              return acc;
+            },
+            {}
+          );
+
+          const mostRelevantLocation = Object.entries(
+            combinedLocationScores
+          ).sort((a, b) => b[1] - a[1])[0]?.[0];
 
           return {
             category,
             count: events.length,
-            suggestedTitle: mostCommonTitle || category,
-            suggestedLocation: mostCommonLocation || "",
-            events: events.sort(
-              (a, b) => dayjs(b.day).valueOf() - dayjs(a.day).valueOf()
-            ),
+            averageScore,
+            totalScore,
+            suggestedTitle: mostRelevantTitle || category,
+            suggestedLocation: mostRelevantLocation || "",
+            events: sortedEvents,
           };
         })
-        .sort((a, b) => b.count - a.count);
+        // Sortează categoriile după scorul total și apoi după numărul de evenimente
+        .sort((a, b) => {
+          if (Math.abs(b.averageScore - a.averageScore) > 1) {
+            return b.averageScore - a.averageScore;
+          } else {
+            return b.count - a.count;
+          }
+        });
 
       setSuggestions(categoryFrequency);
       setCurrentSuggestionIndex(0);
@@ -366,7 +464,7 @@ export default function EventModal() {
           </h1>
           <div className="flex items-center">
             <button
-              onClick={closeWithAnimation}
+              onClick={() => setShowEventModal(false)}
               className="cursor-pointer mr-4"
               type="button"
             >
@@ -522,7 +620,7 @@ export default function EventModal() {
                         {reminderOptions.map((option) => (
                           <div
                             key={option.value}
-                            className={`flex items-center gap-2 px-4 py-2 hover:bg-gray-100 cursor-pointer ${
+                            className={`flex items-center gap-2 px-2 py-1 hover:bg-gray-100 cursor-pointer ${
                               (reminderEnabled &&
                                 option.value === reminderTime) ||
                               (!reminderEnabled && option.value === 0)
@@ -589,7 +687,7 @@ export default function EventModal() {
               ""
             )}
             <button
-              onClick={closeWithAnimation}
+              onClick={() => setShowEventModal(false)}
               className="transition-all  active:bg-gray-50 cursor-pointer border px-4 h-10 shadow-custom border-gray-200 rounded-full mr-2"
               type="button"
             >

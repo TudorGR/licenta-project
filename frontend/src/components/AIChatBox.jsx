@@ -35,15 +35,50 @@ const AIChatBox = ({ onClose }) => {
   // Get currentUser from AuthContext instead
   const { currentUser } = useContext(AuthContext);
 
-  // Update the initial message using currentUser instead of user
-  const [messages, setMessages] = useState([
-    {
-      type: "system",
-      text: currentUser?.name
-        ? `Hi ${currentUser.name}! How can I help you with your calendar?`
-        : "Hi! How can I help you with your calendar?",
-    },
-  ]);
+  // Load saved messages from localStorage if available
+  const getInitialMessages = () => {
+    if (!currentUser?.id)
+      return [
+        {
+          type: "system",
+          text: "Hi! How can I help you with your calendar?",
+        },
+      ];
+
+    try {
+      const savedMessages = localStorage.getItem(
+        `chat_messages_${currentUser.id}`
+      );
+      if (savedMessages) {
+        return JSON.parse(savedMessages);
+      }
+    } catch (error) {
+      console.error("Error loading saved messages:", error);
+    }
+
+    // Default initial message if no saved messages
+    return [
+      {
+        type: "system",
+        text: currentUser?.name
+          ? `Hi ${currentUser.name}! How can I help you with your calendar?`
+          : "Hi! How can I help you with your calendar?",
+      },
+    ];
+  };
+
+  // Update the messages state with the loaded messages
+  const [messages, setMessages] = useState(getInitialMessages);
+
+  // Save messages to localStorage whenever they change
+  useEffect(() => {
+    if (currentUser?.id && messages.length > 0) {
+      localStorage.setItem(
+        `chat_messages_${currentUser.id}`,
+        JSON.stringify(messages)
+      );
+    }
+  }, [messages, currentUser?.id]);
 
   const [input, setInput] = useState("");
   const inputRef = useRef(null);
@@ -67,7 +102,6 @@ const AIChatBox = ({ onClose }) => {
     );
   };
 
-  // Replace the speech recognition implementation with react-speech-recognition
   const {
     transcript,
     listening: isListening,
@@ -79,6 +113,16 @@ const AIChatBox = ({ onClose }) => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, showSuggestions]);
+
+  // NEW EFFECT: Scroll to bottom on initial load with a slight delay
+  // This ensures the chat box opens with the most recent messages visible
+  useEffect(() => {
+    const scrollTimeout = setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+    }, 0);
+
+    return () => clearTimeout(scrollTimeout);
+  }, []); // Empty dependency array means this runs once on mount
 
   // Modified useEffect for input focus - don't focus on initial render for mobile
   useEffect(() => {
@@ -139,18 +183,27 @@ const AIChatBox = ({ onClose }) => {
     }
   }, [savedEvents]);
 
-  // Add a new function to handle resetting the chat
+  // Update the handleStartOver function to also clear localStorage
   const handleStartOver = () => {
-    setMessages([
-      {
-        type: "system",
-        text: currentUser?.name
-          ? `Hi ${currentUser.name}! How can I help you with your calendar?`
-          : "Hi! How can I help you with your calendar?",
-      },
-    ]);
+    const initialMessage = {
+      type: "system",
+      text: currentUser?.name
+        ? `Hi ${currentUser.name}! How can I help you with your calendar?`
+        : "Hi! How can I help you with your calendar?",
+    };
+
+    setMessages([initialMessage]);
     setInput("");
     setSuggestions([]);
+
+    // Clear saved messages in localStorage
+    if (currentUser?.id) {
+      localStorage.setItem(
+        `chat_messages_${currentUser.id}`,
+        JSON.stringify([initialMessage])
+      );
+    }
+
     fetchEventSuggestions(); // Fetch fresh suggestions
   };
 
@@ -325,10 +378,13 @@ const AIChatBox = ({ onClose }) => {
     const messageToSend = customMessage || input;
     if (!messageToSend.trim()) return;
 
-    // Add user message to chat
     setMessages((prev) => [...prev, { type: "user", text: messageToSend }]);
 
     setInput("");
+    // Reset textarea height after sending
+    if (inputRef.current) {
+      inputRef.current.style.height = "auto";
+    }
     setLoading(true);
 
     try {
@@ -339,6 +395,7 @@ const AIChatBox = ({ onClose }) => {
         text: messageToSend,
         workingHoursStart,
         workingHoursEnd,
+        userId: currentUser.id, // Add the user ID from AuthContext
       });
 
       if (response.data.intent === "create_event") {
@@ -566,7 +623,7 @@ const AIChatBox = ({ onClose }) => {
           {message || `Here are suggested times for "${eventData.title}":`}
         </div>
         <div className="mt-2 mb-2">
-          <div className="flex flex-row gap-1 items-center">
+          <div className="flex flex-row gap-1 flex-wrap items-center">
             {suggestedSlots.length == 0 ? (
               <div className="text-xs text-gray-500">No time slots found.</div>
             ) : (
@@ -592,7 +649,7 @@ const AIChatBox = ({ onClose }) => {
               <div className="relative inline-block">
                 <button
                   onClick={() => setShowAllSlots(!showAllSlots)}
-                  className="py-1 overflow-x-scroll rounded  text-gray-800 flex items-center"
+                  className="py-1 px-2 overflow-x-scroll rounded  bg-gray-100 hover:bg-gray-200 transition-all text-gray-800 flex items-center"
                 >
                   {suggestedSlots.slice(3).length}
                   {showAllSlots ? "▲" : "▼"}
@@ -600,14 +657,14 @@ const AIChatBox = ({ onClose }) => {
 
                 {/* Dropdown menu for all slots */}
                 {showAllSlots && (
-                  <div className="shadow-custom absolute z-10 mt-1 right-0 bg-white rounded-md border border-gray-200 py-1 w-40 max-h-100 overflow-scroll">
+                  <div className="shadow-custom absolute z-10 mt-1 -right-8 bg-white rounded-md border border-gray-200 py-1 max-h-70 overflow-scroll">
                     {suggestedSlots.slice(3).map((slot, index) => (
                       <button
                         key={index + 3}
                         onClick={() => handleSelectSlot(slot)}
-                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        className="block text-nowrap w-full text-left px-2 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       >
-                        {slot.timeStart} · {slot.timeEnd}
+                        {slot.timeStart} - {slot.timeEnd}
                       </button>
                     ))}
                   </div>
@@ -740,7 +797,7 @@ const AIChatBox = ({ onClose }) => {
                   className="inline-block text-nowrap px-2 py-0.5 rounded text-xs text-white "
                   style={{
                     backgroundColor:
-                      darkCategoryColors[selectedEvent.category] || "#9E9E9E",
+                      categoryColors[selectedEvent.category] || "#9E9E9E",
                   }}
                 >
                   {selectedEvent.category}
@@ -1104,11 +1161,12 @@ const AIChatBox = ({ onClose }) => {
             }, 300);
           }}
           disabled={loading || !browserSupportsSpeechRecognition}
-          className={`transition align-self-end relative ${
+          className={`transition h-full align-self-end relative ${
             isListening ? "text-blue-500" : ""
           }`}
           title="Press and hold to record voice message"
         >
+          <div className="absolute top-0 z-15 cursor-pointer w-full h-full rounded-r-full"></div>
           <img
             src={micIcon}
             className={`h-6 w-6 mx-2 ${

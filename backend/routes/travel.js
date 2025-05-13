@@ -78,7 +78,7 @@ router.post("/calculate-travel-time", async (req, res) => {
   } catch (error) {
     console.error("Error calculating travel time:", error);
     res.status(500).json({
-      error: "Failed to calculate travel time",
+      error: "Error",
       message: error.message,
     });
   }

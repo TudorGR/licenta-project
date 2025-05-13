@@ -107,12 +107,12 @@ const TravelTimeIndicator = ({ origin, destination, timeBetween }) => {
 
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.error || "Failed to calculate travel time");
+          throw new Error(errorData.error || "Error");
         }
 
         const data = await response.json();
         if (!data.driving && !data.walking && !data.transit && !data.cycling) {
-          setError("Could not calculate travel times");
+          setError("Error");
         } else {
           // Store in cache for future use
           storeInCache(cacheKey, data);
@@ -122,7 +122,7 @@ const TravelTimeIndicator = ({ origin, destination, timeBetween }) => {
         setLoading(false);
       } catch (error) {
         console.error("Error fetching travel times:", error);
-        setError(error.message || "Failed to calculate travel time");
+        setError(error.message || "Error");
         setLoading(false);
       }
     };

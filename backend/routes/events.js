@@ -11,10 +11,6 @@ dotenv.config();
 // Extend dayjs with the weekOfYear plugin
 dayjs.extend(weekOfYear);
 
-import Groq from "groq-sdk";
-
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
 const router = express.Router();
 
 // Apply auth middleware to protect event routes

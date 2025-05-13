@@ -19,14 +19,12 @@ const TOTAL_HEIGHT = TIME_SLOT_HEIGHT * 24;
 
 const DayWeek = ({
   day,
-  index,
   dayIndex,
   isDraggingAcrossDays,
   draggedEvent,
   currentDragDayIndex,
   onStartEventDrag,
   onEventDrag,
-  onEventDragEnd,
 }) => {
   const timeGridRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -47,23 +45,18 @@ const DayWeek = ({
     setSelectedEvent,
     setTimeStart,
     setTimeEnd,
-    selectedEvent,
     selectedHeatmapCategories,
     dispatchEvent,
     savedEvents,
     loading,
     showHeatmap,
-    workingHoursStart,
-    workingHoursEnd,
     showWeather,
-    showLocalEvents,
     userCity,
   } = useContext(Context);
 
   const [isDraggingEvent, setIsDraggingEvent] = useState(false);
   const [mouseDownPos, setMouseDownPos] = useState(null);
   const [hasMoved, setHasMoved] = useState(false);
-  const [localEvents, setLocalEvents] = useState([]);
   const [isSmallScreen, setIsSmallScreen] = useState(false);
 
   const calculateTimePosition = () => {
@@ -246,21 +239,6 @@ const DayWeek = ({
   }, []);
 
   useEffect(() => {
-    if (showLocalEvents) {
-      api
-        .getLocalEvents(userCity)
-        .then((events) => {
-          setLocalEvents(events);
-        })
-        .catch((error) => {
-          console.error("Error fetching local events:", error);
-        });
-    } else {
-      setLocalEvents([]);
-    }
-  }, [showLocalEvents, userCity]);
-
-  useEffect(() => {
     const checkScreenSize = () => {
       setIsSmallScreen(window.innerWidth < 768);
     };
@@ -307,14 +285,6 @@ const DayWeek = ({
       (evt) => dayjs(evt.day).format("DD-MM-YY") === day.format("DD-MM-YY")
     );
   }, [savedEvents, day]);
-
-  const dayLocalEvents = useMemo(() => {
-    if (!showLocalEvents || !localEvents.length) return [];
-
-    return localEvents.filter((event) => {
-      return dayjs(event.day).format("DD-MM-YY") === day.format("DD-MM-YY");
-    });
-  }, [localEvents, day, showLocalEvents]);
 
   useEffect(() => {
     if (timeGridRef.current) {
@@ -388,48 +358,6 @@ const DayWeek = ({
     );
   };
 
-  const getCategoryCounts = () => {
-    if (!dayEvents || dayEvents.length === 0) return [];
-
-    const categoryData = {};
-    let totalDuration = 0;
-
-    const getWorkingMinutes = (start, end) => {
-      const [startHour, startMin] = start.split(":").map(Number);
-      const [endHour, endMin] = end.split(":").map(Number);
-      return endHour * 60 + endMin - (startHour * 60 + startMin);
-    };
-
-    const workingMinutes = getWorkingMinutes(
-      workingHoursStart || "09:00",
-      workingHoursEnd || "17:00"
-    );
-
-    dayEvents.forEach((event) => {
-      const category = event.category || "None";
-      if (!categoryData[category]) {
-        categoryData[category] = { count: 0, duration: 0 };
-      }
-
-      const eventDuration =
-        getTimeSlot(event.timeEnd) - getTimeSlot(event.timeStart);
-      categoryData[category].count += 1;
-      categoryData[category].duration += eventDuration;
-      totalDuration += eventDuration;
-    });
-
-    return Object.entries(categoryData)
-      .map(([category, { count, duration }]) => ({
-        category,
-        count,
-        duration,
-        percentage: totalDuration > 0 ? duration / totalDuration : 0,
-        workingHoursPercentage:
-          workingMinutes > 0 ? Math.min(duration / workingMinutes, 1) : 0,
-      }))
-      .sort((a, b) => b.duration - a.duration);
-  };
-
   const getConsecutiveEventsWithLocations = (events) => {
     // Sort events by start time
     const sortedEvents = [...events].sort((a, b) => {
@@ -463,8 +391,7 @@ const DayWeek = ({
           ).getTime();
           const timeBetween = (nextStartTime - currentEndTime) / (1000 * 60);
 
-          // Consider events consecutive if they're less than 3 hours apart
-          if (timeBetween <= 180 && timeBetween > 0) {
+          if (timeBetween > 0) {
             pairs.push({
               firstEvent: currentEvent,
               secondEvent: nextEvent,
@@ -863,66 +790,6 @@ const DayWeek = ({
                   </div>
                 );
               })}
-              {showLocalEvents &&
-                dayLocalEvents.map((event) => {
-                  const { timeStart, timeEnd } = event;
-                  const eventPosition = positionEvent(timeStart, timeEnd);
-
-                  return (
-                    <div
-                      key={`local-event-${event.title}-${timeStart}`}
-                      className="local-event"
-                      style={{
-                        position: "absolute",
-                        top: eventPosition.top,
-                        height: eventPosition.height,
-                        left: 0,
-                        width: "100%",
-                        padding: "0px 4px 0px 0px",
-                        boxSizing: "border-box",
-                        pointerEvents: "none", // Makes the event "ghost-like"
-                        opacity: 0.75, // Increased opacity for better visibility
-                        zIndex: 2,
-                      }}
-                    >
-                      <div
-                        className="relative  pr-0.5 py-0 overflow-hidden"
-                        style={{
-                          backgroundColor: "#f3f4f6", // Lighter background
-                          height: "100%",
-                          position: "relative",
-                          border: "2px dashed #6b7280", // Thicker, more visible border
-                          boxShadow: "0 1px 3px rgba(0,0,0,0.1)", // Subtle shadow
-                        }}
-                      >
-                        <div className="relative flex items-start h-full">
-                          <div
-                            className="text-xs ml-0.5 overflow-hidden whitespace-nowrap flex justify-between items-center gap-1 h-full"
-                            style={{ width: "100%" }}
-                          >
-                            <div className="flex flex-col justify-center h-full w-full bg-white bg-opacity-70 px-1 rounded">
-                              <span className="truncate font-semibold text-gray-800">
-                                {event.title}
-                              </span>
-                              <div className="flex items-center gap-1">
-                                <div className="w-2 h-2 rounded-full bg-gray-500"></div>{" "}
-                                {/* Indicator dot */}
-                                <div className="font-medium text-xs text-nowrap overflow-clip text-gray-700">
-                                  {`${timeStart} · ${timeEnd}`}
-                                </div>
-                              </div>
-                              {event.location && (
-                                <div className="text-gray-600 text-xs truncate">
-                                  {event.location}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
             </>
           )}
         </div>

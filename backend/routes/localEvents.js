@@ -12,7 +12,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 router.get("/:city", async (req, res) => {
   try {
     const { city } = req.params;
-    const { timeframe = "this week" } = req.query;
+    const { timeframe = "this week", startDate, endDate } = req.query;
 
     const model = genAI.getGenerativeModel({
       model: "gemini-2.0-flash",
@@ -21,20 +21,26 @@ router.get("/:city", async (req, res) => {
       tools: [{ googleSearch: {} }],
     });
 
+    // Format date context
+    const today = dayjs();
+
     const prompt = `
       What events are happening in ${city} ${timeframe}.
+      Today's date is ${today.format("YYYY-MM-DD")}.
       Return ONLY a JSON array with the following structure for each event:
       [
         {
           "title": "Event Name",
           "description": "Short event description",
-          "timeStart": "HH:MM", (24-hour format)
-          "timeEnd": "HH:MM", (24-hour format)
-          "day": "YYYY-MM-DD", (date of event)
+          "timeStart": "HH:MM", (24-hour format, if unknown use "00:00")
+          "timeEnd": "HH:MM", (24-hour format, if unknown use "23:59")
+          "day": "YYYY-MM-DD", (date of event, must be valid date)
           "location": "Event venue/location",
           "category": "One of: Concert, Sports, Art, Food, Conference, Festival, Other"
         }
       ]
+      Ensure all events have accurate dates in YYYY-MM-DD format.
+      Include only events that occur within the specified date range.
       Do not include any explanatory text, only return valid JSON.
     `;
 
@@ -54,8 +60,8 @@ router.get("/:city", async (req, res) => {
     // Add default values for time fields if not available
     events = events.map((event) => {
       // Default times if not available
-      if (!event.timeStart) event.timeStart = "12:00";
-      if (!event.timeEnd) event.timeEnd = "13:00";
+      if (!event.timeStart) event.timeStart = "00:00";
+      if (!event.timeEnd) event.timeEnd = "23:59";
 
       // Ensure day is in the correct format
       if (!event.day) {

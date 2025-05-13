@@ -13,18 +13,18 @@ router.post("/smart-suggestions", async (req, res) => {
     const suggestions = [];
 
     // Get events from the past month
-    const oneMonthAgo = today.subtract(1, "month");
+    const twoMonthsAgo = today.subtract(2, "month");
     const pastMonthEvents = pastEvents.filter(
       (event) =>
-        dayjs(event.day).isAfter(oneMonthAgo) ||
-        dayjs(event.day).isSame(oneMonthAgo)
+        dayjs(event.day).isAfter(twoMonthsAgo) ||
+        dayjs(event.day).isSame(twoMonthsAgo)
     );
 
     // 1. CREATE_EVENT suggestions
     createEventSuggestions(suggestions, pastMonthEvents, futureEvents, today);
 
     // 2. FIND_EVENT suggestions
-    findEventSuggestions(suggestions, pastMonthEvents);
+    findEventSuggestions(suggestions, pastMonthEvents, futureEvents, today);
 
     // 3. LOCAL_EVENTS suggestions
     localEventSuggestions(suggestions, pastMonthEvents, today);
@@ -52,7 +52,7 @@ function createEventSuggestions(
   // Group past events by category to find common event types
   const eventsByCategory = {};
   pastMonthEvents.forEach((event) => {
-    const category = event.category || "None";
+    const category = event.category || "Other";
     if (!eventsByCategory[category]) {
       eventsByCategory[category] = [];
     }
@@ -66,7 +66,7 @@ function createEventSuggestions(
     .slice(0, 3); // Get top 3 categories
 
   categoryCounts.forEach(({ category }) => {
-    if (category === "None") return;
+    if (category === "Other") return;
 
     const categoryEvents = eventsByCategory[category];
     const titleCounts = {};
@@ -108,11 +108,25 @@ function createEventSuggestions(
   });
 }
 
-function findEventSuggestions(suggestions, pastMonthEvents) {
-  // Get unique titles from past month events
-  const uniqueTitles = [
-    ...new Set(pastMonthEvents.map((event) => event.title)),
-  ];
+function findEventSuggestions(
+  suggestions,
+  pastMonthEvents,
+  futureEvents,
+  today
+) {
+  // Filter future events to get only those within the next month
+  const oneMonthFromNow = today.add(1, "month");
+  const nextMonthEvents = futureEvents.filter(
+    (event) =>
+      dayjs(event.day).isBefore(oneMonthFromNow) ||
+      dayjs(event.day).isSame(oneMonthFromNow)
+  );
+
+  // Combine past and future events for title analysis
+  const relevantEvents = [...pastMonthEvents, ...nextMonthEvents];
+
+  // Get unique titles from relevant events
+  const uniqueTitles = [...new Set(relevantEvents.map((event) => event.title))];
 
   // If we have titles, randomly select up to 2 to suggest searching for
   if (uniqueTitles.length > 0) {

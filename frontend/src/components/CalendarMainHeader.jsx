@@ -1,30 +1,16 @@
 import React, { useContext, useState, useEffect } from "react";
 import Context from "../context/Context";
 import { AuthContext } from "../context/AuthContext";
-import dayjs from "dayjs";
 import CreateEventButton from "./CreateEventButton";
-import left from "../assets/chevron-left.svg";
-import right from "../assets/chevron-right.svg";
 import logoutIcon from "../assets/log-out.svg";
 
 const CalendarHeader = ({ onOpenAIModal }) => {
-  const {
-    monthIndex,
-    setMonthIndex,
-    setSelectedDay,
-    isMonthView,
-    setSelectedWeek,
-    selectedWeek,
-    isDayView,
-    selectedDay,
-    isWeekView,
-  } = useContext(Context);
   const { currentUser, logout } = useContext(AuthContext);
   const [isSmallScreen, setIsSmallScreen] = useState(false);
 
   useEffect(() => {
     const checkScreenSize = () => {
-      setIsSmallScreen(window.innerWidth < 640);
+      setIsSmallScreen(window.innerWidth < 540);
     };
 
     checkScreenSize();

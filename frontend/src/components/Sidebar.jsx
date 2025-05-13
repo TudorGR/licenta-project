@@ -95,7 +95,7 @@ const Sidebar = ({ onClose }) => {
             <div className="w-full rounded-sm p-0">
               {(isWeekView || isDayView) && (
                 <div className="flex items-center justify-between border-y-1 border-gray-200 pl-4 h-12 ">
-                  <span className="text-sm">Show weather</span>
+                  <span className="text-sm">Weather</span>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
@@ -125,7 +125,7 @@ const Sidebar = ({ onClose }) => {
 
               {isWeekView && (
                 <div className="flex items-center justify-between border-b-1 border-gray-200 pl-4 h-12">
-                  <span className="text-sm">Show heatmap</span>
+                  <span className="text-sm">Heatmap</span>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
@@ -158,7 +158,7 @@ const Sidebar = ({ onClose }) => {
       )}
 
       {showHeatmap && (
-        <div className="w-full border border-gray-200 rounded-sm overflow-hidden">
+        <div className="w-full rounded-sm overflow-scroll">
           <button
             onClick={() => setDropdown(!dropdown)}
             className="outline-0 text-sm font-medium h-8 w-full text-center cursor-pointer hover:bg-gray-100 transition-all flex items-center justify-center gap-2"

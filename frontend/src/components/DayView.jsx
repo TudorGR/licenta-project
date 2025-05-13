@@ -1,22 +1,20 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
-import toast from "react-hot-toast"; // Add this import
 import Context from "../context/Context";
 import dayjs from "dayjs";
 import bellIcon from "../assets/bell.svg";
 import ContextMenu from "./ContextMenu";
 import TravelTimeIndicator, {
   clearTravelTimeCache,
-} from "./TravelTimeIndicator"; // Add .clearTravelTimeCache to the import
-import WeatherIndicator from "./WeatherIndicator"; // Add this import
+} from "./TravelTimeIndicator";
+import WeatherIndicator from "./WeatherIndicator";
 import {
   categoryColors,
   lightCategoryColors,
   darkCategoryColors,
 } from "../utils/categoryColors";
-import { getCategoryIcon } from "../utils/categoryIcons"; // Add this import
+import { getCategoryIcon } from "../utils/categoryIcons";
 
 const TIME_SLOT_HEIGHT = 50;
-const TOTAL_HEIGHT = TIME_SLOT_HEIGHT * 24;
 
 const DayView = () => {
   const [currentTimeString, setCurrentTimeString] = useState("");
@@ -65,7 +63,6 @@ const DayView = () => {
     y: 0,
     eventId: null,
   });
-  const [hoveredEventId, setHoveredEventId] = useState(null);
   const [isDraggingEvent, setIsDraggingEvent] = useState(false);
   const [draggedEvent, setDraggedEvent] = useState(null);
   const [dragOffset, setDragOffset] = useState(0);
@@ -98,7 +95,7 @@ const DayView = () => {
     const interval = setInterval(updateTimePosition, 15000);
 
     return () => clearInterval(interval);
-  }, []); // No dependencies needed as calculateTimePosition doesn't depend on props/state
+  }, []);
 
   useEffect(() => {
     const handleGlobalClick = (e) => {
@@ -267,8 +264,6 @@ const DayView = () => {
 
           // Clear travel time cache when events are moved
           TravelTimeIndicator.clearTravelTimeCache();
-
-          // Overlap detection kept but toast notification removed
         } else {
           setTimeStart(draggedEvent.timeStart);
           setTimeEnd(draggedEvent.timeEnd);
@@ -278,7 +273,6 @@ const DayView = () => {
         }
       } catch (error) {
         console.error("Error updating event position:", error);
-        toast.error("Failed to update event position", { duration: 3000 });
       } finally {
         // Always reset drag states regardless of outcome
         resetDragStates();
@@ -310,21 +304,6 @@ const DayView = () => {
     }, 0);
   };
 
-  const handleCloseContextMenu = () => {
-    setContextMenu((prev) => ({ ...prev, isClosing: true }));
-
-    // Wait for animation to complete before fully closing
-    setTimeout(() => {
-      setContextMenu({
-        isOpen: false,
-        x: 0,
-        y: 0,
-        eventId: null,
-        isClosing: false,
-      });
-    }, 150); // Match this with your transition duration
-  };
-
   const positionEvent = (startTime, endTime) => {
     const startMinutes = getTimeSlot(startTime);
     const endMinutes = getTimeSlot(endTime);
@@ -350,8 +329,6 @@ const DayView = () => {
     setHasMoved(false);
 
     setSelectedEventForClick(event);
-
-    if (event.locked) return;
 
     const gridElement = e.currentTarget.closest(".relative");
     const rect = gridElement.getBoundingClientRect();
@@ -397,8 +374,7 @@ const DayView = () => {
           ).getTime();
           const timeBetween = (nextStartTime - currentEndTime) / (1000 * 60);
 
-          // Consider events consecutive if they're less than 3 hours apart
-          if (timeBetween <= 180 && timeBetween > 0) {
+          if (timeBetween > 0) {
             pairs.push({
               firstEvent: currentEvent,
               secondEvent: nextEvent,
@@ -502,8 +478,6 @@ const DayView = () => {
                   key={event.id}
                   onMouseDown={(e) => handleEventMouseDown(e, event)}
                   onContextMenu={(e) => handleContextMenu(e, event)}
-                  onMouseEnter={() => setHoveredEventId(event.id)}
-                  onMouseLeave={() => setHoveredEventId(null)}
                   className={`transition-opacity  eventt absolute left-0 ${
                     showWeather ? "w-[calc(100%-80px)]" : "w-full"
                   } cursor-pointer ${
@@ -523,7 +497,7 @@ const DayView = () => {
                     <div
                       className="w-full relative flex items-start h-full"
                       style={{
-                        borderLeft: `4px ${event.locked ? "dashed" : "solid"} ${
+                        borderLeft: `4px solid ${
                           categoryColors[event.category || "None"]
                         }`,
                       }}
@@ -709,7 +683,7 @@ const DayView = () => {
                 }}
               >
                 <div className="absolute -left-1 -top-0.75 w-2 h-2 rounded-full bg-black" />
-                <div className="absolute -left-15 -top-1.75 text-xs font-medium w-15 px-[15.5px] ">
+                <div className="absolute -left-15.5 -top-1.75 text-xs font-medium w-15 px-[15.5px] ">
                   {currentTimeString}
                 </div>
               </div>
@@ -743,9 +717,6 @@ const DayView = () => {
             }
             setContextMenu({ isOpen: false, x: 0, y: 0, eventId: null });
           }}
-          isLocked={
-            savedEvents.find((e) => e.id === contextMenu.eventId)?.locked
-          }
         />
       )}
     </div>

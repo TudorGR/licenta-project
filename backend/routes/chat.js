@@ -16,6 +16,7 @@ router.post("/", async (req, res) => {
     text,
     workingHoursStart = "08:00",
     workingHoursEnd = "20:00",
+    userId,
   } = req.body;
 
   const currentDate = dayjs().format("YYYY-MM-DD");
@@ -36,23 +37,31 @@ router.post("/", async (req, res) => {
 
   let systemPrompt = `You are a calendar assistant that outputs JSON only.
   Extract the function and it's parameters from the user message, and provide a short but useful message for completion or missing any parameters.
-  These are all your possible function: "
-createEvent(title,startTime,endTime,date)
-local_events(timeframe)
-findEvent(category,timeframe)
-unknownFuntion()"
-  Format: {function: '', parameters: ['','',...], category: "", message: ""}.
+  These are all your possible function:
+  - createEvent(title,startTime,endTime,date)
+  - local_events(timeframe)
+  - findEvent(timeframe)
+  - unknownFuntion()
+  Formats:
+  createEvent format: {'function': 'createEvent', 'parameters': [title,startTime,endTime,date], 'category': "", 'message': ""}.
+  local_events format: {'function': 'local_events', 'parameters': [timeframe], 'message': ""}.
+  findEvent format: {'function': 'findEvent', 'parameters': [timeframe], 'category': "", 'message': ""}
+  unknownFuntion format: {'message': ""}
   RULES:
+  createEvent rules:
   - if the user asks to find the best time or when to schedule it refers to createEvent function
-  - if the user asks about what events are happening, local events, or similar queries, use local_events function
-  - if the user asks about when an event will happen, or when was the last time, or to find specific events, use findEvent function
-  - for local_events, timeframe can be "today", "this week", "this month", day of week or a date
-  - for findEvent, category is gonna be the event category and timeframe is gonna be "future" or "past" depending on the users intent
   - the parameters should be in the order: title(string), startTime(24hr format), endTime(24hr format), date(YYYY-MM-DD)
+  - some valid formats are these [add a (event) today] [put (event) from 10 to 12] [when to schedule a (event)?] etc. ex: "add meeting today"
+  - ignore formats like "now", "in 2 hours", "before that", etc.
+  local_events rules:
+  - if the user asks about what events are happening, local events, or similar queries, use local_events function
+  - for local_events, timeframe can be "today", "this week", "this month", day of week or a date
+  findEvent rules:
+  - if the user asks about when an event will happen, or when was the last time, or to find specific events, use findEvent function
+  - for findEvent, category is gonna be the event category and timeframe is gonna be "future" or "past" but not explicitly mentioned
+  general rules:
   - date parameter is by default ${currentDate} if it is not specified
   - if a parameter is not specified ask for it and make the parameter empty in the list
-  - ignore formats like "now", "in 2 hours", "before that", etc.
-  - some valid formats are these [add a (event) today] [put (event) from 10 to 12] [when to schedule a (event)?] etc. ex: "add meeting today"
   - days of week map to these specific dates for the next 7 days:
     ${dateMapping.join("\n    ")}
   - when a day of week is mentioned (like "monday", "tuesday", etc.) use the corresponding date from the mapping above
@@ -67,7 +76,7 @@ unknownFuntion()"
     const response = await groq.chat.completions.create({
       messages: messages,
       model: "llama3-70b-8192",
-      response_format: { type: "json_object" },
+      // response_format: { type: "json_object" },
       temperature: 0,
     });
 
@@ -98,7 +107,8 @@ unknownFuntion()"
         const overlappingEvents = await checkEventOverlaps(
           dayValue,
           timeStart,
-          timeEnd
+          timeEnd,
+          userId
         );
 
         if (overlappingEvents.length > 0) {
@@ -118,7 +128,7 @@ unknownFuntion()"
               title: event.title,
               timeStart: event.timeStart,
               timeEnd: event.timeEnd,
-              category: event.category || "None",
+              category: event.category || "Other",
             })),
             message: `Creating "${title}" on ${dayjs(date).format(
               "YYYY-MM-DD"
@@ -148,18 +158,22 @@ unknownFuntion()"
         const title = params[0];
         const date = params[3];
         const dayValue = dayjs(date).valueOf();
-        const eventCategory = assistantResponse.category || "None";
+        const eventCategory = assistantResponse.category || "Other";
         const dayOfWeek = dayjs(date).day(); // 0 is Sunday, 6 is Saturday
 
-        // Find free slots for the day
+        // Find free slots for the day (pass userId!)
         const freeSlots = await findFreeSlotsForDay(
           dayValue,
           workingHoursStart,
-          workingHoursEnd
+          workingHoursEnd,
+          userId // <-- adaugă userId aici
         );
 
         // Get category patterns to find optimal slots
-        const categoryPatterns = await getCategoryPatterns(eventCategory);
+        const categoryPatterns = await getCategoryPatterns(
+          eventCategory,
+          userId
+        );
 
         // Find the average duration for this category (minimum 30 minutes)
         const avgDuration = categoryPatterns
@@ -231,7 +245,11 @@ unknownFuntion()"
 
       try {
         // Get events matching the category and timeframe
-        const matchingEvents = await findEventsByCategory(category, timeframe);
+        const matchingEvents = await findEventsByCategory(
+          category,
+          timeframe,
+          userId
+        );
 
         if (matchingEvents.length === 0) {
           return res.json({
@@ -257,7 +275,6 @@ unknownFuntion()"
           timeStart: event.timeStart,
           timeEnd: event.timeEnd,
           category: event.category,
-          description: event.description || "",
           location: event.location || "",
         }));
 
@@ -281,17 +298,19 @@ unknownFuntion()"
         }
 
         // Create a prompt for Groq to match the events with the user's query
+        const currentDateTime = dayjs().format("YYYY-MM-DD HH:mm");
         const matchPrompt = `You are an AI assistant that helps find the most relevant event from a list based on a user's query.
 
 User's original query: "${text}"
 Category: ${category}
 Timeframe: ${timeframe}
+Current date and time: ${currentDateTime}
 
 Available events:
 ${JSON.stringify(formattedEvents, null, 2)}
 
 Please analyze these events and determine which ONE is most relevant to the user's original query.
-Consider factors like event title, timing, description, and any specific details mentioned in the user's query.
+Consider factors like event title, timing, and any specific details mentioned in the user's query.
 
 Your response must be a JSON that follows this exact format:
 {
@@ -308,6 +327,18 @@ Your response must be a JSON that follows this exact format:
         });
 
         const matchResult = JSON.parse(groqResponse.choices[0].message.content);
+
+        // Check if eventId is null or undefined
+        if (!matchResult.eventId) {
+          return res.json({
+            intent: "find_event_result",
+            events: formattedEvents,
+            selectedEvent: null,
+            category: category,
+            timeframe: timeframe,
+            message: matchResult.message || "No matching event found.",
+          });
+        }
 
         // Find the selected event
         const selectedEvent = formattedEvents.find(
@@ -343,14 +374,17 @@ Your response must be a JSON that follows this exact format:
 });
 
 // Helper function to check for overlapping events
-async function checkEventOverlaps(day, timeStart, timeEnd) {
+async function checkEventOverlaps(day, timeStart, timeEnd, userId) {
   try {
-    // Find events on the same day
+    // Find events on the same day FOR THE CURRENT USER
     const eventsOnSameDay = await Event.findAll({
-      where: { day: day.toString() },
+      where: {
+        day: day.toString(),
+        userId: userId, // Add user ID filter
+      },
     });
 
-    // Check for time overlaps using the same logic as elsewhere in the codebase
+    // Rest of the function remains the same...
     const getTimeInMinutes = (time) => {
       const [hours, minutes] = time.split(":").map(Number);
       return hours * 60 + minutes;
@@ -359,12 +393,10 @@ async function checkEventOverlaps(day, timeStart, timeEnd) {
     const newStartMinutes = getTimeInMinutes(timeStart);
     const newEndMinutes = getTimeInMinutes(timeEnd);
 
-    // Filter events that overlap with the proposed time slot
     return eventsOnSameDay.filter((event) => {
       const eventStartMinutes = getTimeInMinutes(event.timeStart);
       const eventEndMinutes = getTimeInMinutes(event.timeEnd);
 
-      // Standard interval overlap check
       return (
         newStartMinutes < eventEndMinutes && eventStartMinutes < newEndMinutes
       );
@@ -379,12 +411,13 @@ async function checkEventOverlaps(day, timeStart, timeEnd) {
 async function findFreeSlotsForDay(
   day,
   workingHoursStart = "08:00",
-  workingHoursEnd = "20:00"
+  workingHoursEnd = "20:00",
+  userId
 ) {
   try {
-    // Get all events for the day
+    // Get all events for the day FOR THE CURRENT USER
     const eventsOnDay = await Event.findAll({
-      where: { day: day.toString() },
+      where: { day: day.toString(), userId: userId }, // <-- filtrează după userId
     });
 
     // Convert events to time ranges (in minutes)
@@ -441,15 +474,16 @@ async function findFreeSlotsForDay(
 }
 
 // Helper function to get category patterns from database or cache
-async function getCategoryPatterns(category) {
+async function getCategoryPatterns(category, userId) {
   try {
     const today = dayjs();
     const threeMonthsAgo = today.subtract(3, "month").valueOf();
 
-    // Get all events in this category from past month
+    // Get all events in this category from past month FOR THE CURRENT USER
     const pastEvents = await Event.findAll({
       where: {
         category: category,
+        userId: userId, // Add user ID filter
         day: {
           [Op.between]: [threeMonthsAgo, today.valueOf()],
         },
@@ -612,30 +646,31 @@ async function getLocalEvents(city, timeframe) {
 }
 
 // Helper function to find events by category and time range
-async function findEventsByCategory(category, timeframe) {
+async function findEventsByCategory(category, timeframe, userId) {
   try {
-    const now = dayjs(); // Current date and time
-    const today = now.startOf("day"); // Start of today
-    const currentTime = now.format("HH:mm"); // Current time in HH:MM format
+    const now = dayjs();
+    const today = now.startOf("day");
+    const currentTime = now.format("HH:mm");
 
     let startDate, endDate;
 
     // Determine time range based on timeframe
     if (timeframe === "future") {
-      startDate = today.subtract(1, "day").valueOf(); // Include today
+      startDate = today.subtract(1, "day").valueOf();
       endDate = today.add(3, "month").valueOf();
     } else {
       startDate = today.subtract(3, "month").valueOf();
-      endDate = today.add(1, "day").valueOf(); // Include today
+      endDate = today.add(1, "day").valueOf();
     }
 
-    // Fetch events in the specified time range
+    // Fetch events in the specified time range FOR THE CURRENT USER
     const events = await Event.findAll({
       where: {
         day: {
           [Op.between]: [startDate, endDate],
         },
         category: category,
+        userId: userId, // Add user ID filter
       },
       order: [
         ["day", "ASC"],
@@ -643,20 +678,18 @@ async function findEventsByCategory(category, timeframe) {
       ],
     });
 
-    // Filter events based on current time for today's events
+    // Rest of the function remains the same...
     return events.filter((event) => {
       const eventDay = dayjs(parseInt(event.day));
       const isToday =
         eventDay.format("YYYY-MM-DD") === today.format("YYYY-MM-DD");
 
       if (!isToday) {
-        // If not today, just check if it's before or after today
         return timeframe === "future"
           ? eventDay.isAfter(today)
           : eventDay.isBefore(today);
       }
 
-      // For today's events, compare with current time
       if (timeframe === "future") {
         return event.timeStart >= currentTime;
       } else {
@@ -668,107 +701,5 @@ async function findEventsByCategory(category, timeframe) {
     return [];
   }
 }
-
-// Get category patterns based on past month's data
-router.get("/category-patterns", async (req, res) => {
-  try {
-    const today = dayjs();
-    const oneMonthAgo = today.subtract(1, "month").valueOf();
-
-    // Fetch events from past month
-    const pastEvents = await Event.findAll({
-      where: {
-        day: {
-          [Op.between]: [oneMonthAgo, today.valueOf()],
-        },
-      },
-    });
-
-    // Process events by category
-    const categoryData = {};
-    const hourFrequency = {};
-    const dayOfWeekFrequency = {}; // New data structure for day of week patterns
-
-    pastEvents.forEach((event) => {
-      const category = event.category || "None";
-      const eventDate = dayjs(Number(event.day));
-      const dayOfWeek = eventDate.day(); // 0 is Sunday, 6 is Saturday
-
-      // Initialize category data if not exists
-      if (!categoryData[category]) {
-        categoryData[category] = {
-          count: 0,
-          totalDuration: 0,
-          averageDuration: 0,
-        };
-        hourFrequency[category] = Array(24).fill(0);
-
-        // Initialize day of week frequency data
-        dayOfWeekFrequency[category] = {
-          0: Array(24).fill(0), // Sunday
-          1: Array(24).fill(0), // Monday
-          2: Array(24).fill(0), // Tuesday
-          3: Array(24).fill(0), // Wednesday
-          4: Array(24).fill(0), // Thursday
-          5: Array(24).fill(0), // Friday
-          6: Array(24).fill(0), // Saturday
-        };
-      }
-
-      // Calculate duration in minutes
-      const startTime = event.timeStart.split(":").map(Number);
-      const endTime = event.timeEnd.split(":").map(Number);
-      const durationMinutes =
-        endTime[0] * 60 + endTime[1] - (startTime[0] * 60 + startTime[1]);
-
-      // Update category statistics
-      categoryData[category].count++;
-      categoryData[category].totalDuration += durationMinutes;
-
-      // Update hour frequency (general)
-      const startHour = startTime[0];
-      const endHour = endTime[0] + (endTime[1] > 0 ? 1 : 0); // Round up if there are minutes
-
-      for (let hour = startHour; hour < endHour; hour++) {
-        if (hour < 24) {
-          hourFrequency[category][hour]++;
-          // Also update the day-specific frequency
-          dayOfWeekFrequency[category][dayOfWeek][hour]++;
-        }
-      }
-    });
-
-    // Calculate average durations
-    Object.keys(categoryData).forEach((category) => {
-      const { count, totalDuration } = categoryData[category];
-      categoryData[category].averageDuration =
-        count > 0 ? Math.round(totalDuration / count) : 0;
-    });
-
-    // Prepare response
-    const result = {
-      categories: Object.keys(categoryData).map((category) => ({
-        name: category,
-        eventCount: categoryData[category].count,
-        averageDurationMinutes: categoryData[category].averageDuration,
-        frequencyByHour: hourFrequency[category], // General frequency
-        frequencyByDayOfWeek: {
-          sunday: dayOfWeekFrequency[category][0],
-          monday: dayOfWeekFrequency[category][1],
-          tuesday: dayOfWeekFrequency[category][2],
-          wednesday: dayOfWeekFrequency[category][3],
-          thursday: dayOfWeekFrequency[category][4],
-          friday: dayOfWeekFrequency[category][5],
-          saturday: dayOfWeekFrequency[category][6],
-        },
-      })),
-    };
-
-    res.json(result);
-  } catch (error) {
-    console.error("Error fetching category patterns:", error);
-    res.status(500).json({ error: "Failed to analyze category patterns" });
-  }
-});
 
 export default router;
