@@ -5,11 +5,73 @@ import dayjs from "dayjs";
 import Event from "../models/Event.js";
 import { Op } from "sequelize";
 import axios from "axios";
+import { jsonrepair } from "jsonrepair";
 
 dotenv.config();
 const router = express.Router();
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+// In-memory conversation history store (userId -> conversation array)
+// In production, consider moving this to a database
+const conversationHistory = new Map();
+
+// Helper function to get or initialize conversation history
+function getUserConversation(userId) {
+  if (!conversationHistory.has(userId)) {
+    conversationHistory.set(userId, []);
+  }
+  return conversationHistory.get(userId);
+}
+
+// Limit conversation history to specified number of messages
+function addMessageToHistory(userId, role, content) {
+  const history = getUserConversation(userId);
+  history.push({ role, content });
+
+  // Keep only the last 10 messages (5 exchanges)
+  const MAX_HISTORY = 10;
+  if (history.length > MAX_HISTORY) {
+    conversationHistory.set(
+      userId,
+      history.slice(history.length - MAX_HISTORY)
+    );
+  }
+}
+
+// Replace your custom safeJsonParse function with this simpler version
+function safeJsonParse(jsonString) {
+  try {
+    // First try direct parsing
+    return JSON.parse(jsonString);
+  } catch (error) {
+    // Pre-process specific date format errors before using jsonrepair
+    let preprocessed = jsonString;
+
+    // Fix the specific pattern with unclosed quotes in date values
+    // This matches patterns like: "2025-05-17] where the closing quote is missing
+    preprocessed = preprocessed.replace(/(\d{4}-\d{2}-\d{2})\]/g, '$1"]');
+
+    try {
+      // Try direct parsing after our custom fix
+      return JSON.parse(preprocessed);
+    } catch (firstRepairError) {
+      // If our custom fix didn't work, try jsonrepair
+      try {
+        const repaired = jsonrepair(preprocessed);
+        return JSON.parse(repaired);
+      } catch (repairError) {
+        // If all repair attempts fail, return a safe default
+        console.error("Failed to repair JSON:", repairError);
+        return {
+          function: "unknownFunction",
+          message:
+            "I couldn't understand that. Could you rephrase your request?",
+        };
+      }
+    }
+  }
+}
 
 router.post("/", async (req, res) => {
   const {
@@ -19,7 +81,15 @@ router.post("/", async (req, res) => {
     userId,
   } = req.body;
 
+  // Get user's conversation history
+  const history = getUserConversation(userId);
+
+  // Add the current message to history
+  addMessageToHistory(userId, "user", text);
+
   const currentDate = dayjs().format("YYYY-MM-DD");
+  const currentTime = dayjs().format("HH:mm");
+  const currentDayName = dayjs().format("dddd");
 
   // Generate date mapping for the upcoming week
   const dateMapping = [];
@@ -35,24 +105,32 @@ router.post("/", async (req, res) => {
     dateMapping.push(`${dayOfWeek}: ${formattedDate}`);
   }
 
+  // Update the system prompt to add the new function
   let systemPrompt = `You are a calendar assistant that outputs JSON only.
-  Extract the function and it's parameters from the user message, and provide a short but useful message for completion or missing any parameters.
+  Extract the function and it's parameters from the user message, and provide a short but useful message for completion, missing any parameters or just a friendly response.
   These are all your possible function:
   - createEvent(title,startTime,endTime,date)
+  - suggestTime(title,date)
   - local_events(timeframe)
   - findEvent(timeframe)
   - unknownFuntion()
   Formats:
-  createEvent format: {'function': 'createEvent', 'parameters': [title,startTime,endTime,date], 'category': "", 'message': ""}.
-  local_events format: {'function': 'local_events', 'parameters': [timeframe], 'message': ""}.
-  findEvent format: {'function': 'findEvent', 'parameters': [timeframe], 'category': "", 'message': ""}
+  createEvent format: {'function': 'createEvent', 'parameters': ["title","startTime","endTime","date"], 'category': 'category', 'message': ""}.
+  suggestTime format: {'function': 'suggestTime', 'parameters': ["title","date"], 'category': 'category', 'message': ""}.
+  local_events format: {'function': 'local_events', 'parameters': "timeframe", 'message': ""}.
+  findEvent format: {'function': 'findEvent', 'parameters': "timeframe", 'category': 'category', 'message': ""}
   unknownFuntion format: {'message': ""}
   RULES:
   createEvent rules:
-  - if the user asks to find the best time or when to schedule it refers to createEvent function
+  - if the user asks to create or add or put a specific event with complete details, use createEvent function
   - the parameters should be in the order: title(string), startTime(24hr format), endTime(24hr format), date(YYYY-MM-DD)
-  - some valid formats are these [add a (event) today] [put (event) from 10 to 12] [when to schedule a (event)?] etc. ex: "add meeting today"
-  - ignore formats like "now", "in 2 hours", "before that", etc.
+  - some valid formats are these [add a (event) today] [put (event) from 10 to 12] etc. ex: "add meeting today"
+  - start time and end time must not be empty
+  suggestTime rules:
+  - if the user asks to find the best time, for what time to schedule, or when to have an event, use suggestTime function
+  - if the user provides a title but no specific time, use suggestTime function
+  - the parameters should be in the order: title(string), date(YYYY-MM-DD)
+  - example formats: "when should I schedule a meeting?", "find a good time for my doctor appointment", "suggest time for studying"
   local_events rules:
   - if the user asks about what events are happening, local events, or similar queries, use local_events function
   - for local_events, timeframe can be "today", "this week", "this month", day of week or a date
@@ -60,27 +138,44 @@ router.post("/", async (req, res) => {
   - if the user asks about when an event will happen, or when was the last time, or to find specific events, use findEvent function
   - for findEvent, category is gonna be the event category and timeframe is gonna be "future" or "past" but not explicitly mentioned
   general rules:
-  - date parameter is by default ${currentDate} if it is not specified
+  - empty parameters are just gonna be 2 single quotes, not undefined/null
+  - date parameter is by default today: ${currentDate} if it is not specified
+  - the current day of week is: ${currentDayName}, and the time is: ${currentTime}
   - if a parameter is not specified ask for it and make the parameter empty in the list
   - days of week map to these specific dates for the next 7 days:
     ${dateMapping.join("\n    ")}
   - when a day of week is mentioned (like "monday", "tuesday", etc.) use the corresponding date from the mapping above
-  - you are gonna choose the category: Work, Education, Health & Wellness, Finance & Bills, Social & Family, Travel & Commute, Personal Tasks, Leisure & Hobbies, Other`;
+  - you must choose a category: Work, Education, Health & Wellness, Finance & Bills, Social & Family, Travel & Commute, Personal Tasks, Leisure & Hobbies, Other
+  - category parameter is mandatory, if you cannot deduce it use "Other"
+  - the response should be formatted correctly and not miss any double quotes
+  - the time must be in 24 hour format
+  
+  Consider the conversation history for context when processing the current user message, like a found event, or a created event.`;
 
-  const messages = [
-    { role: "system", content: systemPrompt },
-    { role: "user", content: `The user's message is: "${text}"` },
-  ];
+  // Build messages array with system prompt, conversation history, and current user message
+  const messages = [{ role: "system", content: systemPrompt }];
+
+  // Add previous conversation history to provide context
+  if (history.length > 1) {
+    // Skip the current message which we'll add separately
+    const previousHistory = history.slice(0, history.length - 1);
+    messages.push(...previousHistory);
+  }
+
+  // Add the current user message
+  messages.push({ role: "user", content: `The user's message is: "${text}"` });
 
   try {
     const response = await groq.chat.completions.create({
       messages: messages,
       model: "llama3-70b-8192",
       // response_format: { type: "json_object" },
-      temperature: 0,
+      temperature: 0.7,
     });
 
-    const assistantResponse = JSON.parse(response.choices[0].message.content);
+    const assistantResponse = safeJsonParse(
+      response.choices[0].message.content
+    );
 
     // Create params array from direct properties if parameters doesn't exist
     let params = assistantResponse.parameters;
@@ -93,7 +188,11 @@ router.post("/", async (req, res) => {
       ];
     }
 
-    const category = assistantResponse.category;
+    const category = assistantResponse.category || "Other";
+
+    // Generate dynamic response messages based on the intent
+    let responseMessage = assistantResponse.message;
+    let finalResponse = null;
 
     if (assistantResponse.function === "createEvent") {
       if (params && params.every(Boolean)) {
@@ -112,8 +211,19 @@ router.post("/", async (req, res) => {
         );
 
         if (overlappingEvents.length > 0) {
-          // Return overlapping events
-          return res.json({
+          // Format overlapping events for the frontend
+          const formattedOverlappingEvents = overlappingEvents.map((event) => ({
+            id: event.id,
+            title: event.title,
+            day: parseInt(event.day),
+            timeStart: event.timeStart,
+            timeEnd: event.timeEnd,
+            category: event.category || "Other",
+            location: event.location || "",
+          }));
+
+          // Create proper response for event overlap
+          finalResponse = {
             intent: "event_overlap",
             eventData: {
               title: title,
@@ -121,52 +231,100 @@ router.post("/", async (req, res) => {
               day: dayValue,
               timeStart: timeStart,
               timeEnd: timeEnd,
-              category: category || "Other", // Add default "Other" category
+              category: category,
             },
-            overlappingEvents: overlappingEvents.map((event) => ({
-              id: event.id,
-              title: event.title,
-              timeStart: event.timeStart,
-              timeEnd: event.timeEnd,
-              category: event.category || "Other",
-            })),
+            overlappingEvents: formattedOverlappingEvents,
             message: `Creating "${title}" on ${dayjs(date).format(
               "YYYY-MM-DD"
             )} from ${timeStart} to ${timeEnd} would overlap with ${
               overlappingEvents.length
             } existing event(s).`,
-          });
+          };
+
+          // Store the formatted message in history
+          addMessageToHistory(
+            userId,
+            "assistant",
+            JSON.stringify({
+              function: "createEvent",
+              message: finalResponse.message,
+            })
+          );
+
+          return res.json(finalResponse);
+        } else {
+          // Format the response message using the front-end format
+          const formattedDate = dayjs(dayValue).format("dddd, MMMM D");
+          responseMessage = `Event created: ${title} on ${formattedDate} at ${timeStart}.`;
+
+          finalResponse = {
+            intent: "create_event",
+            eventData: {
+              title: title,
+              description: "",
+              day: dayValue,
+              timeStart: timeStart,
+              timeEnd: timeEnd,
+              category: category,
+            },
+            message: responseMessage,
+          };
+
+          // Store the formatted message in history
+          addMessageToHistory(
+            userId,
+            "assistant",
+            JSON.stringify({
+              function: "createEvent",
+              message: responseMessage,
+            })
+          );
+
+          return res.json(finalResponse);
+        }
+      }
+    }
+
+    if (assistantResponse.function === "suggestTime") {
+      const params = assistantResponse.parameters;
+      if (params && params.length >= 2) {
+        const title = params[0];
+        const date = params[1];
+
+        // Add check for empty title
+        if (!title) {
+          // Use the message provided by the AI or a fallback
+          responseMessage =
+            assistantResponse.message ||
+            "Please provide a title for the event I should find time for.";
+
+          finalResponse = {
+            intent: "unknown",
+            message: responseMessage,
+          };
+
+          addMessageToHistory(
+            userId,
+            "assistant",
+            JSON.stringify({
+              function: "suggestTime",
+              message: responseMessage,
+            })
+          );
+
+          return res.json(finalResponse);
         }
 
-        // No overlaps, return event data for creation
-        return res.json({
-          intent: "create_event",
-          eventData: {
-            title: title,
-            description: "",
-            day: dayValue,
-            timeStart: timeStart,
-            timeEnd: timeEnd,
-            category: category,
-          },
-          message: `I can create an event "${title}" on ${dayjs(date).format(
-            "YYYY-MM-DD"
-          )} from ${timeStart} to ${timeEnd}.`,
-        });
-      } else if (params[0] && !params[1] && !params[2] && params[3]) {
-        // User provided title and date, but no time slots - suggest optimal times
-        const title = params[0];
-        const date = params[3];
         const dayValue = dayjs(date).valueOf();
         const eventCategory = assistantResponse.category || "Other";
         const dayOfWeek = dayjs(date).day(); // 0 is Sunday, 6 is Saturday
 
-        // Find free slots for the day (pass userId!)
+        // Find free slots for the day
         const freeSlots = await findFreeSlotsForDay(
           dayValue,
           workingHoursStart,
           workingHoursEnd,
-          userId // <-- adaugă userId aici
+          userId
         );
 
         // Get category patterns to find optimal slots
@@ -192,8 +350,12 @@ router.post("/", async (req, res) => {
           categoryPatterns
         );
 
-        // Return all suggestions instead of just top 3
-        return res.json({
+        // Message for time suggestions
+        responseMessage = `Here are the best times to schedule "${title}" on ${dayjs(
+          date
+        ).format("YYYY-MM-DD")} based on your patterns.`;
+
+        finalResponse = {
           intent: "time_suggestions",
           eventData: {
             title: title,
@@ -208,10 +370,40 @@ router.post("/", async (req, res) => {
             score: slot.score,
             isRecommended: index < 3, // Mark top 3 as recommended
           })),
-          message: `Here are the best times to schedule "${title}" on ${dayjs(
-            date
-          ).format("YYYY-MM-DD")} based on your patterns.`,
-        });
+          message: responseMessage,
+        };
+
+        // Store the suggestion message in history
+        addMessageToHistory(
+          userId,
+          "assistant",
+          JSON.stringify({
+            function: "suggestTime",
+            message: responseMessage,
+          })
+        );
+
+        return res.json(finalResponse);
+      } else {
+        // Not enough parameters
+        responseMessage =
+          "I need both an event title and a date to suggest optimal times.";
+
+        finalResponse = {
+          intent: "unknown",
+          message: responseMessage,
+        };
+
+        addMessageToHistory(
+          userId,
+          "assistant",
+          JSON.stringify({
+            function: "suggestTime",
+            message: responseMessage,
+          })
+        );
+
+        return res.json(finalResponse);
       }
     }
 
@@ -223,13 +415,27 @@ router.post("/", async (req, res) => {
         // Get events using the existing endpoint with timeframe parameter
         const events = await getLocalEvents(cityName, timeframe);
 
-        return res.json({
+        // Dynamic message for local events
+        responseMessage = `Here are the events in ${cityName} for ${timeframe}`;
+
+        finalResponse = {
           intent: "local_events",
           events: events,
           timeframe: timeframe,
           city: cityName,
-          message: `Here are the events in ${cityName} for ${timeframe}`,
-        });
+          message: responseMessage,
+        };
+
+        addMessageToHistory(
+          userId,
+          "assistant",
+          JSON.stringify({
+            function: "local_events",
+            message: responseMessage,
+          })
+        );
+
+        return res.json(finalResponse);
       } catch (error) {
         console.error("Error fetching local events:", error);
         return res.json({
@@ -239,7 +445,6 @@ router.post("/", async (req, res) => {
       }
     }
 
-    // Add this condition after the other function checks
     if (assistantResponse.function === "findEvent") {
       const timeframe = params.includes("future") ? "future" : "past";
 
@@ -252,19 +457,33 @@ router.post("/", async (req, res) => {
         );
 
         if (matchingEvents.length === 0) {
-          return res.json({
+          // Dynamic message for no events found
+          responseMessage = `I couldn't find any ${category} events ${
+            timeframe === "future"
+              ? "coming up"
+              : timeframe === "past"
+              ? "in the past"
+              : ""
+          }.`;
+
+          finalResponse = {
             intent: "find_event_result",
             events: [],
             category: category,
             timeframe: timeframe,
-            message: `I couldn't find any ${category} events ${
-              timeframe === "future"
-                ? "coming up"
-                : timeframe === "past"
-                ? "in the past"
-                : ""
-            }.`,
-          });
+            message: responseMessage,
+          };
+
+          addMessageToHistory(
+            userId,
+            "assistant",
+            JSON.stringify({
+              function: "findEvent",
+              message: responseMessage,
+            })
+          );
+
+          return res.json(finalResponse);
         }
 
         // Prepare the events for sending to Groq
@@ -297,7 +516,7 @@ router.post("/", async (req, res) => {
           });
         }
 
-        // Create a prompt for Groq to match the events with the user's query
+        // Create a prompt for Groq that includes conversation history
         const currentDateTime = dayjs().format("YYYY-MM-DD HH:mm");
         const matchPrompt = `You are an AI assistant that helps find the most relevant event from a list based on a user's query.
 
@@ -305,6 +524,11 @@ User's original query: "${text}"
 Category: ${category}
 Timeframe: ${timeframe}
 Current date and time: ${currentDateTime}
+${
+  history.length > 2
+    ? "Previous conversation context: " + JSON.stringify(history.slice(0, -1))
+    : ""
+}
 
 Available events:
 ${JSON.stringify(formattedEvents, null, 2)}
@@ -345,14 +569,29 @@ Your response must be a JSON that follows this exact format:
           (e) => e.id.toString() === matchResult.eventId.toString()
         );
 
-        return res.json({
+        // Use the dynamically generated message from the AI
+        responseMessage = matchResult.message;
+
+        finalResponse = {
           intent: "find_event_result",
           events: formattedEvents,
           selectedEvent: selectedEvent,
           category: category,
           timeframe: timeframe,
-          message: matchResult.message,
-        });
+          message: responseMessage,
+        };
+
+        // Save the actual response shown to the user
+        addMessageToHistory(
+          userId,
+          "assistant",
+          JSON.stringify({
+            function: "findEvent",
+            message: responseMessage,
+          })
+        );
+
+        return res.json(finalResponse);
       } catch (error) {
         console.error("Error finding events:", error);
         return res.json({
@@ -362,15 +601,58 @@ Your response must be a JSON that follows this exact format:
       }
     }
 
-    // For other intents
-    res.json({
+    // For other intents, use the AI-generated message
+    finalResponse = {
       intent: "unknown",
-      message: assistantResponse.message,
-    });
+      message: responseMessage || assistantResponse.message,
+    };
+
+    // Save the response to history
+    addMessageToHistory(
+      userId,
+      "assistant",
+      JSON.stringify({
+        function: "unknown",
+        message: finalResponse.message,
+      })
+    );
+
+    res.json(finalResponse);
   } catch (error) {
     console.error("Error processing chat message:", error);
-    res.status(500).json({ error: "Failed to process your request" });
+
+    // Check if we have an AI message we can use instead of a generic error
+    let errorMessage = "Failed to process your request";
+    let status = 500;
+
+    // If we have an assistant response with a message, use that
+    if (typeof assistantResponse === "object" && assistantResponse?.message) {
+      errorMessage = assistantResponse.message;
+      status = 400; // Use 400 Bad Request instead of 500 Server Error when we have a useful message
+    }
+
+    // Return whatever message we have, prioritizing the AI's message
+    res.status(status).json({
+      intent: "error",
+      message: errorMessage,
+    });
   }
+});
+
+// Add this new endpoint after the existing route
+router.post("/reset", (req, res) => {
+  const { userId } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ error: "User ID is required" });
+  }
+
+  // Clear conversation history for this user
+  if (conversationHistory.has(userId)) {
+    conversationHistory.set(userId, []);
+  }
+
+  res.json({ success: true, message: "Conversation history cleared" });
 });
 
 // Helper function to check for overlapping events

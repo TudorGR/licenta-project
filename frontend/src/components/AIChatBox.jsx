@@ -16,8 +16,33 @@ import SpeechRecognition, {
   useSpeechRecognition,
 } from "react-speech-recognition";
 import AudioWaveform from "./AudioWaveform";
-import { categoryColors, darkCategoryColors } from "../utils/categoryColors";
+import {
+  lightCategoryColors,
+  categoryColors,
+  darkCategoryColors,
+} from "../utils/categoryColors";
 import { AuthContext } from "../context/AuthContext";
+
+// Add this new component after the imports and before the AIChatBox component
+const TypewriterEffect = ({ text, onComplete, speed = 10 }) => {
+  const [displayedText, setDisplayedText] = useState("");
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    if (currentIndex < text.length) {
+      const timer = setTimeout(() => {
+        setDisplayedText((prevText) => prevText + text[currentIndex]);
+        setCurrentIndex((prevIndex) => prevIndex + 1);
+      }, speed);
+
+      return () => clearTimeout(timer);
+    } else if (onComplete) {
+      onComplete();
+    }
+  }, [currentIndex, text, speed, onComplete]);
+
+  return <span>{displayedText}</span>;
+};
 
 const AIChatBox = ({ onClose }) => {
   const {
@@ -42,6 +67,9 @@ const AIChatBox = ({ onClose }) => {
         {
           type: "system",
           text: "Hi! How can I help you with your calendar?",
+          isTyping: true, // Add this flag
+          isComplete: false, // Add this flag
+          timestamp: new Date(),
         },
       ];
 
@@ -63,6 +91,9 @@ const AIChatBox = ({ onClose }) => {
         text: currentUser?.name
           ? `Hi ${currentUser.name}! How can I help you with your calendar?`
           : "Hi! How can I help you with your calendar?",
+        isTyping: true, // Add this flag
+        isComplete: false, // Add this flag
+        timestamp: new Date(), // Add timestamp to initial message
       },
     ];
   };
@@ -184,12 +215,16 @@ const AIChatBox = ({ onClose }) => {
   }, [savedEvents]);
 
   // Update the handleStartOver function to also clear localStorage
-  const handleStartOver = () => {
+  const handleStartOver = async () => {
+    // Reset the UI first for better user experience
     const initialMessage = {
       type: "system",
       text: currentUser?.name
         ? `Hi ${currentUser.name}! How can I help you with your calendar?`
         : "Hi! How can I help you with your calendar?",
+      isTyping: true, // Add this flag
+      isComplete: false, // Add this flag
+      timestamp: new Date(), // Add timestamp to initial message
     };
 
     setMessages([initialMessage]);
@@ -202,6 +237,15 @@ const AIChatBox = ({ onClose }) => {
         `chat_messages_${currentUser.id}`,
         JSON.stringify([initialMessage])
       );
+
+      // Reset the AI's memory on the server
+      try {
+        await axios.post("http://localhost:5000/api/chat/reset", {
+          userId: currentUser.id,
+        });
+      } catch (error) {
+        console.error("Failed to reset AI memory:", error);
+      }
     }
 
     fetchEventSuggestions(); // Fetch fresh suggestions
@@ -378,7 +422,15 @@ const AIChatBox = ({ onClose }) => {
     const messageToSend = customMessage || input;
     if (!messageToSend.trim()) return;
 
-    setMessages((prev) => [...prev, { type: "user", text: messageToSend }]);
+    // Add timestamp to user message
+    setMessages((prev) => [
+      ...prev,
+      {
+        type: "user",
+        text: messageToSend,
+        timestamp: new Date(), // Add timestamp
+      },
+    ]);
 
     setInput("");
     // Reset textarea height after sending
@@ -398,6 +450,9 @@ const AIChatBox = ({ onClose }) => {
         userId: currentUser.id, // Add the user ID from AuthContext
       });
 
+      // Store response timestamp to use for all system messages
+      const responseTimestamp = new Date();
+
       if (response.data.intent === "create_event") {
         // Handle event creation (no overlaps)
         const eventData = response.data.eventData;
@@ -413,7 +468,7 @@ const AIChatBox = ({ onClose }) => {
 
         await dispatchEvent({ type: "push", payload: event });
 
-        // Add confirmation message to chat
+        // Add confirmation message to chat with timestamp
         setMessages((prev) => [
           ...prev,
           {
@@ -421,6 +476,9 @@ const AIChatBox = ({ onClose }) => {
             text: `Event created: ${event.title} on ${dayjs(event.day).format(
               "dddd, MMMM D"
             )} at ${event.timeStart}.`,
+            isTyping: true, // Add this flag
+            isComplete: false, // Add this flag
+            timestamp: responseTimestamp,
           },
         ]);
 
@@ -440,7 +498,15 @@ const AIChatBox = ({ onClose }) => {
               type: "eventOverlap",
               eventData: eventData,
               overlappingEvents: overlappingEvents,
+              message: `I can't create "${eventData.title}" on ${dayjs(
+                eventData.day
+              ).format("dddd, MMMM D")} from ${eventData.timeStart} to ${
+                eventData.timeEnd
+              } because it would overlap with:`,
             },
+            isTyping: true, // Add this flag
+            isComplete: false, // Add this flag
+            timestamp: responseTimestamp,
           },
         ]);
 
@@ -462,6 +528,9 @@ const AIChatBox = ({ onClose }) => {
               suggestedSlots: suggestedSlots,
               message: response.data.message,
             },
+            isTyping: true, // Add this flag
+            isComplete: false, // Add this flag
+            timestamp: responseTimestamp,
           },
         ]);
 
@@ -487,6 +556,9 @@ const AIChatBox = ({ onClose }) => {
               timeframe,
               city,
             },
+            isTyping: true, // Add this flag
+            isComplete: false, // Add this flag
+            timestamp: responseTimestamp,
           },
         ]);
 
@@ -507,6 +579,9 @@ const AIChatBox = ({ onClose }) => {
               category: category,
               message: message,
             },
+            isTyping: true, // Add this flag
+            isComplete: false, // Add this flag
+            timestamp: responseTimestamp,
           },
         ]);
 
@@ -516,7 +591,13 @@ const AIChatBox = ({ onClose }) => {
         // For other intents (existing code)
         setMessages((prev) => [
           ...prev,
-          { type: "system", text: response.data.message },
+          {
+            type: "system",
+            text: response.data.message,
+            isTyping: true, // Add this flag
+            isComplete: false, // Add this flag
+            timestamp: responseTimestamp,
+          },
         ]);
 
         // Refresh suggestions after getting a response
@@ -529,6 +610,7 @@ const AIChatBox = ({ onClose }) => {
         {
           type: "system",
           text: "Sorry, I encountered an error processing your request.",
+          timestamp: new Date(),
         },
       ]);
 
@@ -547,21 +629,21 @@ const AIChatBox = ({ onClose }) => {
         {dayjs(eventData.day).format("dddd, MMMM D")} from {eventData.timeStart}{" "}
         to {eventData.timeEnd} because it would overlap with:
       </div>
-      <ul className="mt-2 mb-2">
+      <ul className="shadow-custom p-2 mt-2 mb-2 border border-gray-200 rounded-2xl flex flex-col gap-2">
         {overlappingEvents.map((event) => (
           <li
             key={event.id}
             onClick={() => handleEventClick(event)}
-            className="py-1 px-2 my-1 rounded transition-all bg-gray-100 hover:bg-gray-200 cursor-pointer flex justify-between"
+            className="py-1 px-2 rounded-xl transition-all bg-gray-100 hover:bg-gray-200 cursor-pointer flex justify-between"
           >
             <span className="font-medium">{event.title}</span>
             <span className="text-gray-600">
-              {event.timeStart} · {event.timeEnd}
+              {event.timeStart} - {event.timeEnd}
             </span>
           </li>
         ))}
       </ul>
-      <div className="text-xs text-gray-500">
+      <div className="text-xxs text-gray-500">
         Click on any event to edit it or choose a different time.
       </div>
     </div>
@@ -585,16 +667,24 @@ const AIChatBox = ({ onClose }) => {
 
         await dispatchEvent({ type: "push", payload: event });
 
-        // Add confirmation message
-        setMessages((prev) => [
-          ...prev,
-          {
+        // Replace the current message instead of adding a new one
+        setMessages((prev) => {
+          // Create a copy of the previous messages
+          const updatedMessages = [...prev];
+
+          // Find the index of the current message (which should be the last one)
+          const lastMessageIndex = updatedMessages.length - 1;
+
+          // Replace the time suggestions message with the confirmation message
+          updatedMessages[lastMessageIndex] = {
             type: "system",
             text: `Event created: ${event.title} on ${dayjs(event.day).format(
               "dddd, MMMM D"
-            )} from ${event.timeStart} to ${event.timeEnd}.`,
-          },
-        ]);
+            )} at ${event.timeStart}.`,
+          };
+
+          return updatedMessages;
+        });
       } catch (error) {
         console.error("Error creating event:", error);
         setMessages((prev) => [
@@ -623,7 +713,7 @@ const AIChatBox = ({ onClose }) => {
           {message || `Here are suggested times for "${eventData.title}":`}
         </div>
         <div className="mt-2 mb-2">
-          <div className="flex flex-row gap-1 flex-wrap items-center">
+          <div className="flex flex-row gap-2 flex-wrap items-center shadow-custom rounded-2xl border border-gray-200 p-2">
             {suggestedSlots.length == 0 ? (
               <div className="text-xs text-gray-500">No time slots found.</div>
             ) : (
@@ -634,7 +724,7 @@ const AIChatBox = ({ onClose }) => {
               <button
                 key={index}
                 onClick={() => handleSelectSlot(slot)}
-                className={`py-1 px-2 rounded cursor-pointer transition-all ${
+                className={`py-1 px-2 rounded-xl cursor-pointer transition-all ${
                   index === 0
                     ? "bg-black hover:bg-gray-700 text-white"
                     : "bg-gray-100 hover:bg-gray-200 transition-all text-gray-800"
@@ -649,15 +739,14 @@ const AIChatBox = ({ onClose }) => {
               <div className="relative inline-block">
                 <button
                   onClick={() => setShowAllSlots(!showAllSlots)}
-                  className="py-1 px-2 overflow-x-scroll rounded  bg-gray-100 hover:bg-gray-200 transition-all text-gray-800 flex items-center"
+                  className="py-1 px-2 overflow-x-scroll rounded-xl  bg-gray-100 hover:bg-gray-200 transition-all text-gray-800 flex items-center"
                 >
-                  {suggestedSlots.slice(3).length}
-                  {showAllSlots ? "▲" : "▼"}
+                  more {showAllSlots ? "▲" : "▼"}
                 </button>
 
                 {/* Dropdown menu for all slots */}
                 {showAllSlots && (
-                  <div className="shadow-custom absolute z-10 mt-1 -right-8 bg-white rounded-md border border-gray-200 py-1 max-h-70 overflow-scroll">
+                  <div className="shadow-custom absolute z-10 mt-1 -right-8 bg-white rounded-xl border border-gray-200 py-1 max-h-70 overflow-scroll">
                     {suggestedSlots.slice(3).map((slot, index) => (
                       <button
                         key={index + 3}
@@ -676,7 +765,7 @@ const AIChatBox = ({ onClose }) => {
         {suggestedSlots.length == 0 ? (
           ""
         ) : (
-          <div className="text-xs text-gray-500">
+          <div className="text-xxs text-gray-500">
             Click on a time slot to schedule this event
           </div>
         )}
@@ -700,11 +789,11 @@ const AIChatBox = ({ onClose }) => {
             No events found. Try a different timeframe or check back later.
           </div>
         ) : (
-          <div className="space-y-2 max-h-72 overflow-y-auto">
+          <div className="space-y-2 max-h-72 overflow-y-auto p-2 rounded-2xl border border-gray-200 shadow-custom">
             {events.map((event, index) => (
               <div
                 key={index}
-                className="p-2.5 rounded-md bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors"
+                className="p-2.5 rounded-xl bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors"
                 onClick={() =>
                   setExpandedEvent(expandedEvent === index ? null : index)
                 }
@@ -730,7 +819,7 @@ const AIChatBox = ({ onClose }) => {
                     )}
                     {event.category && (
                       <div className="mt-1">
-                        <span className="inline-block px-2 py-0.5 bg-gray-200 rounded text-xs">
+                        <span className="inline-block px-2 py-0.5 bg-gray-200 rounded-md text-xs">
                           {event.category}
                         </span>
                       </div>
@@ -781,7 +870,7 @@ const AIChatBox = ({ onClose }) => {
         <div className="mb-2">{message}</div>
 
         {selectedEvent && (
-          <div className="mb-3 p-3 bg-gray-100 rounded-xl border border-gray-200">
+          <div className="mb-2 p-2 shadow-custom rounded-xl border border-gray-200">
             <div className="flex justify-between items-center mb-1">
               <span className="font-medium text-lg">{selectedEvent.title}</span>
               <span className="text-sm text-gray-600">
@@ -789,12 +878,12 @@ const AIChatBox = ({ onClose }) => {
               </span>
             </div>
             <div className="text-sm mb-1 flex flex-wrap gap-1">
-              <span className="inline-block text-nowrap bg-gray-200 px-2 py-0.5 rounded text-xs ">
-                {selectedEvent.timeStart} · {selectedEvent.timeEnd}
+              <span className="inline-block text-nowrap bg-gray-100 px-2 py-1 rounded-xl  ">
+                {selectedEvent.timeStart} - {selectedEvent.timeEnd}
               </span>
               {selectedEvent.category && (
                 <span
-                  className="inline-block text-nowrap px-2 py-0.5 rounded text-xs text-white "
+                  className="inline-block text-nowrap px-2 py-1 rounded-xl  text-white "
                   style={{
                     backgroundColor:
                       categoryColors[selectedEvent.category] || "#9E9E9E",
@@ -812,17 +901,17 @@ const AIChatBox = ({ onClose }) => {
                 {selectedEvent.description}
               </div>
             )}
-            <div className="flex justify-end mt-2 gap-1">
+            <div className="flex justify-end gap-1">
               <button
                 onClick={() => handleGoToEvent(selectedEvent)}
-                className="px-3 flex gap-1 transition-all justify-center py-1 bg-gray-200 text-gray-800 text-xs rounded hover:bg-gray-300"
+                className="px-2 flex gap-1 transition-all justify-center py-1 cursor-pointer bg-gray-100 text-gray-800  rounded-xl hover:bg-gray-200"
               >
                 Go to
                 <img src={arrowRightIcon} className="h-4 w-4" />
               </button>
               <button
                 onClick={() => handleEventClick(selectedEvent)}
-                className="px-3 flex items-center justify-center gap-1 py-1 bg-black text-white text-xs rounded transition-all hover:bg-gray-800"
+                className="px-2 flex items-center justify-center gap-1 py-1 cursor-pointer bg-black text-white  rounded-xl transition-all hover:bg-gray-800"
               >
                 Edit
                 <img src={editIcon} className="h-3 w-3 alter invert" />
@@ -835,7 +924,7 @@ const AIChatBox = ({ onClose }) => {
           <div className="mb-2">
             <button
               onClick={() => setShowAllEvents(!showAllEvents)}
-              className="flex items-center gap-1 px-3 py-1 bg-gray-200 transition-all text-gray-800 text-sm rounded hover:bg-gray-300"
+              className="flex items-center gap-1 px-3 py-1 bg-gray-100 transition-all text-gray-800 text-sm rounded-2xl hover:bg-gray-200"
             >
               {showAllEvents ? (
                 <>
@@ -877,22 +966,22 @@ const AIChatBox = ({ onClose }) => {
         )}
 
         {showAllEvents && events.length > 1 && (
-          <div className="space-y-2 max-h-72 overflow-y-auto">
+          <div className="space-y-2 max-h-72 overflow-y-auto p-2 border border-gray-200 shadow-custom rounded-2xl">
             {events
               .filter((event) => event.id !== selectedEvent?.id)
               .map((event) => (
                 <div
                   key={event.id}
-                  className="p-2.5 rounded-md cursor-pointer transition-all hover:bg-gray-200  bg-gray-100"
+                  className="p-2.5 rounded-xl cursor-pointer transition-all hover:bg-gray-200  bg-gray-100"
                   onClick={() => handleEventClick(event)}
                 >
                   <div className="flex justify-between items-center">
-                    <span>{event.title}</span>
+                    <span className="font-medium">{event.title}</span>
                     <span className="text-xs text-gray-500">
                       {dayjs(event.day).format("MMM D")}
                     </span>
                   </div>
-                  <div className="flex mt-1">
+                  <div className="flex">
                     <span className="text-xs text-gray-600 mr-2">
                       {event.timeStart} · {event.timeEnd}
                     </span>
@@ -918,7 +1007,7 @@ const AIChatBox = ({ onClose }) => {
 
   // Render suggestions as command texts with highlighted parts
   const SuggestionsSection = () => (
-    <div className="flex flex-col justify-end items-end mb-4 mt-3 w-full">
+    <div className="flex flex-col justify-end mb-1 items-end mt-3 w-full">
       <div className="text-xs opacity-50 mb-2 ml-1 flex items-center">
         {suggestionsLoading && <span className="spinner-loader mr-2"></span>}
         {suggestionsLoading ? "Getting suggestions..." : "Suggested commands:"}
@@ -927,8 +1016,8 @@ const AIChatBox = ({ onClose }) => {
       {suggestionsLoading ? (
         <></>
       ) : (
-        <div className="w-[85%] flex flex-col gap-1">
-          {suggestions.map((suggestion, index) => {
+        <div className="w-[85%]  flex flex-col gap-1">
+          {suggestions.slice(0, 3).map((suggestion, index) => {
             // Choose icon based on suggestion type
             const getIcon = (type) => {
               switch (type) {
@@ -953,14 +1042,14 @@ const AIChatBox = ({ onClose }) => {
                 onClick={() => handleSuggestionClick(suggestion)}
                 className={`
                   text-left px-2 py-2 w-full
-                  flex items-center gap-2 rounded-xl bg-gray-50 hover:bg-gray-100 transition-all
+                  flex items-center gap-2 shadow rounded-xl  hover:bg-gray-100 transition-all
                 `}
               >
                 {/* Icon based on suggestion type */}
-                <div className="flex-shrink-0 text-gray-600">
+                <div className="flex-shrink-0 text-gray-500">
                   {getIcon(suggestion.type)}
                 </div>
-                <div className="flex-grow text-xs text-gray-600">
+                <div className="flex-grow text-xs text-gray-500">
                   {suggestion.formattedMessage}
                 </div>
               </button>
@@ -975,45 +1064,105 @@ const AIChatBox = ({ onClose }) => {
   const renderMessage = (msg, index) => {
     let content;
 
+    // For text messages
     if (msg.text) {
-      // Regular text message
-      content = msg.text;
-    } else if (msg.content && msg.content.type === "eventOverlap") {
-      // Overlap message with interactive elements
-      content = (
-        <OverlapMessage
-          eventData={msg.content.eventData}
-          overlappingEvents={msg.content.overlappingEvents}
-        />
-      );
-    } else if (msg.content && msg.content.type === "timeSuggestions") {
-      // Time suggestions message with interactive elements
-      content = (
-        <TimeSuggestionsMessage
-          eventData={msg.content.eventData}
-          suggestedSlots={msg.content.suggestedSlots}
-          message={msg.content.message}
-        />
-      );
-    } else if (msg.content && msg.content.type === "localEvents") {
-      // Local events list message
-      content = (
-        <LocalEventsMessage
-          events={msg.content.events}
-          timeframe={msg.content.timeframe}
-          city={msg.content.city}
-        />
-      );
-    } else if (msg.content && msg.content.type === "eventSearch") {
-      // Event search results
-      content = (
-        <EventSearchMessage
-          events={msg.content.events}
-          selectedEvent={msg.content.selectedEvent}
-          category={msg.content.category}
-          message={msg.content.message}
-        />
-      );
+      if (msg.isTyping && msg.type === "system") {
+        content = (
+          <TypewriterEffect
+            text={msg.text}
+            onComplete={() => {
+              setMessages((prevMessages) => {
+                const newMessages = [...prevMessages];
+                newMessages[index] = {
+                  ...newMessages[index],
+                  isTyping: false,
+                  isComplete: true,
+                };
+                return newMessages;
+              });
+            }}
+          />
+        );
+      } else {
+        content = msg.text;
+      }
+    }
+    // For interactive messages
+    else if (msg.content) {
+      if (msg.isTyping && msg.type === "system") {
+        // First animate the message text
+        let animateText = msg.content.message || "Here's what I found:";
+
+        content = (
+          <TypewriterEffect
+            text={animateText}
+            onComplete={() => {
+              setMessages((prevMessages) => {
+                const newMessages = [...prevMessages];
+                newMessages[index] = {
+                  ...newMessages[index],
+                  isTyping: false,
+                  isComplete: true,
+                };
+                return newMessages;
+              });
+            }}
+          />
+        );
+      } else if (!msg.isTyping || msg.type === "user") {
+        // After typing is done or for user messages, show interactive content
+        if (msg.content.type === "eventOverlap") {
+          content = (
+            <div className="flex flex-col">
+              {msg.content.message && (
+                <div className="mb-2">{msg.content.message}</div>
+              )}
+              <ul className="shadow-custom p-2 mt-2 mb-2 border border-gray-200 rounded-2xl flex flex-col gap-2">
+                {msg.content.overlappingEvents.map((event) => (
+                  <li
+                    key={event.id}
+                    onClick={() => handleEventClick(event)}
+                    className="py-1 px-2 rounded-xl transition-all bg-gray-100 hover:bg-gray-200 cursor-pointer flex justify-between"
+                  >
+                    <span className="font-medium">{event.title}</span>
+                    <span className="text-gray-600">
+                      {event.timeStart} - {event.timeEnd}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <div className="text-xxs text-gray-500">
+                Click on any event to edit it or choose a different time.
+              </div>
+            </div>
+          );
+        } else if (msg.content.type === "timeSuggestions") {
+          content = (
+            <TimeSuggestionsMessage
+              eventData={msg.content.eventData}
+              suggestedSlots={msg.content.suggestedSlots}
+              message={msg.content.message}
+            />
+          );
+        } else if (msg.content.type === "localEvents") {
+          content = (
+            <LocalEventsMessage
+              events={msg.content.events}
+              timeframe={msg.content.timeframe}
+              city={msg.content.city}
+            />
+          );
+        } else if (msg.content.type === "eventSearch") {
+          content = (
+            <EventSearchMessage
+              events={msg.content.events}
+              selectedEvent={msg.content.selectedEvent}
+              category={msg.content.category}
+              message={msg.content.message}
+            />
+          );
+        }
+      }
     }
 
     return (
@@ -1022,10 +1171,10 @@ const AIChatBox = ({ onClose }) => {
         className={`mb-2 ${msg.type === "user" ? "text-right" : ""}`}
       >
         <div
-          className={`text-sm text-left inline-block p-3 rounded-xl max-w-[85%] ${
+          className={`text-sm text-left inline-block px-3 py-2 rounded-2xl max-w-[85%] ${
             msg.type === "user"
-              ? "bg-gray-100  text-black  border border-gray-200"
-              : "bg-white text-black border border-gray-200 "
+              ? "bg-gray-100 text-black "
+              : "bg-white text-black "
           }`}
         >
           {content}
@@ -1035,7 +1184,7 @@ const AIChatBox = ({ onClose }) => {
   };
 
   return (
-    <div className="w-80 h-full border-l border-gray-200 flex flex-col bg-white">
+    <div className="w-80 h-full  border-l border-gray-200 flex flex-col bg-white">
       <div className="py-2 border-b border-gray-200 flex justify-between items-center">
         <h2 className="shrink-0 ml-4 text-lg font-medium">AI Assistant</h2>
         <div className="flex items-center">
@@ -1055,7 +1204,9 @@ const AIChatBox = ({ onClose }) => {
         </div>
       </div>
 
-      <div className="flex-1 p-2 overflow-y-auto h-full">
+      <div className="flex-1 p-2 pb-16 overflow-y-auto h-full relative">
+        <div className="sticky -mt-10 -top-2 left-0 w-full right-0 h-12 pointer-events-none bg-gradient-to-b from-white to-transparent"></div>
+
         {messages.map((msg, index) => renderMessage(msg, index))}
 
         {/* Show suggestions after messages with delay */}
@@ -1065,7 +1216,7 @@ const AIChatBox = ({ onClose }) => {
 
         {loading && (
           <div className="mb-2">
-            <div className="inline-block p-3 rounded-xl max-w-[85%] border border-gray-200 text-black rounded-tl-none">
+            <div className="inline-block p-3 rounded-xl max-w-[85%] text-black rounded-tl-none">
               <div className="flex items-center space-x-2">
                 <span className="spinner-loader"></span>
                 <span className="text-sm text-gray-500">Thinking...</span>
@@ -1073,112 +1224,115 @@ const AIChatBox = ({ onClose }) => {
             </div>
           </div>
         )}
+
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="flex items-center m-2 mt-0 rounded-full shadow-custom border border-gray-200">
-        <button
-          onClick={() => handleSendMessage()}
-          disabled={loading || !input.trim()}
-          className="text-white hover:opacity-50 transition-all cursor-pointer align-self-end"
-        >
-          <img src={searchIcon2} className="h-6 w-6 mx-2" />
-        </button>
+      <div className="absolute bottom-0 w-full bg-gradient-to-t from-white to-transparent">
+        <div className="bg-white/95 flex items-center m-2 mt-0 rounded-full shadow-custom border border-gray-200">
+          <button
+            onClick={() => handleSendMessage()}
+            disabled={loading || !input.trim()}
+            className="text-white hover:opacity-50 transition-all cursor-pointer align-self-end"
+          >
+            <img src={searchIcon2} className="h-6 w-6 mx-2" />
+          </button>
 
-        {isListening ? (
-          <div className="flex-1 min-h-[40px] py-1 flex items-center justify-center">
-            <AudioWaveform isListening={isListening} />
-          </div>
-        ) : (
-          <textarea
-            value={input}
-            onChange={(e) => {
-              setInput(e.target.value);
-              // Auto-resize the textarea
-              e.target.style.height = "auto";
-              e.target.style.height = `${Math.min(
-                e.target.scrollHeight,
-                130
-              )}px`;
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                if (!loading) handleSendMessage();
-              }
-            }}
-            placeholder="Type here..."
-            className="flex-1 py-3 focus:outline-none focus:border-black resize-none min-h-[30px] max-h-[150px] overflow-y-auto"
-            disabled={loading}
-            ref={inputRef}
-            rows={1}
-          />
-        )}
+          {isListening ? (
+            <div className="flex-1 h-10 py-1 flex items-center justify-center">
+              <AudioWaveform isListening={isListening} />
+            </div>
+          ) : (
+            <textarea
+              value={input}
+              onChange={(e) => {
+                setInput(e.target.value);
+                // Auto-resize the textarea
+                e.target.style.height = "auto";
+                e.target.style.height = `${Math.min(
+                  e.target.scrollHeight,
+                  130
+                )}px`;
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  if (!loading) handleSendMessage();
+                }
+              }}
+              placeholder="Type here..."
+              className="flex-1 py-2 focus:outline-none focus:border-black resize-none min-h-[30px] max-h-[150px] overflow-y-auto"
+              disabled={loading}
+              ref={inputRef}
+              rows={1}
+            />
+          )}
 
-        <button
-          onMouseDown={() => {
-            resetTranscript();
-            setShowVoiceInput(true);
-            SpeechRecognition.startListening({
-              continuous: true,
-              language: "en-US",
-            });
-          }}
-          onMouseUp={() => {
-            SpeechRecognition.stopListening();
-            setShowVoiceInput(false);
-            // Small delay to ensure transcript is complete
-            setTimeout(() => {
-              if (transcript) {
-                // Send directly instead of transferring to input
-                handleSendMessage(transcript);
-              }
-            }, 300);
-          }}
-          onMouseLeave={() => {
-            if (isListening) {
+          <button
+            onMouseDown={() => {
+              resetTranscript();
+              setShowVoiceInput(true);
+              SpeechRecognition.startListening({
+                continuous: true,
+                language: "en-US",
+              });
+            }}
+            onMouseUp={() => {
               SpeechRecognition.stopListening();
               setShowVoiceInput(false);
-            }
-          }}
-          onTouchStart={() => {
-            resetTranscript();
-            setShowVoiceInput(true);
-            SpeechRecognition.startListening({
-              continuous: true,
-              language: "en-US",
-            });
-          }}
-          onTouchEnd={() => {
-            SpeechRecognition.stopListening();
-            setShowVoiceInput(false);
-            // Small delay to ensure transcript is complete
-            setTimeout(() => {
-              if (transcript) {
-                // Send directly instead of transferring to input
-                handleSendMessage(transcript);
+              // Small delay to ensure transcript is complete
+              setTimeout(() => {
+                if (transcript) {
+                  // Send directly instead of transferring to input
+                  handleSendMessage(transcript);
+                }
+              }, 300);
+            }}
+            onMouseLeave={() => {
+              if (isListening) {
+                SpeechRecognition.stopListening();
+                setShowVoiceInput(false);
               }
-            }, 300);
-          }}
-          disabled={loading || !browserSupportsSpeechRecognition}
-          className={`transition h-full align-self-end relative ${
-            isListening ? "text-blue-500" : ""
-          }`}
-          title="Press and hold to record voice message"
-        >
-          <div className="absolute top-0 z-15 cursor-pointer w-full h-full rounded-r-full"></div>
-          <img
-            src={micIcon}
-            className={`h-6 w-6 mx-2 ${
-              isListening ? "animate-pulse" : "hover:opacity-50"
-            } transition-all cursor-pointer`}
-          />
-          {isListening && (
-            <span className="absolute bottom-full mb-1 left-1/2 transform -translate-x-1/2 text-xs bg-black text-white px-2 py-1 rounded whitespace-nowrap">
-              Release to send
-            </span>
-          )}
-        </button>
+            }}
+            onTouchStart={() => {
+              resetTranscript();
+              setShowVoiceInput(true);
+              SpeechRecognition.startListening({
+                continuous: true,
+                language: "en-US",
+              });
+            }}
+            onTouchEnd={() => {
+              SpeechRecognition.stopListening();
+              setShowVoiceInput(false);
+              // Small delay to ensure transcript is complete
+              setTimeout(() => {
+                if (transcript) {
+                  // Send directly instead of transferring to input
+                  handleSendMessage(transcript);
+                }
+              }, 300);
+            }}
+            disabled={loading || !browserSupportsSpeechRecognition}
+            className={`transition h-full align-self-end relative ${
+              isListening ? "text-blue-500" : ""
+            }`}
+            title="Press and hold to record voice message"
+          >
+            <div className="absolute top-0 z-15 cursor-pointer w-full h-full rounded-r-full"></div>
+            <img
+              src={micIcon}
+              className={`h-6 w-6 mx-2 ${
+                isListening ? "animate-pulse" : "hover:opacity-50"
+              } transition-all cursor-pointer`}
+            />
+            {isListening && (
+              <span className="absolute bottom-full mb-1 left-1/2 transform -translate-x-1/2 text-xs bg-black text-white px-2 py-1 rounded whitespace-nowrap">
+                Release to send
+              </span>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
