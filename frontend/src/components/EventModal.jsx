@@ -262,8 +262,6 @@ export default function EventModal() {
         );
       });
 
-      console.log(pastEvents);
-
       const calculateEventScore = (event) => {
         let score = 0;
 

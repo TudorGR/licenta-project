@@ -113,13 +113,13 @@ router.post("/", async (req, res) => {
   - suggestTime(title,date)
   - local_events(timeframe)
   - findEvent(timeframe)
-  - unknownFuntion()
+  - unknownFunction()
   Formats:
   createEvent format: {'function': 'createEvent', 'parameters': ["title","startTime","endTime","date"], 'category': 'category', 'message': ""}.
   suggestTime format: {'function': 'suggestTime', 'parameters': ["title","date"], 'category': 'category', 'message': ""}.
   local_events format: {'function': 'local_events', 'parameters': "timeframe", 'message': ""}.
   findEvent format: {'function': 'findEvent', 'parameters': "timeframe", 'category': 'category', 'message': ""}
-  unknownFuntion format: {'message': ""}
+  unknownFunction format: {'message': ""}
   RULES:
   createEvent rules:
   - if the user asks to create or add or put a specific event with complete details, use createEvent function
@@ -138,7 +138,7 @@ router.post("/", async (req, res) => {
   - if the user asks about when an event will happen, or when was the last time, or to find specific events, use findEvent function
   - for findEvent, category is gonna be the event category and timeframe is gonna be "future" or "past" but not explicitly mentioned
   general rules:
-  - empty parameters are just gonna be 2 single quotes, not undefined/null
+  - empty parameters are just gonna be 2 single quotes, not undefined or null or 'timeframe'/'category'/etc.
   - date parameter is by default today: ${currentDate} if it is not specified
   - the current day of week is: ${currentDayName}, and the time is: ${currentTime}
   - if a parameter is not specified ask for it and make the parameter empty in the list
@@ -524,11 +524,6 @@ User's original query: "${text}"
 Category: ${category}
 Timeframe: ${timeframe}
 Current date and time: ${currentDateTime}
-${
-  history.length > 2
-    ? "Previous conversation context: " + JSON.stringify(history.slice(0, -1))
-    : ""
-}
 
 Available events:
 ${JSON.stringify(formattedEvents, null, 2)}

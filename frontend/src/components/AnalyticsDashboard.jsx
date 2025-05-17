@@ -359,8 +359,8 @@ const AnalyticsDashboard = ({ onClose }) => {
   }, [filteredEvents]);
 
   return (
-    <div className="flex flex-col h-full overflow-auto py-2">
-      <div className="flex justify-between items-center mb-4">
+    <div className="flex flex-col h-full py-2">
+      <div className="flex justify-between items-center ">
         <h1 className="text-xl shrink-1 ml-4 mb-2 font-medium">
           Calendar Analytics
         </h1>
@@ -399,7 +399,7 @@ const AnalyticsDashboard = ({ onClose }) => {
         </div>
       </div>
 
-      <div className="flex mb-6 border-b border-gray-200">
+      <div className="flex  border-b border-gray-200">
         <button
           className={`px-4 py-2 ${
             activeTab === "overview"
@@ -441,8 +441,8 @@ const AnalyticsDashboard = ({ onClose }) => {
       </div>
 
       {activeTab === "overview" && (
-        <div className="m-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white p-4 rounded-lg shadow">
+        <div className="mx-4 py-4 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-auto">
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-custom">
             <h2 className="text-lg font-medium mb-4">Time Spent by Category</h2>
             <div className="h-64">
               <Doughnut
@@ -485,7 +485,7 @@ const AnalyticsDashboard = ({ onClose }) => {
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-lg shadow">
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-custom">
             <h2 className="text-lg font-medium mb-4">
               Daily Distribution (hours)
             </h2>
@@ -523,7 +523,7 @@ const AnalyticsDashboard = ({ onClose }) => {
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-lg shadow">
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-custom">
             <h2 className="text-lg font-medium mb-4">Activity Trends</h2>
             <div className="h-64">
               <Line
@@ -565,7 +565,7 @@ const AnalyticsDashboard = ({ onClose }) => {
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-lg shadow">
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-custom">
             <h2 className="text-lg font-medium mb-4">Hourly Distribution</h2>
             <div className="h-64">
               <Bar
@@ -602,8 +602,8 @@ const AnalyticsDashboard = ({ onClose }) => {
       )}
 
       {activeTab === "time" && (
-        <div className="m-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white p-4 rounded-lg shadow">
+        <div className="mx-4 py-4 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-auto">
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-custom">
             <h2 className="text-lg font-medium mb-4">Hourly Distribution</h2>
             <div className="h-64">
               <Bar
@@ -637,7 +637,7 @@ const AnalyticsDashboard = ({ onClose }) => {
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-lg shadow">
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-custom">
             <h2 className="text-lg font-medium mb-4">Activity Trends</h2>
             <div className="h-64">
               <Line
@@ -670,7 +670,7 @@ const AnalyticsDashboard = ({ onClose }) => {
             </div>
           </div>
 
-          <div className="md:col-span-2 bg-white p-4 rounded-lg shadow">
+          <div className="md:col-span-2 bg-white p-4 rounded-xl border border-gray-200 shadow-custom">
             <h2 className="text-lg font-medium mb-4">
               Working Hours Utilization
             </h2>
@@ -726,8 +726,8 @@ const AnalyticsDashboard = ({ onClose }) => {
       )}
 
       {activeTab === "categories" && (
-        <div className="m-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white p-4 rounded-lg shadow">
+        <div className="mx-4 py-4 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-auto">
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-custom">
             <h2 className="text-lg font-medium mb-4">Time Spent by Category</h2>
             <div className="h-64">
               <Doughnut
@@ -767,7 +767,7 @@ const AnalyticsDashboard = ({ onClose }) => {
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-lg shadow">
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-custom">
             <h2 className="text-lg font-medium mb-4">
               Category Distribution (Top 5)
             </h2>
@@ -796,7 +796,7 @@ const AnalyticsDashboard = ({ onClose }) => {
             </div>
           </div>
 
-          <div className="md:col-span-2 bg-white p-4 rounded-lg shadow">
+          <div className="md:col-span-2 bg-white p-4 rounded-xl border border-gray-200 shadow-custom">
             <h2 className="text-lg font-medium mb-4">
               Category Distribution by Day of Week
             </h2>
@@ -829,8 +829,8 @@ const AnalyticsDashboard = ({ onClose }) => {
       )}
 
       {activeTab === "locations" && (
-        <div className="m-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white p-4 rounded-lg shadow">
+        <div className="mx-4 py-4 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-auto">
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-custom">
             <h2 className="text-lg font-medium mb-4">Top Locations</h2>
             <div className="h-64">
               <Bar
@@ -857,10 +857,10 @@ const AnalyticsDashboard = ({ onClose }) => {
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-lg shadow">
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-custom">
             <h2 className="text-lg font-medium mb-4">Location Statistics</h2>
             <div className="p-4">
-              <div className="m-2 grid grid-cols-2 gap-4">
+              <div className="m-4 grid grid-cols-2 gap-4">
                 <div className="bg-gray-50 p-4 rounded-lg text-center">
                   <div className="text-gray-500 text-sm">
                     Events with Location

@@ -169,7 +169,13 @@ const AIChatBox = ({ onClose }) => {
 
   // Effect to handle the delayed showing of suggestions
   useEffect(() => {
-    if (suggestions.length > 0 && !loading) {
+    const lastMessage = messages[messages.length - 1];
+    const isSystemMessageTyping =
+      lastMessage &&
+      lastMessage.type === "system" &&
+      lastMessage.isTyping === true;
+
+    if (suggestions.length > 0 && !loading && !isSystemMessageTyping) {
       if (suggestionTimer.current) {
         clearTimeout(suggestionTimer.current);
       }
@@ -182,15 +188,23 @@ const AIChatBox = ({ onClose }) => {
         setSuggestionsLoading(false);
       }, 1000);
     } else {
+      // If conditions are not met (e.g., system message is typing, loading, or no suggestions),
+      // clear any existing timer and hide suggestions/loading state.
+      if (suggestionTimer.current) {
+        clearTimeout(suggestionTimer.current);
+        suggestionTimer.current = null;
+      }
       setShowSuggestions(false);
+      setSuggestionsLoading(false);
     }
 
     return () => {
       if (suggestionTimer.current) {
         clearTimeout(suggestionTimer.current);
+        suggestionTimer.current = null;
       }
     };
-  }, [suggestions, loading]);
+  }, [suggestions, loading, messages]); // Added 'messages' to dependency array
 
   // Update input when transcript changes
   useEffect(() => {
@@ -1042,7 +1056,7 @@ const AIChatBox = ({ onClose }) => {
                 onClick={() => handleSuggestionClick(suggestion)}
                 className={`
                   text-left px-2 py-2 w-full
-                  flex items-center gap-2 shadow rounded-xl  hover:bg-gray-100 transition-all
+                  flex cursor-pointer items-center gap-2 shadow rounded-xl  hover:bg-gray-50 transition-all
                 `}
               >
                 {/* Icon based on suggestion type */}
