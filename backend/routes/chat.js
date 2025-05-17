@@ -170,7 +170,7 @@ router.post("/", async (req, res) => {
       messages: messages,
       model: "llama3-70b-8192",
       // response_format: { type: "json_object" },
-      temperature: 0.7,
+      temperature: 0.1,
     });
 
     const assistantResponse = safeJsonParse(
@@ -547,7 +547,7 @@ Your response must be a JSON that follows this exact format:
           messages: [{ role: "user", content: matchPrompt }],
           model: "llama3-70b-8192",
           response_format: { type: "json_object" },
-          temperature: 0,
+          temperature: 0.1,
         });
 
         const matchResult = JSON.parse(groqResponse.choices[0].message.content);
