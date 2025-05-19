@@ -141,7 +141,7 @@ router.post("/", async (req, res) => {
   - empty parameters are just gonna be 2 single quotes, not undefined or null or 'timeframe'/'category'/etc.
   - date parameter is by default today: ${currentDate} if it is not specified
   - the current day of week is: ${currentDayName}, and the time is: ${currentTime}
-  - if a parameter is not specified ask for it and make the parameter empty in the list
+  - if a parameter is not specified or the request is unclear ask for clarification and make the parameter empty, DON'T ASSUME WHAT THE USER WANTS
   - days of week map to these specific dates for the next 7 days:
     ${dateMapping.join("\n    ")}
   - when a day of week is mentioned (like "monday", "tuesday", etc.) use the corresponding date from the mapping above
@@ -170,7 +170,7 @@ router.post("/", async (req, res) => {
       messages: messages,
       model: "llama3-70b-8192",
       // response_format: { type: "json_object" },
-      temperature: 0.1,
+      temperature: 0,
     });
 
     const assistantResponse = safeJsonParse(
@@ -408,7 +408,7 @@ router.post("/", async (req, res) => {
     }
 
     if (assistantResponse.function === "local_events") {
-      const timeframe = params[0] || "this week";
+      const timeframe = params || "this week";
       const cityName = "Iasi Romania"; // City is hardcoded as specified in requirements
 
       try {
@@ -542,7 +542,7 @@ Your response must be a JSON that follows this exact format:
           messages: [{ role: "user", content: matchPrompt }],
           model: "llama3-70b-8192",
           response_format: { type: "json_object" },
-          temperature: 0.1,
+          temperature: 0,
         });
 
         const matchResult = JSON.parse(groqResponse.choices[0].message.content);
