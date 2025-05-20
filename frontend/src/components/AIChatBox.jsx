@@ -512,11 +512,7 @@ const AIChatBox = ({ onClose }) => {
               type: "eventOverlap",
               eventData: eventData,
               overlappingEvents: overlappingEvents,
-              message: `I can't create "${eventData.title}" on ${dayjs(
-                eventData.day
-              ).format("dddd, MMMM D")} from ${eventData.timeStart} to ${
-                eventData.timeEnd
-              } because it would overlap with:`,
+              message: response.data.message,
             },
             isTyping: true, // Add this flag
             isComplete: false, // Add this flag
@@ -681,24 +677,19 @@ const AIChatBox = ({ onClose }) => {
 
         await dispatchEvent({ type: "push", payload: event });
 
-        // Replace the current message instead of adding a new one
-        setMessages((prev) => {
-          // Create a copy of the previous messages
-          const updatedMessages = [...prev];
-
-          // Find the index of the current message (which should be the last one)
-          const lastMessageIndex = updatedMessages.length - 1;
-
-          // Replace the time suggestions message with the confirmation message
-          updatedMessages[lastMessageIndex] = {
+        // Add a new confirmation message instead of replacing the current one
+        setMessages((prev) => [
+          ...prev,
+          {
             type: "system",
             text: `Event created: ${event.title} on ${dayjs(event.day).format(
               "dddd, MMMM D"
             )} at ${event.timeStart}.`,
-          };
-
-          return updatedMessages;
-        });
+            isTyping: true,
+            isComplete: false,
+            timestamp: new Date(),
+          },
+        ]);
       } catch (error) {
         console.error("Error creating event:", error);
         setMessages((prev) => [
@@ -706,6 +697,9 @@ const AIChatBox = ({ onClose }) => {
           {
             type: "system",
             text: "Sorry, I encountered an error creating your event.",
+            isTyping: true,
+            isComplete: false,
+            timestamp: new Date(),
           },
         ]);
       }

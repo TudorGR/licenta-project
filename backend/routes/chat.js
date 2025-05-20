@@ -52,6 +52,10 @@ function safeJsonParse(jsonString) {
     // This matches patterns like: "2025-05-17] where the closing quote is missing
     preprocessed = preprocessed.replace(/(\d{4}-\d{2}-\d{2})\]/g, '$1"]');
 
+    // Fix quotes followed by closing brackets instead of commas or closing braces
+    // This matches patterns like: "past"] where the closing bracket should be a quote
+    preprocessed = preprocessed.replace(/"([^"]+)"\]/g, '"$1"');
+
     try {
       // Try direct parsing after our custom fix
       return JSON.parse(preprocessed);
@@ -64,7 +68,7 @@ function safeJsonParse(jsonString) {
         // If all repair attempts fail, return a safe default
         console.error("Failed to repair JSON:", repairError);
         return {
-          function: "unknownFunction",
+          function: "unknown_function",
           message:
             "I couldn't understand that. Could you rephrase your request?",
         };
@@ -106,51 +110,58 @@ router.post("/", async (req, res) => {
   }
 
   // Update the system prompt to add the new function
-  let systemPrompt = `You are a calendar assistant that outputs JSON only.
-  Extract the function and it's parameters from the user message, and provide a short but useful message for completion, missing any parameters or just a friendly response.
+  let systemPrompt = `You are a calendar assistant that outputs JSON only
+  Extract the function and it's parameters from the user message, and provide a short but useful message for completion, missing parameters or just a friendly response
+  Consider the conversation history for context when processing the current user message
+
   These are all your possible function:
-  - createEvent(title,startTime,endTime,date)
-  - suggestTime(title,date)
-  - local_events(timeframe)
-  - findEvent(timeframe)
-  - unknownFunction()
-  Formats:
-  createEvent format: {'function': 'createEvent', 'parameters': ["title","startTime","endTime","date"], 'category': 'category', 'message': ""}.
-  suggestTime format: {'function': 'suggestTime', 'parameters': ["title","date"], 'category': 'category', 'message': ""}.
-  local_events format: {'function': 'local_events', 'parameters': "timeframe", 'message': ""}.
-  findEvent format: {'function': 'findEvent', 'parameters': "timeframe", 'category': 'category', 'message': ""}
-  unknownFunction format: {'message': ""}
+  - create_event(title,startTime,endTime,date) (if the user asks to create or add or put a specific event)
+  - find_event(timeframe) (if the user asks about when an event will happen, or when was the last time an event happened, or when is the next time an event is gonna happen)
+  - suggest_time(title,date) (if the user asks to find the best time, for what time to schedule, or when to have an event)
+  - local_events(timeframe) (if the user asks about what events are happening, local events, or similar queries)
+  - unknown_function() (if the request is unclear)
+
+  FORMATS:
+  create_event format: {"function": "create_event", "parameters": ["title", "startTime", "endTime", "date"], "category": "category", "message": ""}
+  find_event format: {"function": "find_event", "timeframe": "timeframe", "category": "category", "message": ""}
+  suggest_time format: {"function": "suggest_time", "parameters": ["title", "date"], "category": "category", "message": ""}
+  local_events format: {"function": "local_events", "timeframe": "timeframe", "message": ""}
+  unknown_function format: {"message": ""}
+
   RULES:
-  createEvent rules:
-  - if the user asks to create or add or put a specific event with complete details, use createEvent function
+  create_event rules:
   - the parameters should be in the order: title(string), startTime(24hr format), endTime(24hr format), date(YYYY-MM-DD)
   - some valid formats are these [add a (event) today] [put (event) from 10 to 12] etc. ex: "add meeting today"
-  - start time and end time must not be empty
-  suggestTime rules:
-  - if the user asks to find the best time, for what time to schedule, or when to have an event, use suggestTime function
-  - if the user provides a title but no specific time, use suggestTime function
+  - if you are not 100% sure about the start time or end time MAKE THEM EMPTY and ask for them
+  - you need all the parameters to create an event, ask for missing parameters
+
+  find_event rules:
+  - for timeframe chose either "future" or "past"
+  - category is gonna be the event category
+  - example formats: "when was my last meeting", "when is my next party"
+
+  suggest_time rules:
   - the parameters should be in the order: title(string), date(YYYY-MM-DD)
   - example formats: "when should I schedule a meeting?", "find a good time for my doctor appointment", "suggest time for studying"
+  - you don't need time for suggest_time, just title, date and category
+
   local_events rules:
-  - if the user asks about what events are happening, local events, or similar queries, use local_events function
   - for local_events, timeframe can be "today", "this week", "this month", day of week or a date
-  findEvent rules:
-  - if the user asks about when an event will happen, or when was the last time, or to find specific events, use findEvent function
-  - for findEvent, category is gonna be the event category and timeframe is gonna be "future" or "past" but not explicitly mentioned
-  general rules:
-  - empty parameters are just gonna be 2 single quotes, not undefined or null or 'timeframe'/'category'/etc.
-  - date parameter is by default today: ${currentDate} if it is not specified
-  - the current day of week is: ${currentDayName}, and the time is: ${currentTime}
-  - if a parameter is not specified or the request is unclear ask for clarification and make the parameter empty, DON'T ASSUME WHAT THE USER WANTS
-  - days of week map to these specific dates for the next 7 days:
+
+  General rules:
+  - Empty parameters are gonna be "".
+  - Date parameter is by default today: ${currentDate} if it is not specified
+  - The current day of week is: ${currentDayName}, and the time is: ${currentTime}
+  - If a parameter is not specified or the request is unclear ask for clarification and make the parameter empty, DON'T ASSUME WHAT THE USER WANTS
+  - Days of week map to these specific dates for the next 7 days:
     ${dateMapping.join("\n    ")}
-  - when a day of week is mentioned (like "monday", "tuesday", etc.) use the corresponding date from the mapping above
-  - you must choose a category: Work, Education, Health & Wellness, Finance & Bills, Social & Family, Travel & Commute, Personal Tasks, Leisure & Hobbies, Other
-  - category parameter is mandatory, if you cannot deduce it use "Other"
-  - the response should be formatted correctly and not miss any double quotes
-  - the time must be in 24 hour format
-  
-  Consider the conversation history for context when processing the current user message, like a found event, or a created event.`;
+  - When a day of week is mentioned (like "monday", "tuesday", etc.) use the corresponding date from the mapping above
+  - You must choose a category: Work, Education, Health & Wellness, Finance & Bills, Social & Family, Travel & Commute, Personal Tasks, Leisure & Hobbies, Other
+  - Category parameter is mandatory, if you cannot deduce it use "Other"
+  - The time must be in 24 hour format
+  - Always provide a message
+  - Ensure the response is valid JSON: all keys and string values must use double quotes, and the structure must be parsable.
+  - Respect the formats and don't miss any fields`;
 
   // Build messages array with system prompt, conversation history, and current user message
   const messages = [{ role: "system", content: systemPrompt }];
@@ -163,14 +174,17 @@ router.post("/", async (req, res) => {
   }
 
   // Add the current user message
-  messages.push({ role: "user", content: `The user's message is: "${text}"` });
+  messages.push({
+    role: "user",
+    content: `The user's message is: "${text.replace(/\?/g, "")}"`,
+  });
 
   try {
     const response = await groq.chat.completions.create({
       messages: messages,
       model: "llama3-70b-8192",
       // response_format: { type: "json_object" },
-      temperature: 0,
+      temperature: 0.9,
     });
 
     const assistantResponse = safeJsonParse(
@@ -179,7 +193,7 @@ router.post("/", async (req, res) => {
 
     // Create params array from direct properties if parameters doesn't exist
     let params = assistantResponse.parameters;
-    if (!params && assistantResponse.function === "createEvent") {
+    if (!params && assistantResponse.function === "create_event") {
       params = [
         assistantResponse.title,
         assistantResponse.startTime,
@@ -194,12 +208,13 @@ router.post("/", async (req, res) => {
     let responseMessage = assistantResponse.message;
     let finalResponse = null;
 
-    if (assistantResponse.function === "createEvent") {
+    if (assistantResponse.function === "create_event") {
       if (params && params.every(Boolean)) {
         const title = params[0];
         const timeStart = params[1];
         const timeEnd = params[2];
         const date = params[3];
+
         const dayValue = dayjs(date).valueOf();
 
         // Check for overlapping events
@@ -234,11 +249,9 @@ router.post("/", async (req, res) => {
               category: category,
             },
             overlappingEvents: formattedOverlappingEvents,
-            message: `Creating "${title}" on ${dayjs(date).format(
-              "YYYY-MM-DD"
-            )} from ${timeStart} to ${timeEnd} would overlap with ${
-              overlappingEvents.length
-            } existing event(s).`,
+            message: `I can't create "${title}" on ${dayjs(date).format(
+              "dddd, MMMM D"
+            )} from ${timeStart} to ${timeEnd} because it would overlap with:`,
           };
 
           // Store the formatted message in history
@@ -246,7 +259,7 @@ router.post("/", async (req, res) => {
             userId,
             "assistant",
             JSON.stringify({
-              function: "createEvent",
+              function: "create_event",
               message: finalResponse.message,
             })
           );
@@ -275,7 +288,7 @@ router.post("/", async (req, res) => {
             userId,
             "assistant",
             JSON.stringify({
-              function: "createEvent",
+              function: "create_event",
               message: responseMessage,
             })
           );
@@ -285,7 +298,7 @@ router.post("/", async (req, res) => {
       }
     }
 
-    if (assistantResponse.function === "suggestTime") {
+    if (assistantResponse.function === "suggest_time") {
       const params = assistantResponse.parameters;
       if (params && params.length >= 2) {
         const title = params[0];
@@ -307,7 +320,30 @@ router.post("/", async (req, res) => {
             userId,
             "assistant",
             JSON.stringify({
-              function: "suggestTime",
+              function: "suggest_time",
+              message: responseMessage,
+            })
+          );
+
+          return res.json(finalResponse);
+        }
+
+        // Check if the date is valid
+        if (!date || !dayjs(date).isValid()) {
+          responseMessage =
+            assistantResponse.message ||
+            "I need a valid date to suggest optimal times.";
+
+          finalResponse = {
+            intent: "unknown",
+            message: responseMessage,
+          };
+
+          addMessageToHistory(
+            userId,
+            "assistant",
+            JSON.stringify({
+              function: "suggest_time",
               message: responseMessage,
             })
           );
@@ -316,7 +352,7 @@ router.post("/", async (req, res) => {
         }
 
         const dayValue = dayjs(date).valueOf();
-        const eventCategory = assistantResponse.category || "Other";
+        const eventCategory = assistantResponse.category || category || "Other";
         const dayOfWeek = dayjs(date).day(); // 0 is Sunday, 6 is Saturday
 
         // Find free slots for the day
@@ -378,7 +414,7 @@ router.post("/", async (req, res) => {
           userId,
           "assistant",
           JSON.stringify({
-            function: "suggestTime",
+            function: "suggest_time",
             message: responseMessage,
           })
         );
@@ -398,7 +434,7 @@ router.post("/", async (req, res) => {
           userId,
           "assistant",
           JSON.stringify({
-            function: "suggestTime",
+            function: "suggest_time",
             message: responseMessage,
           })
         );
@@ -407,8 +443,9 @@ router.post("/", async (req, res) => {
       }
     }
 
+    // Handle functions that use timeframe directly
     if (assistantResponse.function === "local_events") {
-      const timeframe = params || "this week";
+      const timeframe = assistantResponse.timeframe || "this week";
       const cityName = "Iasi Romania"; // City is hardcoded as specified in requirements
 
       try {
@@ -445,8 +482,9 @@ router.post("/", async (req, res) => {
       }
     }
 
-    if (assistantResponse.function === "findEvent") {
-      const timeframe = params.includes("future") ? "future" : "past";
+    if (assistantResponse.function === "find_event") {
+      const timeframe =
+        assistantResponse.timeframe === "future" ? "future" : "past";
 
       try {
         // Get events matching the category and timeframe
@@ -478,7 +516,7 @@ router.post("/", async (req, res) => {
             userId,
             "assistant",
             JSON.stringify({
-              function: "findEvent",
+              function: "find_event",
               message: responseMessage,
             })
           );
@@ -581,7 +619,7 @@ Your response must be a JSON that follows this exact format:
           userId,
           "assistant",
           JSON.stringify({
-            function: "findEvent",
+            function: "find_event",
             message: responseMessage,
           })
         );
