@@ -109,7 +109,7 @@ router.post("/", async (req, res) => {
     dateMapping.push(`${dayOfWeek}: ${formattedDate}`);
   }
 
-  // Update the system prompt to add the new function
+  // Update the system prompt to add the new delete_event function
   let systemPrompt = `You are a calendar assistant that outputs JSON only
   Extract the function and it's parameters from the user message, and provide a short but useful message for completion, missing parameters or just a friendly response
   Consider the conversation history for context when processing the current user message
@@ -119,6 +119,7 @@ router.post("/", async (req, res) => {
   - find_event(timeframe) (if the user asks about when an event will happen, or when was the last time an event happened, or when is the next time an event is gonna happen)
   - suggest_time(title,date) (if the user asks to find the best time, for what time to schedule, or when to have an event)
   - local_events(timeframe) (if the user asks about what events are happening, local events, or similar queries)
+  - delete_event(eventTime,eventTitle) (if the user asks to delete, remove, or cancel an event)
   - unknown_function() (if the request is unclear)
 
   FORMATS:
@@ -126,6 +127,7 @@ router.post("/", async (req, res) => {
   find_event format: {"function": "find_event", "timeframe": "timeframe", "category": "category", "message": ""}
   suggest_time format: {"function": "suggest_time", "parameters": ["title", "date"], "category": "category", "message": ""}
   local_events format: {"function": "local_events", "timeframe": "timeframe", "message": ""}
+  delete_event format: {"function": "delete_event", "parameters": ["eventTime", "eventTitle"], "message": ""}
   unknown_function format: {"message": ""}
 
   RULES:
@@ -148,15 +150,21 @@ router.post("/", async (req, res) => {
   local_events rules:
   - for local_events, timeframe can be "today", "this week", "this month", day of week or a date
 
+  delete_event rules:
+  - parameters should be in the order: eventTime(string description of when), eventTitle(string description of what)
+  - example formats: "delete my meeting tomorrow", "remove doctor appointment next week", "cancel lunch on Friday"
+  - the eventTime can be a specific date, day of week, or relative time like "tomorrow", "next week"
+  - the eventTitle can be the exact title or a description like "meeting", "appointment"
+
   General rules:
   - Empty parameters are gonna be "".
+  - Category must be one of these: Work, Education, Health & Wellness, Finance & Bills, Social & Family, Travel & Commute, Personal Tasks, Leisure & Hobbies, Other
   - Date parameter is by default today: ${currentDate} if it is not specified
   - The current day of week is: ${currentDayName}, and the time is: ${currentTime}
   - If a parameter is not specified or the request is unclear ask for clarification and make the parameter empty, DON'T ASSUME WHAT THE USER WANTS
-  - Days of week map to these specific dates for the next 7 days:
+  - These are the next 7 days for context:
     ${dateMapping.join("\n    ")}
   - When a day of week is mentioned (like "monday", "tuesday", etc.) use the corresponding date from the mapping above
-  - You must choose a category: Work, Education, Health & Wellness, Finance & Bills, Social & Family, Travel & Commute, Personal Tasks, Leisure & Hobbies, Other
   - Category parameter is mandatory, if you cannot deduce it use "Other"
   - The time must be in 24 hour format
   - Always provide a message
@@ -184,7 +192,7 @@ router.post("/", async (req, res) => {
       messages: messages,
       model: "llama3-70b-8192",
       // response_format: { type: "json_object" },
-      temperature: 0.9,
+      temperature: 0.1,
     });
 
     const assistantResponse = safeJsonParse(
@@ -440,6 +448,170 @@ router.post("/", async (req, res) => {
         );
 
         return res.json(finalResponse);
+      }
+    }
+
+    if (assistantResponse.function === "delete_event") {
+      const params = assistantResponse.parameters;
+      if (params && params.length >= 2) {
+        const eventTime = params[0]; // When (date description)
+        const eventTitle = params[1]; // What (event description)
+
+        if (!eventTime || !eventTitle) {
+          // Use the message provided by the AI or a fallback
+          responseMessage =
+            assistantResponse.message ||
+            "I need more details about which event to delete.";
+
+          finalResponse = {
+            intent: "unknown",
+            message: responseMessage,
+          };
+
+          addMessageToHistory(
+            userId,
+            "assistant",
+            JSON.stringify({
+              function: "delete_event",
+              message: responseMessage,
+            })
+          );
+
+          return res.json(finalResponse);
+        }
+
+        try {
+          // Get events from the next 30 days FOR THE CURRENT USER
+          const today = dayjs().startOf("day");
+          const thirtyDaysLater = today.add(30, "days").endOf("day");
+
+          const upcomingEvents = await Event.findAll({
+            where: {
+              day: {
+                [Op.between]: [today.valueOf(), thirtyDaysLater.valueOf()],
+              },
+              userId: userId,
+            },
+          });
+
+          if (upcomingEvents.length === 0) {
+            responseMessage = "I couldn't find any events in the next 30 days.";
+            finalResponse = {
+              intent: "delete_event_result",
+              events: [],
+              message: responseMessage,
+            };
+
+            addMessageToHistory(
+              userId,
+              "assistant",
+              JSON.stringify({
+                function: "delete_event",
+                message: responseMessage,
+              })
+            );
+
+            return res.json(finalResponse);
+          }
+
+          // Format events for AI processing
+          const formattedEvents = upcomingEvents.map((event) => ({
+            id: event.id,
+            title: event.title,
+            day: dayjs(parseInt(event.day)).format("YYYY-MM-DD"),
+            dayOfWeek: dayjs(parseInt(event.day)).format("dddd"), // Add day of week
+            timeStart: event.timeStart,
+            timeEnd: event.timeEnd,
+            category: event.category,
+            location: event.location || "",
+          }));
+
+          // Create a prompt for Groq to find the event to delete
+          const deletePrompt = `You are an AI assistant that helps identify which event to delete based on a user's description.
+
+User wants to delete an event described as: "${eventTitle}" on/at "${eventTime}"
+Current date: ${dayjs().format("YYYY-MM-DD")}
+Current day of week: ${dayjs().format("dddd")}
+
+Available events in the next 30 days:
+${JSON.stringify(formattedEvents, null, 2)}
+
+Find the SINGLE most likely event that matches the user's description.
+Consider the event title, date, and any other relevant details from the user's request.
+
+Your response must be a JSON with this format:
+{
+  "eventId": "id of the event to delete",
+  "message": "A short and natural confirmation message about which event will be deleted."
+}
+
+If you cannot find a matching event, use null for eventId and explain why in the message.`;
+
+          // Call Groq to find the event to delete
+          const groqResponse = await groq.chat.completions.create({
+            messages: [{ role: "user", content: deletePrompt }],
+            model: "llama3-70b-8192",
+            response_format: { type: "json_object" },
+            temperature: 0,
+          });
+
+          const matchResult = JSON.parse(
+            groqResponse.choices[0].message.content
+          );
+
+          if (!matchResult.eventId) {
+            return res.json({
+              intent: "delete_event_result",
+              events: formattedEvents,
+              selectedEvent: null,
+              message:
+                matchResult.message || "I couldn't find that specific event.",
+            });
+          }
+
+          // Find the selected event
+          const selectedEvent = formattedEvents.find(
+            (e) => e.id.toString() === matchResult.eventId.toString()
+          );
+
+          if (!selectedEvent) {
+            return res.json({
+              intent: "delete_event_result",
+              events: formattedEvents,
+              selectedEvent: null,
+              message:
+                "I found an event ID but couldn't retrieve the event details.",
+            });
+          }
+
+          // Use the dynamically generated message from the AI
+          responseMessage = matchResult.message;
+
+          finalResponse = {
+            intent: "delete_event_result",
+            selectedEvent: selectedEvent,
+            message: responseMessage,
+          };
+
+          // Save the actual response shown to the user
+          addMessageToHistory(
+            userId,
+            "assistant",
+            JSON.stringify({
+              function: "delete_event",
+              message: responseMessage,
+            })
+          );
+
+          return res.json(finalResponse);
+        } catch (error) {
+          console.error("Error finding event to delete:", error);
+          return res.json({
+            intent: "error",
+            message:
+              "Sorry, I encountered an error while trying to find the event to delete.",
+          });
+        }
       }
     }
 

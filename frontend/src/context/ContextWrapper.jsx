@@ -25,10 +25,12 @@ const asyncDispatchEvent = (dispatch) => async (action, getState) => {
   try {
     switch (action.type) {
       case "push":
-        await api.createEvent(action.payload);
+        const createdEvent = await api.createEvent(action.payload);
         const eventsAfterCreate = await api.getEvents();
         dispatch({ type: "set", payload: eventsAfterCreate });
-        break;
+        
+        // Return the created event information for potential undo functionality
+        return { eventData: createdEvent };
 
       case "update":
         try {
@@ -46,10 +48,16 @@ const asyncDispatchEvent = (dispatch) => async (action, getState) => {
         break;
 
       case "delete":
-        await api.deleteEvent(action.payload.id);
+        // Store the event ID before deletion
+        const deletedEventId = action.payload.id;
+        const deletedEvent = { ...action.payload };
+
+        await api.deleteEvent(deletedEventId);
         const eventsAfterDelete = await api.getEvents();
         dispatch({ type: "set", payload: eventsAfterDelete });
-        break;
+
+        // Return the deleted event information for potential undo functionality
+        return { id: deletedEventId, eventData: deletedEvent };
 
       case "set":
         dispatch(action);

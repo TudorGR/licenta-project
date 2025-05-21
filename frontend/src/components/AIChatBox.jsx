@@ -44,6 +44,169 @@ const TypewriterEffect = ({ text, onComplete, speed = 10 }) => {
   return <span>{displayedText}</span>;
 };
 
+// Add this new component with the other custom message components
+const DeleteConfirmationMessage = ({ eventData, message, setMessages, dispatchEvent: dispatchCalendarEvent }) => {
+  // Add state to track if the event has been restored
+  const [isRestored, setIsRestored] = useState(false);
+
+  const handleUndoDelete = async () => {
+    try {
+      // Convert day from string format to timestamp if needed
+      let dayValue = eventData.day;
+      
+      // Check if day is a string in date format rather than a timestamp
+      if (typeof eventData.day === 'string' && !isNaN(Date.parse(eventData.day))) {
+        // Convert the date string to timestamp (milliseconds)
+        dayValue = dayjs(eventData.day).valueOf();
+      }
+
+      // Create a clean event object with only the required fields
+      const event = {
+        title: eventData.title,
+        description: eventData.description || "",
+        timeStart: eventData.timeStart,
+        timeEnd: eventData.timeEnd,
+        day: dayValue, // Use the correctly formatted day value
+        category: eventData.category || "Other",
+      };
+
+      // Restore the deleted event by pushing back only required fields
+      await dispatchCalendarEvent({ type: "push", payload: event });
+
+      // Mark as restored to disable the button
+      setIsRestored(true);
+
+      // Add a message confirming the restoration
+      setMessages((prev) => [
+        ...prev,
+        {
+          type: "system",
+          text: `Restored event: ${event.title}`,
+          isTyping: true,
+          isComplete: false,
+          timestamp: new Date(),
+        },
+      ]);
+    } catch (error) {
+      console.error("Error restoring event:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          type: "system",
+          text: "Sorry, I couldn't restore the deleted event.",
+          isTyping: true,
+          isComplete: false,
+          timestamp: new Date(),
+        },
+      ]);
+    }
+  };
+
+  return (
+    <div className="flex flex-col">
+      <div>{message}</div>
+      <button
+        onClick={handleUndoDelete}
+        disabled={isRestored}
+        className={`self-start mt-2 px-3 py-1 ${
+          isRestored
+            ? "bg-gray-50 text-gray-400 cursor-not-allowed"
+            : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+        } text-sm rounded-xl transition-colors flex items-center gap-1`}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M3 7v6h6"></path>
+          <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path>
+        </svg>
+        {isRestored ? "Event Restored" : "Undo"}
+      </button>
+    </div>
+  );
+};
+
+// Add this new component after DeleteConfirmationMessage
+const CreateConfirmationMessage = ({ event, message, setMessages, dispatchEvent: dispatchCalendarEvent }) => {
+  // Add state to track if the event has been undone
+  const [isUndone, setIsUndone] = useState(false);
+
+  const handleUndoCreate = async () => {
+    try {
+      if (event && event.id) {
+        // Delete the newly created event
+        await dispatchCalendarEvent({ type: "delete", payload: event });
+        
+        // Mark as undone to disable the button
+        setIsUndone(true);
+
+        // Add a message confirming the undo action
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: "system",
+            text: `Undid creation of event: ${event.title}`,
+            isTyping: true,
+            isComplete: false,
+            timestamp: new Date(),
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error("Error undoing event creation:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          type: "system",
+          text: "Sorry, I couldn't undo the event creation.",
+          isTyping: true,
+          isComplete: false,
+          timestamp: new Date(),
+        },
+      ]);
+    }
+  };
+
+  return (
+    <div className="flex flex-col">
+      <div>{message}</div>
+      <button
+        onClick={handleUndoCreate}
+        disabled={isUndone}
+        className={`self-start mt-2 px-3 py-1 ${
+          isUndone
+            ? "bg-gray-50 text-gray-400 cursor-not-allowed"
+            : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+        } text-sm rounded-xl transition-colors flex items-center gap-1`}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M3 7v6h6"></path>
+          <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path>
+        </svg>
+        {isUndone ? "Event Removed" : "Undo"}
+      </button>
+    </div>
+  );
+};
+
 const AIChatBox = ({ onClose }) => {
   const {
     dispatchEvent,
@@ -468,36 +631,44 @@ const AIChatBox = ({ onClose }) => {
       const responseTimestamp = new Date();
 
       if (response.data.intent === "create_event") {
-        // Handle event creation (no overlaps)
         const eventData = response.data.eventData;
+        
+        try {
+          // Create the event
+          const event = {
+            title: eventData.title,
+            description: eventData.description || "",
+            day: eventData.day,
+            timeStart: eventData.timeStart,
+            timeEnd: eventData.timeEnd,
+            category: eventData.category || "Other",
+          };
 
-        const event = {
-          title: eventData.title,
-          description: eventData.description || "",
-          timeStart: eventData.timeStart,
-          timeEnd: eventData.timeEnd,
-          day: eventData.day,
-          category: eventData.category || "None",
-        };
+          // Create the event and capture the response (should contain the created event with ID)
+          const createdEventInfo = await dispatchEvent({ type: "push", payload: event });
+          
+          // Add confirmation message with undo button
+          setMessages((prev) => [
+            ...prev,
+            {
+              type: "system",
+              content: {
+                type: "createConfirmation",
+                event: createdEventInfo?.eventData || event, // Use the created event with ID
+                message: response.data.message || `Event created: ${event.title} on ${dayjs(event.day).format("dddd, MMMM D")} at ${event.timeStart}.`,
+              },
+              isTyping: true,
+              isComplete: false,
+              timestamp: responseTimestamp,
+            },
+          ]);
 
-        await dispatchEvent({ type: "push", payload: event });
-
-        // Add confirmation message to chat with timestamp
-        setMessages((prev) => [
-          ...prev,
-          {
-            type: "system",
-            text: `Event created: ${event.title} on ${dayjs(event.day).format(
-              "dddd, MMMM D"
-            )} at ${event.timeStart}.`,
-            isTyping: true, // Add this flag
-            isComplete: false, // Add this flag
-            timestamp: responseTimestamp,
-          },
-        ]);
-
-        // Refresh suggestions after getting a response
-        fetchEventSuggestions();
+          // Refresh suggestions after getting a response
+          fetchEventSuggestions();
+        } catch (error) {
+          console.error("Error creating event:", error);
+          // Handle error...
+        }
       } else if (response.data.intent === "event_overlap") {
         // Handle event overlap case with interactive list
         const eventData = response.data.eventData;
@@ -597,6 +768,44 @@ const AIChatBox = ({ onClose }) => {
 
         // Refresh suggestions after getting a response
         fetchEventSuggestions();
+      } else if (response.data.intent === "delete_event_result") {
+        // Handle delete event result
+        const { selectedEvent, message } = response.data;
+
+        if (selectedEvent) {
+          // Delete the event
+          await dispatchEvent({ type: "delete", payload: selectedEvent });
+
+          // Add confirmation message with undo button
+          setMessages((prev) => [
+            ...prev,
+            {
+              type: "system",
+              content: {
+                type: "deleteConfirmation",
+                event: selectedEvent,
+                message: message || `Deleted event: ${selectedEvent.title}`,
+              },
+              isTyping: true,
+              isComplete: false,
+              timestamp: responseTimestamp,
+            },
+          ]);
+        } else {
+          // No event found to delete
+          setMessages((prev) => [
+            ...prev,
+            {
+              type: "system",
+              text: message || "I couldn't find that specific event to delete.",
+              isTyping: true,
+              isComplete: false,
+              timestamp: responseTimestamp,
+            },
+          ]);
+        }
+        // Refresh suggestions after getting a response
+        fetchEventSuggestions();
       } else {
         // For other intents (existing code)
         setMessages((prev) => [
@@ -672,7 +881,7 @@ const AIChatBox = ({ onClose }) => {
           timeStart: slot.timeStart,
           timeEnd: slot.timeEnd,
           day: eventData.day,
-          category: eventData.category || "None",
+          category: eventData.category || "Other",
         };
 
         await dispatchEvent({ type: "push", payload: event });
@@ -1167,6 +1376,24 @@ const AIChatBox = ({ onClose }) => {
               selectedEvent={msg.content.selectedEvent}
               category={msg.content.category}
               message={msg.content.message}
+            />
+          );
+        } else if (msg.content.type === "deleteConfirmation") {
+          content = (
+            <DeleteConfirmationMessage
+              eventData={msg.content.event}
+              message={msg.content.message}
+              dispatchEvent={dispatchEvent}
+              setMessages={setMessages}
+            />
+          );
+        } else if (msg.content.type === "createConfirmation") {
+          content = (
+            <CreateConfirmationMessage
+              event={msg.content.event}
+              message={msg.content.message}
+              dispatchEvent={dispatchEvent}
+              setMessages={setMessages}
             />
           );
         }
