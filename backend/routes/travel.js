@@ -33,57 +33,6 @@ async function getGroqJsonResponse(prompt) {
   return JSON.parse(jsonMatch[0]);
 }
 
-router.post("/calculate-travel-time", async (req, res) => {
-  try {
-    const { origin, destination } = req.body;
-
-    if (!origin || !destination) {
-      return res
-        .status(400)
-        .json({ error: "Origin and destination are required" });
-    }
-
-    // Create a prompt for GROQ to estimate travel times
-    const prompt = `I need to travel from "${origin}" to "${destination}". 
-    
-    Please estimate the travel time in minutes for each transportation mode:
-    1. Driving
-    2. Walking
-    3. Public transit (bus/train/subway)
-    4. Cycling
-    
-    Return ONLY a valid JSON object in this exact format with no additional text:
-    {
-      "driving": [number of minutes as integer],
-      "walking": [number of minutes as integer],
-      "transit": [number of minutes as integer],
-      "cycling": [number of minutes as integer]
-    }
-    
-    If you cannot estimate for a specific mode, use null for that value. If locations are invalid or cannot be determined, return null for all values.
-    `;
-
-    // Get travel time estimates using the helper function
-    const travelTimes = await getGroqJsonResponse(prompt);
-
-    // Validate the response format
-    const expectedKeys = ["driving", "walking", "transit", "cycling"];
-    const hasAllKeys = expectedKeys.every((key) => key in travelTimes);
-
-    if (!hasAllKeys) {
-      throw new Error("Response is missing required fields");
-    }
-
-    res.json(travelTimes);
-  } catch (error) {
-    console.error("Error calculating travel time:", error);
-    res.status(500).json({
-      error: "Error",
-      message: error.message,
-    });
-  }
-});
-
 router.post("/location-to-coords", async (req, res) => {
   const { location } = req.body;
 

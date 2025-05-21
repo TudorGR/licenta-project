@@ -24,17 +24,11 @@ const Context = React.createContext({
   timeEnd: "09:00",
   setTimeEnd: (time) => {},
   isLoading: true,
-  showHeatmap: false,
-  setShowHeatmap: () => {},
-  selectedHeatmapCategories: new Set(),
-  setSelectedHeatmapCategories: () => {},
   categories: [],
   workingHoursStart: "09:00",
   workingHoursEnd: "17:00",
   setWorkingHoursStart: (time) => {},
   setWorkingHoursEnd: (time) => {},
-  showWeather: false,
-  setShowWeather: () => {},
 
   // Add analytics-related state
   showAnalyticsDashboard: false,

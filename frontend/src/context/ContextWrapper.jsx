@@ -28,7 +28,7 @@ const asyncDispatchEvent = (dispatch) => async (action, getState) => {
         const createdEvent = await api.createEvent(action.payload);
         const eventsAfterCreate = await api.getEvents();
         dispatch({ type: "set", payload: eventsAfterCreate });
-        
+
         // Return the created event information for potential undo functionality
         return { eventData: createdEvent };
 
@@ -113,7 +113,6 @@ export default function ContextWrapper({ children }) {
   const [workingHoursEnd, setWorkingHoursEnd] = useState(
     localStorage.getItem("workingHoursEnd") || "19:00"
   );
-  const [showWeather, setShowWeather] = useState(false);
   const [showLocalEvents, setShowLocalEvents] = useState(false);
   const [userCity, setUserCity] = useState(
     localStorage.getItem("userCity") || "Iasi Romania"
@@ -145,7 +144,7 @@ export default function ContextWrapper({ children }) {
   }, [dispatch, savedEvents, workingHoursStart, workingHoursEnd]);
 
   const [loading, setLoading] = useState(true);
-  const [categories] = useState([
+  const [categories, setCategories] = useState([
     "Other",
     "Work",
     "Education",
@@ -156,11 +155,7 @@ export default function ContextWrapper({ children }) {
     "Personal Tasks",
     "Leisure & Hobbies",
   ]);
-  const [selectedHeatmapCategories, setSelectedHeatmapCategories] = useState(
-    () => new Set(categories)
-  );
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [showHeatmap, setShowHeatmap] = useState(false);
   const [user, setUser] = useState(null);
 
   // Add analytics-related state
@@ -254,19 +249,13 @@ export default function ContextWrapper({ children }) {
         isDayView,
         setIsDayView: setIsDayViewWithStorage,
         categories,
-        selectedHeatmapCategories,
-        setSelectedHeatmapCategories,
         selectedCategory,
         setSelectedCategory,
         isLoading: loading,
-        showHeatmap,
-        setShowHeatmap,
         workingHoursStart,
         workingHoursEnd,
         setWorkingHoursStart,
         setWorkingHoursEnd,
-        showWeather,
-        setShowWeather,
         showLocalEvents,
         setShowLocalEvents,
         userCity,

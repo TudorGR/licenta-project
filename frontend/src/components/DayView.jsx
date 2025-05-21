@@ -3,10 +3,6 @@ import Context from "../context/Context";
 import dayjs from "dayjs";
 import bellIcon from "../assets/bell.svg";
 import ContextMenu from "./ContextMenu";
-import TravelTimeIndicator, {
-  clearTravelTimeCache,
-} from "./TravelTimeIndicator";
-import WeatherIndicator from "./WeatherIndicator";
 import {
   categoryColors,
   lightCategoryColors,
@@ -36,7 +32,6 @@ const DayView = () => {
     selectedCategory,
     setSelectedCategory,
     dispatchEvent,
-    showWeather,
   } = useContext(Context);
 
   const calculateTimePosition = () => {
@@ -261,9 +256,6 @@ const DayView = () => {
             type: "update",
             payload: updatedEvent,
           });
-
-          // Clear travel time cache when events are moved
-          TravelTimeIndicator.clearTravelTimeCache();
         } else {
           setTimeStart(draggedEvent.timeStart);
           setTimeEnd(draggedEvent.timeEnd);
@@ -341,55 +333,6 @@ const DayView = () => {
     setDragOffset(relativeY - eventTop);
   };
 
-  const getConsecutiveEventsWithLocations = (events) => {
-    // Sort events by start time
-    const sortedEvents = [...events].sort((a, b) => {
-      const timeA = new Date(`2000-01-01T${a.timeStart}`).getTime();
-      const timeB = new Date(`2000-01-01T${b.timeStart}`).getTime();
-      return timeA - timeB;
-    });
-
-    const pairs = [];
-
-    // Find consecutive events with locations
-    for (let i = 0; i < sortedEvents.length - 1; i++) {
-      const currentEvent = sortedEvents[i];
-      const nextEvent = sortedEvents[i + 1];
-
-      // Check if both events have locations
-      if (
-        currentEvent.location &&
-        nextEvent.location &&
-        currentEvent.location.trim() !== "" &&
-        nextEvent.location.trim() !== ""
-      ) {
-        // Check if they are on the same day
-        if (currentEvent.day === nextEvent.day) {
-          // Calculate the time between events in minutes
-          const currentEndTime = new Date(
-            `2000-01-01T${currentEvent.timeEnd}`
-          ).getTime();
-          const nextStartTime = new Date(
-            `2000-01-01T${nextEvent.timeStart}`
-          ).getTime();
-          const timeBetween = (nextStartTime - currentEndTime) / (1000 * 60);
-
-          if (timeBetween > 0) {
-            pairs.push({
-              firstEvent: currentEvent,
-              secondEvent: nextEvent,
-              timeBetween,
-            });
-          }
-        }
-      }
-    }
-
-    return pairs;
-  };
-
-  const consecutiveEventPairs = getConsecutiveEventsWithLocations(dayEvents);
-
   return (
     <div className="flex-1 flex flex-col">
       <div ref={timeGridRef} className="flex-1 overflow-y-auto">
@@ -416,11 +359,6 @@ const DayView = () => {
                 <div className="pl-1.5 absolute -left-13 -top-2 text-xs text-gray-300">
                   {`${i.toString().padStart(2, "0")}:00`}
                 </div>
-                {showWeather && (
-                  <div className="absolute right-1 top-1">
-                    <WeatherIndicator hour={i} date={selectedDay} />
-                  </div>
-                )}
               </div>
             ))}
 
@@ -478,13 +416,12 @@ const DayView = () => {
                   key={event.id}
                   onMouseDown={(e) => handleEventMouseDown(e, event)}
                   onContextMenu={(e) => handleContextMenu(e, event)}
-                  className={`transition-opacity  eventt absolute left-0 ${
-                    showWeather ? "w-[calc(100%-80px)]" : "w-full"
-                  } cursor-pointer ${
-                    draggedEvent && draggedEvent.id === event.id
-                      ? "opacity-50"
-                      : ""
-                  }`}
+                  className={`transition-opacity  eventt absolute left-0 w-full
+                   cursor-pointer ${
+                     draggedEvent && draggedEvent.id === event.id
+                       ? "opacity-50"
+                       : ""
+                   }`}
                   style={{ top, height }}
                 >
                   <div
@@ -638,37 +575,6 @@ const DayView = () => {
                       )}
                     </div>
                   </div>
-                </div>
-              );
-            })}
-
-            {consecutiveEventPairs.map((pair, idx) => {
-              const firstEventEnd = getTimeSlot(pair.firstEvent.timeEnd);
-              const secondEventStart = getTimeSlot(pair.secondEvent.timeStart);
-
-              const top = (firstEventEnd / 60) * TIME_SLOT_HEIGHT;
-              const height =
-                ((secondEventStart - firstEventEnd) / 60) * TIME_SLOT_HEIGHT;
-
-              return (
-                <div
-                  key={`travel-${idx}`}
-                  className="travel-time-container"
-                  style={{
-                    position: "absolute",
-                    top: `${top}px`,
-                    height: `${height}px`,
-                    left: "0",
-                    width: "100%",
-                    zIndex: 2,
-                    pointerEvents: "none",
-                  }}
-                >
-                  <TravelTimeIndicator
-                    origin={pair.firstEvent.location}
-                    destination={pair.secondEvent.location}
-                    timeBetween={pair.timeBetween}
-                  />
                 </div>
               );
             })}

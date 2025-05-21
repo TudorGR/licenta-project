@@ -339,7 +339,6 @@ const AnalyticsDashboard = ({ onClose }) => {
   // 7. Travel time analytics
   const travelTimeData = useMemo(() => {
     // This is a placeholder - ideally we would use actual travel time data
-    // from your TravelTimeIndicator component if it's stored somewhere
     // For now, let's just count events with locations as a proxy
 
     const eventsWithLocation = filteredEvents.filter(

@@ -2,10 +2,6 @@ import dayjs from "dayjs";
 import React, { useContext, useEffect, useRef, useState, useMemo } from "react";
 import Context from "../context/Context";
 import ContextMenu from "./ContextMenu";
-import TravelTimeIndicator, {
-  clearTravelTimeCache,
-} from "./TravelTimeIndicator";
-import WeatherIndicator from "./WeatherIndicator";
 import {
   categoryColors,
   lightCategoryColors,
@@ -45,12 +41,9 @@ const DayWeek = ({
     setSelectedEvent,
     setTimeStart,
     setTimeEnd,
-    selectedHeatmapCategories,
     dispatchEvent,
     savedEvents,
     loading,
-    showHeatmap,
-    showWeather,
     userCity,
   } = useContext(Context);
 
@@ -131,7 +124,7 @@ const DayWeek = ({
     } else if (isDraggingAcrossDays) {
       if (hasMoved) {
         try {
-          clearTravelTimeCache();
+          // Removed clearTravelTimeCache usage
         } catch (error) {
           console.error("Error updating event:", error);
         }
@@ -293,118 +286,6 @@ const DayWeek = ({
     }
   }, []);
 
-  const getHeatmapData = () => {
-    if (!savedEvents) return null;
-
-    const currentDate = day.format("YYYY-MM-DD");
-    const oneMonthAgo = day.subtract(1, "month").format("YYYY-MM-DD");
-    const currentWeekStart = dayjs().startOf("week").add(1, "day");
-
-    const timeSlotsByCategory = {};
-
-    savedEvents
-      .filter((event) => {
-        const eventDate = dayjs(event.day);
-        const isSameWeekDay = eventDate.day() === day.day();
-
-        const isBeforeToday = eventDate.isBefore(currentDate);
-        const isAfterOneMonthAgo = eventDate.isAfter(oneMonthAgo);
-        const isPastMonthEvent = isBeforeToday && isAfterOneMonthAgo;
-
-        const isCurrentWeek = eventDate.isSame(day, "week");
-
-        return isSameWeekDay && (isPastMonthEvent || isCurrentWeek);
-      })
-      .forEach((event) => {
-        if (!selectedHeatmapCategories.has(event.category)) return;
-
-        const category = event.category || "None";
-        if (!timeSlotsByCategory[category]) {
-          timeSlotsByCategory[category] = {};
-        }
-
-        const startMinutes = getTimeSlot(event.timeStart);
-        const endMinutes = getTimeSlot(event.timeEnd);
-
-        for (let min = startMinutes; min < endMinutes; min += 15) {
-          timeSlotsByCategory[category][min] =
-            (timeSlotsByCategory[category][min] || 0) + 1;
-        }
-      });
-
-    return timeSlotsByCategory;
-  };
-
-  const renderHeatmap = () => {
-    const heatmapData = getHeatmapData();
-    if (!heatmapData) return null;
-
-    return Object.entries(heatmapData).map(([category, timeSlots]) =>
-      Object.entries(timeSlots).map(([minutes, count]) => {
-        const opacity = Math.min(count * 0.2, 0.8);
-        return (
-          <div
-            key={`${category}-${minutes}`}
-            className="absolute left-0 w-full"
-            style={{
-              top: `${(parseInt(minutes) / 60) * TIME_SLOT_HEIGHT}px`,
-              height: `${TIME_SLOT_HEIGHT / 4}px`,
-              backgroundColor: categoryColors[category],
-              opacity,
-            }}
-          />
-        );
-      })
-    );
-  };
-
-  const getConsecutiveEventsWithLocations = (events) => {
-    // Sort events by start time
-    const sortedEvents = [...events].sort((a, b) => {
-      const timeA = new Date(`2000-01-01T${a.timeStart}`).getTime();
-      const timeB = new Date(`2000-01-01T${b.timeStart}`).getTime();
-      return timeA - timeB;
-    });
-
-    const pairs = [];
-
-    // Find consecutive events with locations
-    for (let i = 0; i < sortedEvents.length - 1; i++) {
-      const currentEvent = sortedEvents[i];
-      const nextEvent = sortedEvents[i + 1];
-
-      // Check if both events have locations
-      if (
-        currentEvent.location &&
-        nextEvent.location &&
-        currentEvent.location.trim() !== "" &&
-        nextEvent.location.trim() !== ""
-      ) {
-        // Check if they are on the same day
-        if (currentEvent.day === nextEvent.day) {
-          // Calculate the time between events in minutes
-          const currentEndTime = new Date(
-            `2000-01-01T${currentEvent.timeEnd}`
-          ).getTime();
-          const nextStartTime = new Date(
-            `2000-01-01T${nextEvent.timeStart}`
-          ).getTime();
-          const timeBetween = (nextStartTime - currentEndTime) / (1000 * 60);
-
-          if (timeBetween > 0) {
-            pairs.push({
-              firstEvent: currentEvent,
-              secondEvent: nextEvent,
-              timeBetween,
-            });
-          }
-        }
-      }
-    }
-
-    return pairs;
-  };
-
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -460,37 +341,6 @@ const DayWeek = ({
           }
         }}
       >
-        {/* Travel time indicators between consecutive events with locations */}
-        {!showHeatmap &&
-          getConsecutiveEventsWithLocations(dayEvents).map((pair, idx) => {
-            const firstEventEnd = getTimeSlot(pair.firstEvent.timeEnd);
-            const secondEventStart = getTimeSlot(pair.secondEvent.timeStart);
-
-            const top = (firstEventEnd / 60) * TIME_SLOT_HEIGHT;
-            const height =
-              ((secondEventStart - firstEventEnd) / 60) * TIME_SLOT_HEIGHT;
-
-            return (
-              <div
-                key={`travel-${idx}`}
-                className="travel-time-container"
-                style={{
-                  position: "absolute",
-                  top: `${top}px`,
-                  height: `${height}px`,
-                  left: "0",
-                  width: "100%",
-                  zIndex: 30,
-                }}
-              >
-                <TravelTimeIndicator
-                  origin={pair.firstEvent.location}
-                  destination={pair.secondEvent.location}
-                  timeBetween={pair.timeBetween}
-                />
-              </div>
-            );
-          })}
         <div
           className={`absolute top-0 w-full z-3 ${
             day.day() === 6 || day.day() === 0 ? "bg-black/1" : ""
@@ -516,9 +366,7 @@ const DayWeek = ({
                 width: "100%",
                 zIndex: 1,
               }}
-            >
-              {showWeather && <WeatherIndicator hour={i} date={day} />}
-            </div>
+            ></div>
           ))}
           {isDragging && dragStart && dragEnd && (
             <div
@@ -554,9 +402,7 @@ const DayWeek = ({
                 ></div>
               </div>
             )}
-          {showHeatmap ? (
-            renderHeatmap()
-          ) : (
+          {
             <>
               {dayEvents.map((event) => {
                 const { timeStart, timeEnd, category, id } = event;
@@ -772,7 +618,7 @@ const DayWeek = ({
                 );
               })}
             </>
-          )}
+          }
         </div>
         {getCurrentDay() ? (
           <div
