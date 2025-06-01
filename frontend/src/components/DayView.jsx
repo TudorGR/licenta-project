@@ -64,7 +64,9 @@ const DayView = () => {
 
   useEffect(() => {
     const events = savedEvents.filter(
-      (e) => dayjs(e.day).format("DD-MM-YY") === selectedDay.format("DD-MM-YY")
+      (e) =>
+        dayjs(parseInt(e.day)).format("DD-MM-YY") ===
+        selectedDay.format("DD-MM-YY")
     );
     setDayEvents(events);
   }, [savedEvents, selectedDay]);

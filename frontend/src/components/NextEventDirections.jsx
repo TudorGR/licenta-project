@@ -47,7 +47,8 @@ const NextEventDirections = () => {
 
       // Filter events for today that have a location and haven't ended yet
       const todayEvents = savedEvents.filter((event) => {
-        const eventDay = dayjs(event.day);
+        // Parse day as integer for proper comparison
+        const eventDay = dayjs(parseInt(event.day));
         const eventEndTime = event.timeEnd.split(":");
         const eventEnd = eventDay
           .hour(parseInt(eventEndTime[0]))
@@ -74,6 +75,9 @@ const NextEventDirections = () => {
 
       // Set the next event if we found one
       setNextEvent(todayEvents.length > 0 ? todayEvents[0] : null);
+
+      // Debug log to check if events are being found
+      console.log("Today's events with location:", todayEvents);
     };
 
     findNextEvent();
@@ -249,10 +253,18 @@ const NextEventDirections = () => {
 
   // Add this block to save destination coordinates when geocoding
   useEffect(() => {
-    if (!nextEvent || !userLocation) return;
+    if (!nextEvent || !userLocation) {
+      console.log("No next event or user location for geocoding");
+      return;
+    }
+
+    console.log("Attempting to geocode location:", nextEvent.location);
 
     const tt = window.tt || window.tomtom;
-    if (!tt) return;
+    if (!tt) {
+      console.error("TomTom SDK not loaded");
+      return;
+    }
 
     tt.services
       .geocode({
@@ -262,10 +274,13 @@ const NextEventDirections = () => {
       .then((response) => {
         if (response.results && response.results.length > 0) {
           const dest = response.results[0].position;
+          console.log("Successfully geocoded to:", dest);
           setEventCoordinates({
             latitude: dest.lat,
             longitude: dest.lng,
           });
+        } else {
+          console.log("No geocoding results found for:", nextEvent.location);
         }
       })
       .catch((error) => {
@@ -276,18 +291,28 @@ const NextEventDirections = () => {
   // Add weather fetching logic using Open-Meteo
   useEffect(() => {
     const fetchWeatherData = async () => {
-      if (!userLocation || !eventCoordinates || !nextEvent) return;
+      if (!userLocation || !eventCoordinates || !nextEvent) {
+        console.log("Missing data for weather:", {
+          hasUserLocation: !!userLocation,
+          hasEventCoordinates: !!eventCoordinates,
+          hasNextEvent: !!nextEvent,
+          nextEventLocation: nextEvent?.location,
+        });
+        return;
+      }
 
       setWeatherLoading(true);
       setWeatherError(null);
 
       try {
         // Get the event time
-        const eventDay = dayjs(nextEvent.day);
+        const eventDay = dayjs(parseInt(nextEvent.day));
         const eventStartTime = nextEvent.timeStart.split(":");
         const eventTime = eventDay
           .hour(parseInt(eventStartTime[0]))
           .minute(parseInt(eventStartTime[1]));
+
+        console.log("Fetching weather for event at time:", eventTime.format());
 
         // Current weather at user's location (departure)
         const departureResponse = await fetch(

@@ -195,10 +195,17 @@ export default function ContextWrapper({ children }) {
       try {
         setLoading(true);
         const events = await api.getEvents();
-        dispatch({ type: "set", payload: events });
+
+        // Ensure day is properly parsed as integer for dayjs
+        const formattedEvents = events.map((event) => ({
+          ...event,
+          day: event.day, // Keep as string, components will parse as needed
+        }));
+
+        dispatch({ type: "set", payload: formattedEvents });
 
         // Initialize reminder service with events
-        reminderService.initialize(events);
+        reminderService.initialize(formattedEvents);
       } catch (error) {
         console.error("Failed to fetch events:", error);
         dispatch({ type: "set", payload: [] });

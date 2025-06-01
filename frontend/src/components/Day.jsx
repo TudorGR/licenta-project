@@ -78,7 +78,8 @@ const Day = ({ day, index }) => {
 
   useEffect(() => {
     const events = savedEvents.filter(
-      (e) => dayjs(e.day).format("DD-MM-YY") === day.format("DD-MM-YY")
+      (e) =>
+        dayjs(parseInt(e.day)).format("DD-MM-YY") === day.format("DD-MM-YY")
     );
     setDayEvents(events);
   }, [savedEvents, day]);

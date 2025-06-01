@@ -105,17 +105,11 @@ class ReminderService {
   }
 
   async getWeatherAdvice(location) {
-    // Check cache first
-    if (this.weatherCache.has(location)) {
-      const cachedData = this.weatherCache.get(location);
-      // Cache valid for 30 minutes
-      if (Date.now() - cachedData.timestamp < 30 * 60 * 1000) {
-        return cachedData.advice;
-      }
-    }
-
     try {
-      // First, get coordinates from the location string using GROQ
+      // Log for debugging
+      console.log("Getting weather advice for location:", location);
+
+      // First, get coordinates from the location string
       const coordsResponse = await axios.post(
         "http://localhost:5000/api/travel/location-to-coords",
         {
@@ -125,6 +119,7 @@ class ReminderService {
       const { latitude, longitude } = coordsResponse.data;
 
       if (!latitude || !longitude) {
+        console.log("No coordinates found for location:", location);
         return ""; // No coordinates found
       }
 
@@ -135,6 +130,7 @@ class ReminderService {
 
       const data = weatherResponse.data;
       if (!data || !data.hourly) {
+        console.log("No weather data found");
         return "";
       }
 
