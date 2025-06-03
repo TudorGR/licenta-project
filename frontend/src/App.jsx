@@ -40,11 +40,15 @@ const CalendarApp = () => {
     isWeekView,
     isDayView,
     selectedWeek,
+    selectedDate,
   } = useContext(Context);
 
   useEffect(() => {
-    setCalendarMonth(getCalendarMonth(monthIndex));
-  }, [monthIndex]);
+    // Extract both month and year from selectedDate
+    const month = selectedDate.month();
+    const year = selectedDate.year();
+    setCalendarMonth(getCalendarMonth(month, year));
+  }, [selectedDate]); // Change dependency from monthIndex to selectedDate
 
   useEffect(() => {
     // Request notification permission

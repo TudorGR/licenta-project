@@ -34,14 +34,13 @@ async function getGroqJsonResponse(prompt) {
 }
 
 router.post("/location-to-coords", async (req, res) => {
+  const { location } = req.body;
+
+  if (!location) {
+    return res.status(400).json({ error: "Location is required" });
+  }
+
   try {
-    const { location } = req.body;
-    console.log("Received location request:", location);
-
-    if (!location || location.trim() === "") {
-      return res.status(400).json({ error: "Location is required" });
-    }
-
     const prompt = `
       Convert this location text: "${location}" into precise latitude and longitude coordinates.
       Respond only with a JSON object in this exact format:
@@ -62,9 +61,11 @@ router.post("/location-to-coords", async (req, res) => {
     res.json(coordinates);
   } catch (error) {
     console.error("Error converting location to coordinates:", error);
-    res
-      .status(500)
-      .json({ error: "Failed to convert location to coordinates" });
+    res.status(500).json({
+      error: "Failed to convert location to coordinates",
+      latitude: null,
+      longitude: null,
+    });
   }
 });
 

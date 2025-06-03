@@ -2,14 +2,14 @@ import React, { useContext, useMemo } from "react";
 import Context from "../context/Context";
 import dayjs from "dayjs";
 import { categoryColors } from "../utils/categoryColors";
+
 const CategoryStats = ({ view = "week", onCategoryClick }) => {
   const {
     savedEvents,
-    monthIndex,
-    selectedWeek,
     selectedDay,
     workingHoursStart,
     workingHoursEnd,
+    selectedDate,
   } = useContext(Context);
 
   const getWorkingMinutes = (start, end) => {
@@ -19,25 +19,23 @@ const CategoryStats = ({ view = "week", onCategoryClick }) => {
   };
 
   const stats = useMemo(() => {
-    const year = dayjs().year();
     let startDate, endDate;
 
     switch (view) {
       case "day":
-        startDate = selectedDay.startOf("day");
-        endDate = selectedDay.endOf("day");
+        // Simply use selectedDate for day view
+        startDate = selectedDate.startOf("day");
+        endDate = selectedDate.endOf("day");
         break;
       case "week":
-        const monthStart = dayjs(new Date(year, monthIndex, 1));
-        startDate = monthStart
-          .startOf("week")
-          .add(selectedWeek, "week")
-          .add(1, "day");
-        endDate = startDate.add(6, "day");
+        // Calculate week boundaries from selectedDate
+        startDate = selectedDate.startOf("isoWeek"); // Monday (remove the +1 day)
+        endDate = selectedDate.startOf("isoWeek").add(6, "day"); // Sunday
         break;
       case "month":
-        startDate = dayjs(new Date(year, monthIndex, 1));
-        endDate = startDate.endOf("month");
+        // Calculate month boundaries from selectedDate
+        startDate = selectedDate.startOf("month");
+        endDate = selectedDate.endOf("month");
         break;
       default:
         return [];
@@ -47,9 +45,7 @@ const CategoryStats = ({ view = "week", onCategoryClick }) => {
       const eventDay = dayjs(event.day);
 
       if (view === "day") {
-        return (
-          eventDay.format("YYYY-MM-DD") === selectedDay.format("YYYY-MM-DD")
-        );
+        return eventDay.format("YYYY-MM-DD") === startDate.format("YYYY-MM-DD");
       }
 
       return (
@@ -73,7 +69,7 @@ const CategoryStats = ({ view = "week", onCategoryClick }) => {
         : dailyWorkingMinutes * endDate.diff(startDate, "day");
 
     filteredEvents.forEach((event) => {
-      const category = event.category || "Other"; // Change from "None" to "Other"
+      const category = event.category || "Other";
       if (!categoryStats[category]) {
         categoryStats[category] = { minutes: 0, percentage: 0 };
       }
@@ -111,8 +107,7 @@ const CategoryStats = ({ view = "week", onCategoryClick }) => {
     );
   }, [
     savedEvents,
-    monthIndex,
-    selectedWeek,
+    selectedDate, // Replace monthIndex and selectedWeek with selectedDate
     selectedDay,
     view,
     workingHoursStart,
@@ -134,8 +129,10 @@ const CategoryStats = ({ view = "week", onCategoryClick }) => {
         {stats.map(([category, stats]) => (
           <div
             key={category}
-            className="space-y-1  py-1"
+            className="space-y-1 py-1"
             title={`Category: ${category}`}
+            onClick={() => onCategoryClick && onCategoryClick(category)}
+            style={{ cursor: onCategoryClick ? "pointer" : "default" }}
           >
             <div className="flex justify-between text-sm ml-4">
               <span style={{ color: categoryColors[category] }}>
@@ -145,13 +142,13 @@ const CategoryStats = ({ view = "week", onCategoryClick }) => {
                 {Math.floor(stats.minutes / 60)}h {stats.minutes % 60}m
               </span>
             </div>
-            <div className="w-full bg-gray-100  h-1">
+            <div className="w-full bg-gray-100 h-1">
               <div
-                className=" h-1 transition-all duration-300"
+                className="h-1 transition-all duration-300"
                 style={{
                   width: `${stats.percentage}%`,
                   backgroundColor:
-                    categoryColors[category] || categoryColors.None,
+                    categoryColors[category] || categoryColors.Other,
                 }}
               />
             </div>

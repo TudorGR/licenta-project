@@ -12,33 +12,67 @@ const getTimeSlot = (time) => {
 };
 
 export default function SmallCalendar() {
-  const [currentMonthIndex, setCurrentMonthIndex] = useState(dayjs().month());
   const [currentMonth, setCurrentMonth] = useState(getCalendarMonth());
+
   const {
     monthIndex,
-    setSmallCalendarMonth,
+    setMonthIndex,
     selectedDay,
     setSelectedDay,
     savedEvents,
     workingHoursStart,
     workingHoursEnd,
+    selectedDate,
+    setSelectedDate,
   } = useContext(Context);
 
-  useEffect(() => {
-    setCurrentMonth(getCalendarMonth(currentMonthIndex));
-  }, [currentMonthIndex]);
+  // Get both month and year from selectedDate
+  const currentMonthIndex = selectedDate.month();
+  const currentYear = selectedDate.year();
 
   useEffect(() => {
-    setCurrentMonthIndex(monthIndex);
-  }, [monthIndex]);
+    // Pass both month and year to getCalendarMonth
+    setCurrentMonth(getModifiedCalendarMonth(currentMonthIndex, currentYear));
+  }, [currentMonthIndex, currentYear]);
+
+  // Custom function to get calendar with specific year
+  const getModifiedCalendarMonth = (month, year) => {
+    month = Math.floor(month);
+    const firstDayOfMonth = dayjs(new Date(year, month, 0)).day();
+    let monthCount = 0 - firstDayOfMonth;
+    const matrix = new Array(5).fill([]).map(() => {
+      return new Array(7).fill(null).map(() => {
+        monthCount = monthCount + 1;
+        return dayjs(new Date(year, month, monthCount));
+      });
+    });
+    return matrix;
+  };
+
+  // Handle previous month navigation with year awareness
+  const handlePrevMonth = () => {
+    // Using subtract(1, "month") properly handles year transitions
+    const newDate = selectedDate.subtract(1, "month");
+    setSelectedDate(newDate);
+    setMonthIndex(newDate.month()); // Update monthIndex for compatibility
+  };
+
+  // Handle next month navigation with year awareness
+  const handleNextMonth = () => {
+    // Using add(1, "month") properly handles year transitions
+    const newDate = selectedDate.add(1, "month");
+    setSelectedDate(newDate);
+    setMonthIndex(newDate.month()); // Update monthIndex for compatibility
+  };
 
   const getDayClass = (day) => {
     const nowDay = dayjs().format("DD-MM-YY");
     const currentDay = day.format("DD-MM-YY");
     const sDay = selectedDay && selectedDay.format("DD-MM-YY");
 
-    if (day.month() !== currentMonthIndex) {
-      return "text-gray-300"; // Gray out days outside the current month
+    // Check if the day is in the current month *and* year
+    if (day.month() !== currentMonthIndex || day.year() !== currentYear) {
+      return "text-gray-300"; // Gray out days outside the current month/year
     } else if (nowDay === currentDay) {
       return "bg-black rounded-full text-white";
     } else if (sDay === currentDay) {
@@ -73,22 +107,20 @@ export default function SmallCalendar() {
     <div className="bg-white rounded-sm p-0 w-[90%]">
       <header className="flex justify-between">
         <p className="text-lg font-medium my-auto">
-          {dayjs(new Date(dayjs().year(), currentMonthIndex)).format(
-            "MMMM YYYY"
-          )}
+          {selectedDate.format("MMMM YYYY")}
         </p>
         <div className="flex flex-row gap-1 mr-9">
           <button
-            className="transition-all  cursor-pointer  w-10 h-10 shadow-custom rounded-full active:bg-gray-50 border-1 border-gray-200"
-            onClick={() => setCurrentMonthIndex(currentMonthIndex - 1)}
+            className="transition-all cursor-pointer w-10 h-10 shadow-custom rounded-full active:bg-gray-50 border-1 border-gray-200"
+            onClick={handlePrevMonth}
           >
-            <img src={left} className="w-5 mx-auto" />
+            <img src={left} className="w-5 mx-auto" alt="Previous month" />
           </button>
           <button
-            className="transition-all  cursor-pointer  w-10 h-10 shadow-custom rounded-full active:bg-gray-50 border-1 border-gray-200"
-            onClick={() => setCurrentMonthIndex(currentMonthIndex + 1)}
+            className="transition-all cursor-pointer w-10 h-10 shadow-custom rounded-full active:bg-gray-50 border-1 border-gray-200"
+            onClick={handleNextMonth}
           >
-            <img src={right} className="w-5 mx-auto" />
+            <img src={right} className="w-5 mx-auto" alt="Next month" />
           </button>
         </div>
       </header>
@@ -101,7 +133,7 @@ export default function SmallCalendar() {
         {currentMonth.map((row, index) => (
           <React.Fragment key={index}>
             {row.map((day, index) => {
-              const categoryData = getCategoryData(day); // Function to calculate category time proportions
+              const categoryData = getCategoryData(day);
               const totalMinutes = categoryData.reduce(
                 (sum, { minutes }) => sum + minutes,
                 0
@@ -115,8 +147,11 @@ export default function SmallCalendar() {
                     day
                   )} my-1 h-8 w-8 text-sm`}
                   onClick={() => {
-                    setSmallCalendarMonth(currentMonthIndex);
+                    // Update both selectedDate and selectedDay when a day is clicked
+                    setSelectedDate(day);
                     setSelectedDay(day);
+                    // Set monthIndex for backwards compatibility
+                    setMonthIndex(day.month());
                   }}
                 >
                   <svg className="absolute w-8 h-8" viewBox="0 0 36 36">
@@ -125,7 +160,7 @@ export default function SmallCalendar() {
                         (minutes /
                           (getTimeSlot(workingHoursEnd) -
                             getTimeSlot(workingHoursStart))) *
-                        100; // Total minutes in a day is 1440
+                        100;
                       const dasharray = `${percentage} ${100 - percentage}`;
                       const strokeColor =
                         categoryColors[category] || categoryColors.None;
@@ -146,7 +181,6 @@ export default function SmallCalendar() {
                           style={{
                             transform: "rotate(-90deg)",
                             transformOrigin: "center",
-                            // opacity: "80%",
                           }}
                         />
                       );

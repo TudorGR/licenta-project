@@ -45,7 +45,12 @@ const TypewriterEffect = ({ text, onComplete, speed = 10 }) => {
 };
 
 // Add this new component with the other custom message components
-const DeleteConfirmationMessage = ({ eventData, message, setMessages, dispatchEvent: dispatchCalendarEvent }) => {
+const DeleteConfirmationMessage = ({
+  eventData,
+  message,
+  setMessages,
+  dispatchEvent: dispatchCalendarEvent,
+}) => {
   // Add state to track if the event has been restored
   const [isRestored, setIsRestored] = useState(false);
 
@@ -53,9 +58,12 @@ const DeleteConfirmationMessage = ({ eventData, message, setMessages, dispatchEv
     try {
       // Convert day from string format to timestamp if needed
       let dayValue = eventData.day;
-      
+
       // Check if day is a string in date format rather than a timestamp
-      if (typeof eventData.day === 'string' && !isNaN(Date.parse(eventData.day))) {
+      if (
+        typeof eventData.day === "string" &&
+        !isNaN(Date.parse(eventData.day))
+      ) {
         // Convert the date string to timestamp (milliseconds)
         dayValue = dayjs(eventData.day).valueOf();
       }
@@ -135,7 +143,12 @@ const DeleteConfirmationMessage = ({ eventData, message, setMessages, dispatchEv
 };
 
 // Add this new component after DeleteConfirmationMessage
-const CreateConfirmationMessage = ({ event, message, setMessages, dispatchEvent: dispatchCalendarEvent }) => {
+const CreateConfirmationMessage = ({
+  event,
+  message,
+  setMessages,
+  dispatchEvent: dispatchCalendarEvent,
+}) => {
   // Add state to track if the event has been undone
   const [isUndone, setIsUndone] = useState(false);
 
@@ -144,7 +157,7 @@ const CreateConfirmationMessage = ({ event, message, setMessages, dispatchEvent:
       if (event && event.id) {
         // Delete the newly created event
         await dispatchCalendarEvent({ type: "delete", payload: event });
-        
+
         // Mark as undone to disable the button
         setIsUndone(true);
 
@@ -213,6 +226,8 @@ const AIChatBox = ({ onClose }) => {
     setSelectedEvent,
     setShowEventModal,
     savedEvents,
+    selectedDate,
+    setSelectedDate,
     setSelectedDay,
     setMonthIndex,
     setSelectedWeek,
@@ -579,10 +594,13 @@ const AIChatBox = ({ onClose }) => {
   const handleGoToEvent = (event) => {
     const eventDay = dayjs(event.day);
 
-    // Set the selected day
+    // Set the selectedDate first (new primary date state)
+    setSelectedDate(eventDay);
+
+    // Set the selected day for backward compatibility
     setSelectedDay(eventDay);
 
-    // Set the month index
+    // Set the month index for backward compatibility
     setMonthIndex(eventDay.month());
 
     // Calculate and set the week index for week view
@@ -632,7 +650,7 @@ const AIChatBox = ({ onClose }) => {
 
       if (response.data.intent === "create_event") {
         const eventData = response.data.eventData;
-        
+
         try {
           // Create the event
           const event = {
@@ -645,8 +663,11 @@ const AIChatBox = ({ onClose }) => {
           };
 
           // Create the event and capture the response (should contain the created event with ID)
-          const createdEventInfo = await dispatchEvent({ type: "push", payload: event });
-          
+          const createdEventInfo = await dispatchEvent({
+            type: "push",
+            payload: event,
+          });
+
           // Add confirmation message with undo button
           setMessages((prev) => [
             ...prev,
@@ -655,7 +676,11 @@ const AIChatBox = ({ onClose }) => {
               content: {
                 type: "createConfirmation",
                 event: createdEventInfo?.eventData || event, // Use the created event with ID
-                message: response.data.message || `Event created: ${event.title} on ${dayjs(event.day).format("dddd, MMMM D")} at ${event.timeStart}.`,
+                message:
+                  response.data.message ||
+                  `Event created: ${event.title} on ${dayjs(event.day).format(
+                    "dddd, MMMM D"
+                  )} at ${event.timeStart}.`,
               },
               isTyping: true,
               isComplete: false,
@@ -1059,13 +1084,16 @@ const AIChatBox = ({ onClose }) => {
     const handleGoToEvent = (event) => {
       const eventDay = dayjs(event.day);
 
-      // Set the selected day
+      // Set the selectedDate first (new primary date state)
+      setSelectedDate(eventDay);
+
+      // Set the selected day for backward compatibility
       setSelectedDay(eventDay);
 
-      // Set the month index
+      // Set the month index for backward compatibility
       setMonthIndex(eventDay.month());
 
-      // Calculate and set the week index
+      // Calculate and set the week index for week view
       const firstDayOfMonth = eventDay.startOf("month");
       const firstDayOfWeek = firstDayOfMonth.startOf("week").add(1, "day");
       const weekIndex = Math.floor(eventDay.diff(firstDayOfWeek, "day") / 7);

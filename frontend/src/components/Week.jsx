@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useContext, useState } from "react";
+import React, { useEffect, useRef, useContext, useState, useMemo } from "react";
 import DayWeek from "./DayWeek";
 import dayjs from "dayjs";
 import Context from "../context/Context.js";
@@ -12,10 +12,14 @@ const calculateTimePosition = () => {
 };
 
 const Week = ({ month, weekIndex }) => {
-  const { showHeatmap, dispatchEvent } = useContext(Context);
-  if (!month || !month[weekIndex]) return null;
-  const week = month[weekIndex];
+  const { showHeatmap, dispatchEvent, selectedDate } = useContext(Context);
   const timeGridRef = useRef(null);
+
+  // Calculate week based on selectedDate
+  const week = useMemo(() => {
+    const startOfWeek = selectedDate.startOf("isoWeek");
+    return Array.from({ length: 7 }, (_, i) => startOfWeek.add(i, "day"));
+  }, [selectedDate]);
 
   // Add state for cross-day dragging
   const [draggedEvent, setDraggedEvent] = useState(null);

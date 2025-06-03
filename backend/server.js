@@ -3,7 +3,6 @@ dotenv.config();
 
 import express from "express";
 import cors from "cors";
-import sequelize from "./config/database.js";
 import eventRoutes from "./routes/events.js";
 import suggestionRoutes from "./routes/suggestions.js";
 import travelRoutes from "./routes/travel.js";

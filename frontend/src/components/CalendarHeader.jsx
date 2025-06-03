@@ -7,20 +7,23 @@ import right from "../assets/chevron-right.svg";
 import chatIcon from "../assets/message-circle.svg";
 import menuIcon from "../assets/menu.svg";
 import chevronDown from "../assets/chevron-down.svg";
-import analyticsIcon from "../assets/bar-chart-2.svg"; // Create or download this icon
+import analyticsIcon from "../assets/bar-chart-2.svg";
+
+import isoWeek from "dayjs/plugin/isoWeek";
+dayjs.extend(isoWeek);
 
 const CalendarHeader = ({
   showChat,
   onOpenAIChat,
   showSidebar,
   onOpenSidebar,
-  onOpenAnalytics, // Add this prop
-  showAnalyticsDashboard, // Add this prop
+  onOpenAnalytics,
+  showAnalyticsDashboard,
 }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  //Handle clicks outside the dropdown to close it
+  // Handle clicks outside the dropdown to close it
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -35,94 +38,69 @@ const CalendarHeader = ({
   }, [dropdownRef]);
 
   const {
-    monthIndex,
+    selectedDate,
+    setSelectedDate,
     setMonthIndex,
+    selectedDay,
     setSelectedDay,
     isMonthView,
-    setSelectedWeek,
-    selectedWeek,
-    isDayView,
-    selectedDay,
     isWeekView,
+    isDayView,
     setIsMonthView,
     setIsWeekView,
     setIsDayView,
   } = useContext(Context);
 
-  const getCurrentWeekIndex = () => {
-    const today = dayjs();
-    const firstDayOfMonth = today.startOf("month");
-    const firstDayOfWeek = firstDayOfMonth.startOf("week").add(1, "day");
-    const weekIndex = Math.floor(today.diff(firstDayOfWeek, "day") / 7);
-
-    // Clamp the weekIndex to the valid range for the current month
-    const lastDayOfMonth = firstDayOfMonth.endOf("month");
-    const totalWeeksInMonth = Math.ceil(lastDayOfMonth.date() / 7);
-    return Math.min(Math.max(0, weekIndex), totalWeeksInMonth - 1);
-  };
-
+  // Simplified navigation handlers using selectedDate
   const handlePrev = () => {
     if (isMonthView) {
-      setMonthIndex(monthIndex - 1);
+      const newDate = selectedDate.subtract(1, "month");
+      setSelectedDate(newDate);
+      setMonthIndex(newDate.month());
     } else if (isDayView) {
-      setSelectedDay(selectedDay.subtract(1, "day"));
-    } else {
-      const firstDayOfMonth = dayjs(new Date(dayjs().year(), monthIndex, 1));
-
-      if (selectedWeek === 0) {
-        const prevMonth = firstDayOfMonth.subtract(1, "month");
-        const weeksInPrevMonth = Math.ceil(prevMonth.daysInMonth() / 7);
-        setMonthIndex(monthIndex - 1);
-        setSelectedWeek(weeksInPrevMonth - 1);
-      } else {
-        setSelectedWeek(selectedWeek - 1);
-      }
+      const newDate = selectedDate.subtract(1, "day");
+      setSelectedDate(newDate);
+      setSelectedDay(newDate);
+    } else if (isWeekView) {
+      setSelectedDate(selectedDate.subtract(1, "week"));
     }
   };
 
   const handleNext = () => {
     if (isMonthView) {
-      setMonthIndex(monthIndex + 1);
+      const newDate = selectedDate.add(1, "month");
+      setSelectedDate(newDate);
+      setMonthIndex(newDate.month());
     } else if (isDayView) {
-      setSelectedDay(selectedDay.add(1, "day"));
-    } else {
-      const firstDayOfMonth = dayjs(new Date(dayjs().year(), monthIndex, 1));
-      const lastDayOfMonth = firstDayOfMonth.endOf("month");
-      const weeksInMonth = Math.ceil(lastDayOfMonth.date() / 7);
-
-      if (selectedWeek >= weeksInMonth - 1) {
-        setMonthIndex(monthIndex + 1);
-        setSelectedWeek(0);
-      } else {
-        setSelectedWeek(selectedWeek + 1);
-      }
+      const newDate = selectedDate.add(1, "day");
+      setSelectedDate(newDate);
+      setSelectedDay(newDate);
+    } else if (isWeekView) {
+      setSelectedDate(selectedDate.add(1, "week"));
     }
   };
 
   const handleToday = () => {
-    setMonthIndex(dayjs().month());
-    setSelectedWeek(getCurrentWeekIndex());
-    setSelectedDay(dayjs());
+    const today = dayjs();
+    setSelectedDate(today);
+    setMonthIndex(today.month()); // Update monthIndex for compatibility
+    setSelectedDay(today);
   };
 
   const getHeaderText = () => {
     if (isDayView) {
       return (
         <div className="flex flex-nowrap text-nowrap">
-          <h2 className="text-sm">{selectedDay.format("DD, MMMM")}</h2>
+          <h2 className="text-sm">{selectedDate.format("DD, MMMM")}</h2>
           <h2 className="text-sm text-gray-400">
-            {selectedDay.format(", YYYY")}
+            {selectedDate.format(", YYYY")}
           </h2>
         </div>
       );
     }
 
     if (isWeekView) {
-      const firstDayOfMonth = dayjs(new Date(dayjs().year(), monthIndex, 1));
-      const weekStart = firstDayOfMonth
-        .startOf("week")
-        .add(1, "day")
-        .add(selectedWeek, "week");
+      const weekStart = selectedDate.startOf("isoWeek").add(1, "day");
       const weekEnd = weekStart.add(6, "day");
 
       if (weekStart.month() !== weekEnd.month()) {
@@ -150,11 +128,9 @@ const CalendarHeader = ({
 
     return (
       <div className="flex flex-nowrap text-nowrap">
-        <h2 className="text-sm">
-          {dayjs(new Date(dayjs().year(), monthIndex)).format("MMMM")}
-        </h2>
+        <h2 className="text-sm">{selectedDate.format("MMMM")}</h2>
         <h2 className="text-sm text-gray-400">
-          , {dayjs(new Date(dayjs().year(), monthIndex)).format("YYYY")}
+          , {selectedDate.format("YYYY")}
         </h2>
       </div>
     );
@@ -199,9 +175,7 @@ const CalendarHeader = ({
       </div>
 
       <div className="flex items-center gap-2">
-        {/* View toggle buttons */}
         <div className="relative">
-          {/* Desktop view - regular buttons */}
           <div className="hidden sm:flex items-center rounded-full shadow-custom">
             <button
               onClick={() => {
@@ -241,7 +215,6 @@ const CalendarHeader = ({
             </button>
           </div>
 
-          {/* Mobile view - dropdown */}
           <div className="sm:hidden" ref={dropdownRef}>
             <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -253,7 +226,6 @@ const CalendarHeader = ({
               <img src={chevronDown} className="w-4 h-4" alt="Select view" />
             </button>
 
-            {/* Dropdown menu */}
             {dropdownOpen && (
               <div className="absolute top-full left-0 mt-1 bg-white rounded-xl shadow-lg border border-gray-200 z-20 w-32">
                 <button
@@ -299,7 +271,6 @@ const CalendarHeader = ({
             )}
           </div>
         </div>
-        {/* Add Analytics button with active state */}
         <button
           onClick={onOpenAnalytics}
           className="shadow-custom shrink-0 active:bg-gray-700 cursor-pointer text-white bg-black rounded-full flex gap-1 items-center transition-all justify-center max-[768px]:w-10 h-10 px-2 md:px-4"

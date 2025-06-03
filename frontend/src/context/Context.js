@@ -35,6 +35,10 @@ const Context = React.createContext({
   setShowAnalyticsDashboard: () => {},
   analyticsTimeframe: "month",
   setAnalyticsTimeframe: () => {},
+
+  // Add new fields
+  selectedDate: null,
+  setSelectedDate: (date) => {},
 });
 
 export default Context;

@@ -82,6 +82,7 @@ const savedEventsReducer = (state, { type, payload }) => {
 };
 
 export default function ContextWrapper({ children }) {
+  const [selectedDate, setSelectedDate] = useState(dayjs());
   const [monthIndex, setMonthIndex] = useState(dayjs().month());
   const [smallCalendarMonth, setSmallCalendarMonth] = useState(null);
   const [selectedDay, setSelectedDay] = useState(dayjs());
@@ -195,17 +196,10 @@ export default function ContextWrapper({ children }) {
       try {
         setLoading(true);
         const events = await api.getEvents();
-
-        // Ensure day is properly parsed as integer for dayjs
-        const formattedEvents = events.map((event) => ({
-          ...event,
-          day: event.day, // Keep as string, components will parse as needed
-        }));
-
-        dispatch({ type: "set", payload: formattedEvents });
+        dispatch({ type: "set", payload: events });
 
         // Initialize reminder service with events
-        reminderService.initialize(formattedEvents);
+        reminderService.initialize(events);
       } catch (error) {
         console.error("Failed to fetch events:", error);
         dispatch({ type: "set", payload: [] });
@@ -221,6 +215,19 @@ export default function ContextWrapper({ children }) {
       setMonthIndex(smallCalendarMonth);
     }
   }, [smallCalendarMonth]);
+
+  useEffect(() => {
+    // When selectedDate changes, update monthIndex
+    setMonthIndex(selectedDate.month());
+
+    // Use selectedDate for any year-aware calculations
+    if (smallCalendarMonth !== null) {
+      const newDate = dayjs()
+        .year(selectedDate.year())
+        .month(smallCalendarMonth);
+      setSelectedDate(newDate);
+    }
+  }, [selectedDate, smallCalendarMonth]);
 
   useEffect(() => {
     if (!showEventModal) {
@@ -268,6 +275,8 @@ export default function ContextWrapper({ children }) {
         userCity,
         setUserCity,
         user,
+        selectedDate,
+        setSelectedDate,
         // Add analytics-related values
         showAnalyticsDashboard,
         setShowAnalyticsDashboard,

@@ -30,8 +30,9 @@ const Day = ({ day, index }) => {
     eventId: null,
   });
 
+  // Update the getCurrentDay function to use full year-month-day format
   function getCurrentDay() {
-    return day.format("DD-MM-YY") === dayjs().format("DD-MM-YY");
+    return day.format("YYYY-MM-DD") === dayjs().format("YYYY-MM-DD");
   }
 
   // Add screen size detection
@@ -76,13 +77,14 @@ const Day = ({ day, index }) => {
     return () => window.removeEventListener("resize", calculateMaxEvents);
   }, []);
 
+  // When filtering events, make sure to use full date comparison
   useEffect(() => {
     const events = savedEvents.filter(
-      (e) =>
-        dayjs(parseInt(e.day)).format("DD-MM-YY") === day.format("DD-MM-YY")
+      (event) =>
+        dayjs(event.day).format("YYYY-MM-DD") === day.format("YYYY-MM-DD")
     );
     setDayEvents(events);
-  }, [savedEvents, day]);
+  }, [day, savedEvents]);
 
   const handleContextMenu = (e, event) => {
     e.preventDefault();
