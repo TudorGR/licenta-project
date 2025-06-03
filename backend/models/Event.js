@@ -13,7 +13,7 @@ Event.init(
       type: DataTypes.TEXT,
     },
     day: {
-      type: DataTypes.STRING,
+      type: DataTypes.BIGINT,
       allowNull: false,
     },
     timeStart: {
