@@ -144,3 +144,38 @@
 .animate-slide-in-right {
   animation: slide-in-right 0.2s ease-out forwards;
 }
+
+/* ...existing styles... */
+
+/* Custom tooltip styles */
+.suggestion-tooltip {
+  position: relative;
+}
+
+.suggestion-tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 1000;
+}
+
+.suggestion-tooltip:hover::after {
+  opacity: 1;
+}
+
+/* Make sure xxxs text size exists */
+.text-xxxs {
+  font-size: 0.65rem;
+  line-height: 0.75rem;
+}

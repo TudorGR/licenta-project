@@ -223,196 +223,42 @@ export default function EventModal() {
   ]);
 
   useEffect(() => {
-    const getPastEvents = () => {
-      if (!savedEvents || !selectedDate || !timeStart || !timeEnd) return;
+    const fetchAISuggestions = async () => {
+      if (!selectedDate || !timeStart || !timeEnd) return;
 
-      const getMinutes = (timeStr) => {
-        const [hours, minutes] = timeStr.split(":").map(Number);
-        return hours * 60 + minutes;
-      };
-
-      const selectedStartMinutes = getMinutes(timeStart);
-      const selectedEndMinutes = getMinutes(timeEnd);
-
-      const weekDay = dayjs(selectedDate).day();
-      const currentDate = dayjs(selectedDate).format("YYYY-MM-DD");
-      const twoMonthsAgo = dayjs(currentDate)
-        .subtract(2, "month")
-        .format("YYYY-MM-DD");
-
-      const pastEvents = savedEvents.filter((event) => {
-        const eventDate = dayjs(event.day);
-        const isBeforeToday = eventDate.isBefore(currentDate, "day");
-        const isAfterTwoMonthsAgo = eventDate.isAfter(twoMonthsAgo, "day");
-        const isSameWeekDay = eventDate.day() === weekDay;
-
-        const eventStartMinutes = getMinutes(event.timeStart);
-        const eventEndMinutes = getMinutes(event.timeEnd);
-        const hasTimeOverlap =
-          (eventStartMinutes < selectedEndMinutes &&
-            eventEndMinutes > selectedStartMinutes) ||
-          (selectedStartMinutes < eventEndMinutes &&
-            selectedEndMinutes > eventStartMinutes);
-
-        return (
-          isBeforeToday &&
-          isAfterTwoMonthsAgo &&
-          isSameWeekDay &&
-          hasTimeOverlap
-        );
-      });
-
-      const calculateEventScore = (event) => {
-        let score = 0;
-
-        // Factor 1: Recența evenimentului - evenimentele mai recente primesc scor mai mare
-        const daysSinceEvent = dayjs(currentDate).diff(dayjs(event.day), "day");
-        const recencyScore = (Math.max(0, 30 - daysSinceEvent) / 30) * 10; // Max 10 puncte
-
-        // Factor 2: Potrivirea intervalului orar
-        const eventStartMinutes = getMinutes(event.timeStart);
-        const eventEndMinutes = getMinutes(event.timeEnd);
-        const timeMatchScore =
-          10 -
-          (Math.abs(eventStartMinutes - selectedStartMinutes) +
-            Math.abs(eventEndMinutes - selectedEndMinutes)) /
-            60; // Max 10 puncte pentru potrivire exactă
-
-        // Factor 3: Ziua din săptămână
-        const isWeekendSelected = [0, 6].includes(weekDay);
-        const isWeekendEvent = [0, 6].includes(dayjs(event.day).day());
-        const weekendMatchScore = isWeekendSelected === isWeekendEvent ? 5 : 0;
-
-        // Factor 4: Durata similară
-        const selectedDuration = selectedEndMinutes - selectedStartMinutes;
-        const eventDuration = eventEndMinutes - eventStartMinutes;
-        const durationMatchScore =
-          5 - Math.min(5, Math.abs(selectedDuration - eventDuration) / 30);
-
-        // Calculează scorul total
-        score =
-          recencyScore +
-          timeMatchScore +
-          weekendMatchScore +
-          durationMatchScore;
-
-        return score;
-      };
-
-      // Procesare și scoring pentru fiecare categorie
-      const eventsByCategory = pastEvents.reduce((acc, event) => {
-        const category = event.category || "Other";
-        if (!acc[category]) {
-          acc[category] = {
-            events: [],
-            totalScore: 0,
-          };
-        }
-
-        // Calculează scorul pentru acest eveniment
-        const eventScore = calculateEventScore(event);
-        event.score = eventScore;
-        acc[category].events.push(event);
-        acc[category].totalScore += eventScore;
-
-        return acc;
-      }, {});
-
-      // Generează sugestii cu scoring
-      const categoryFrequency = Object.entries(eventsByCategory)
-        .map(([category, data]) => {
-          const { events, totalScore } = data;
-
-          // Sortează evenimentele după scor în cadrul categoriei
-          const sortedEvents = [...events].sort((a, b) => b.score - a.score);
-
-          // Calculează scorul mediu per eveniment pentru a nu favoriza doar categoriile cu multe evenimente
-          const averageScore =
-            events.length > 0 ? totalScore / events.length : 0;
-
-          // Similar cu codul tău existent pentru a găsi cele mai comune titluri și locații
-          const titleCounts = events.reduce((acc, event) => {
-            acc[event.title] = (acc[event.title] || 0) + 1;
-            return acc;
-          }, {});
-
-          // Adaugă factorul de scor la titluri
-          const titleScores = events.reduce((acc, event) => {
-            if (!acc[event.title]) acc[event.title] = 0;
-            acc[event.title] += event.score;
-            return acc;
-          }, {});
-
-          // Calculează un scor combinat pentru titluri (frecvență × scor)
-          const combinedTitleScores = Object.keys(titleCounts).reduce(
-            (acc, title) => {
-              acc[title] =
-                titleCounts[title] * (titleScores[title] / titleCounts[title]);
-              return acc;
+      try {
+        const response = await fetch(
+          "http://localhost:5000/api/suggestions/ai-suggestions",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-auth-token": localStorage.getItem("token"), // Changed from Authorization to x-auth-token
             },
-            {}
-          );
-
-          // Selectează titlul cu cel mai mare scor combinat
-          const mostRelevantTitle = Object.entries(combinedTitleScores).sort(
-            (a, b) => b[1] - a[1]
-          )[0]?.[0];
-
-          // Similar pentru locații
-          const locationCounts = events.reduce((acc, event) => {
-            if (event.location) {
-              acc[event.location] = (acc[event.location] || 0) + 1;
-            }
-            return acc;
-          }, {});
-
-          const locationScores = events.reduce((acc, event) => {
-            if (event.location) {
-              if (!acc[event.location]) acc[event.location] = 0;
-              acc[event.location] += event.score;
-            }
-            return acc;
-          }, {});
-
-          const combinedLocationScores = Object.keys(locationCounts).reduce(
-            (acc, location) => {
-              acc[location] =
-                locationCounts[location] *
-                (locationScores[location] / locationCounts[location]);
-              return acc;
-            },
-            {}
-          );
-
-          const mostRelevantLocation = Object.entries(
-            combinedLocationScores
-          ).sort((a, b) => b[1] - a[1])[0]?.[0];
-
-          return {
-            category,
-            count: events.length,
-            averageScore,
-            totalScore,
-            suggestedTitle: mostRelevantTitle || category,
-            suggestedLocation: mostRelevantLocation || "",
-            events: sortedEvents,
-          };
-        })
-        // Sortează categoriile după scorul total și apoi după numărul de evenimente
-        .sort((a, b) => {
-          if (Math.abs(b.averageScore - a.averageScore) > 1) {
-            return b.averageScore - a.averageScore;
-          } else {
-            return b.count - a.count;
+            body: JSON.stringify({
+              selectedDate,
+              timeStart,
+              timeEnd,
+            }),
           }
-        });
+        );
 
-      setSuggestions(categoryFrequency);
-      setCurrentSuggestionIndex(0);
+        if (response.ok) {
+          const data = await response.json();
+          setSuggestions(data.suggestions || []);
+          setCurrentSuggestionIndex(0);
+        } else {
+          console.error("Failed to fetch AI suggestions");
+          setSuggestions([]);
+        }
+      } catch (error) {
+        console.error("Error fetching AI suggestions:", error);
+        setSuggestions([]);
+      }
     };
 
-    getPastEvents();
-  }, [savedEvents, selectedDate, timeStart, timeEnd]);
+    fetchAISuggestions();
+  }, [selectedDate, timeStart, timeEnd]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -703,14 +549,14 @@ export default function EventModal() {
         </footer>
 
         {suggestions.length > 0 && (
-          <div className="absolute  left-full top-0 max-w-xs w-50 overflow-hidden">
-            <div className="max-h-80 overflow-y-auto">
+          <div className="absolute left-full top-0 max-w-xs w-50 overflow-hidden">
+            <div className="max-h-[400px] overflow-y-auto">
               {suggestions.map((suggestion, index) => (
                 <div
                   key={`${suggestion.category}-${suggestion.suggestedTitle}`}
-                  className={`overflow-clip px-3 py-1 ml-2 shadow-xl mr-4 mt-2 ${
+                  className={`relative overflow-clip px-3 py-1 ml-2 shadow-xl mr-4 mt-2 ${
                     index === suggestions.length - 1 ? "mb-10" : ""
-                  }  border  rounded-xl cursor-pointer transition-all ${
+                  } border rounded-xl cursor-pointer transition-all ${
                     index === currentSuggestionIndex
                       ? "bg-black border-black"
                       : "bg-gray-50 border-gray-200"
@@ -721,6 +567,7 @@ export default function EventModal() {
                     setSelectedCategory(suggestion.category);
                     setLocation(suggestion.suggestedLocation);
                   }}
+                  title={suggestion.reason || "AI suggestion"} // Add tooltip here
                 >
                   <div className="flex items-center gap-2">
                     {categoryIcons[suggestion.category] && (
@@ -735,7 +582,7 @@ export default function EventModal() {
                         index === currentSuggestionIndex
                           ? "text-white"
                           : "text-black"
-                      }  text-shadow-white`}
+                      } text-shadow-white`}
                     >
                       {suggestion.suggestedTitle}
                     </span>
@@ -771,7 +618,7 @@ export default function EventModal() {
                       <div className={`flex items-center gap-1 mt-1`}>
                         <img
                           src={locationIcon}
-                          className={`w-3 h-3  ${
+                          className={`w-3 h-3 ${
                             index === currentSuggestionIndex
                               ? "alter invert"
                               : ""
@@ -785,6 +632,20 @@ export default function EventModal() {
                           } text-shadow-white`}
                         >
                           {suggestion.suggestedLocation}
+                        </span>
+                      </div>
+                    )}
+                    {/* Add reason display on hover */}
+                    {suggestion.reason && (
+                      <div className={`flex items-center gap-1 mt-1`}>
+                        <span
+                          className={`text-xxxs italic ${
+                            index === currentSuggestionIndex
+                              ? "text-gray-300"
+                              : "text-gray-600"
+                          }`}
+                        >
+                          {suggestion.reason}
                         </span>
                       </div>
                     )}

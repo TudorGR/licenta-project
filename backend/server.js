@@ -10,6 +10,7 @@ import travelRoutes from "./routes/travel.js";
 import localEventsRoutes from "./routes/localEvents.js";
 import chatRoutes from "./routes/chat.js";
 import authRoutes from "./routes/auth.js";
+import suggestionsRoutes from "./routes/suggestions.js";
 import "./models/associations.js";
 
 const app = express();
@@ -18,7 +19,7 @@ app.use(cors());
 
 // Routes
 app.use("/api/events", eventRoutes);
-app.use("/api/suggestions", suggestionRoutes);
+app.use("/api/suggestions", suggestionsRoutes);
 app.use("/api/travel", travelRoutes);
 app.use("/api/local-events", localEventsRoutes);
 app.use("/api/chat", chatRoutes);

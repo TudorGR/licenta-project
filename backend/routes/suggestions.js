@@ -1,9 +1,18 @@
 import express from "express";
-import dayjs from "dayjs";
+import Groq from "groq-sdk";
 import dotenv from "dotenv";
+import dayjs from "dayjs";
+import Event from "../models/Event.js";
+import { Op } from "sequelize";
+import { authMiddleware } from "../middleware/auth.js";
 
 dotenv.config();
 const router = express.Router();
+
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+// Apply auth middleware
+router.use(authMiddleware);
 
 // New endpoint for smart suggestions (without LLM)
 router.post("/smart-suggestions", async (req, res) => {
@@ -310,5 +319,130 @@ function diversifyAndLimitSuggestions(suggestions) {
   // Final shuffle to randomize the order
   return result.sort(() => 0.5 - Math.random()).slice(0, 5);
 }
+
+// Add new endpoint for AI-powered event suggestions
+router.post("/ai-suggestions", async (req, res) => {
+  try {
+    const { selectedDate, timeStart, timeEnd } = req.body;
+    const userId = req.user.userId;
+
+    if (!selectedDate || !timeStart || !timeEnd) {
+      return res.status(400).json({ error: "Missing required parameters" });
+    }
+
+    // Get events from the last 2 months that overlap with the selected time range
+    const twoMonthsAgo = dayjs(selectedDate).subtract(2, "month").valueOf();
+    const selectedDay = dayjs(selectedDate);
+    const weekDay = selectedDay.day();
+
+    const getTimeInMinutes = (timeStr) => {
+      const [hours, minutes] = timeStr.split(":").map(Number);
+      return hours * 60 + minutes;
+    };
+
+    const selectedStartMinutes = getTimeInMinutes(timeStart);
+    const selectedEndMinutes = getTimeInMinutes(timeEnd);
+
+    // Fetch relevant past events
+    const pastEvents = await Event.findAll({
+      where: {
+        userId: userId,
+        day: {
+          [Op.between]: [twoMonthsAgo, selectedDay.valueOf()],
+        },
+      },
+      order: [["day", "DESC"]],
+    });
+
+    // Filter events that match the day of week and have time overlap
+    const relevantEvents = pastEvents.filter((event) => {
+      const eventDay = dayjs(parseInt(event.day));
+      const eventStartMinutes = getTimeInMinutes(event.timeStart);
+      const eventEndMinutes = getTimeInMinutes(event.timeEnd);
+
+      // Check if it's the same day of week and times overlap
+      const isSameDayOfWeek = eventDay.day() === weekDay;
+      const hasTimeOverlap =
+        (eventStartMinutes < selectedEndMinutes &&
+          eventEndMinutes > selectedStartMinutes) ||
+        (selectedStartMinutes < eventEndMinutes &&
+          selectedEndMinutes > eventStartMinutes);
+
+      return isSameDayOfWeek && hasTimeOverlap;
+    });
+
+    if (relevantEvents.length === 0) {
+      return res.json({ suggestions: [] });
+    }
+
+    // Prepare data for Groq
+    const eventsForAI = relevantEvents.slice(0, 50).map((event) => ({
+      title: event.title,
+      category: event.category,
+      location: event.location,
+      timeStart: event.timeStart,
+      timeEnd: event.timeEnd,
+      day: dayjs(parseInt(event.day)).format("YYYY-MM-DD"),
+      dayOfWeek: dayjs(parseInt(event.day)).format("dddd"),
+    }));
+
+    const prompt = `Based on the user's past events, suggest 3-5 relevant event titles, categories, and locations for a new event.
+
+Selected time slot: ${timeStart} - ${timeEnd} on ${selectedDay.format(
+      "dddd, MMMM D"
+    )}
+
+Past events from the last 2 months that occurred on ${selectedDay.format(
+      "dddd"
+    )}s with overlapping times:
+${JSON.stringify(eventsForAI, null, 2)}
+
+Categories available: Work, Education, Health & Wellness, Finance & Bills, Social & Family, Travel & Commute, Personal Tasks, Leisure & Hobbies, Other
+
+Please analyze patterns in the user's past events and suggest relevant events for this time slot. Consider:
+1. Most frequent event types for this day/time
+2. Recent events that might repeat
+3. Common locations used
+4. Typical categories for this time
+
+Return ONLY a JSON array with this structure:
+[
+  {
+    "suggestedTitle": "Event title",
+    "category": "Category name",
+    "suggestedLocation": "Location (can be empty string)",
+    "confidence": 0.8,
+    "reason": "Short explanation why this event is suggested (max 50 characters)"
+  }
+]
+
+Limit to 5 suggestions maximum, ordered by relevance/confidence. Keep reasons concise and specific.`;
+
+    const response = await groq.chat.completions.create({
+      messages: [{ role: "user", content: prompt }],
+      model: "llama3-70b-8192",
+      temperature: 0.3,
+      max_tokens: 1000,
+    });
+
+    let suggestions = [];
+    try {
+      const aiResponse = response.choices[0].message.content;
+      // Extract JSON from response
+      const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        suggestions = JSON.parse(jsonMatch[0]);
+      }
+    } catch (parseError) {
+      console.error("Error parsing AI response:", parseError);
+      suggestions = [];
+    }
+
+    res.json({ suggestions });
+  } catch (error) {
+    console.error("Error generating AI suggestions:", error);
+    res.status(500).json({ error: "Failed to generate suggestions" });
+  }
+});
 
 export default router;
