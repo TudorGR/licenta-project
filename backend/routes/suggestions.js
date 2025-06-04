@@ -360,15 +360,14 @@ router.post("/ai-suggestions", async (req, res) => {
       const eventStartMinutes = getTimeInMinutes(event.timeStart);
       const eventEndMinutes = getTimeInMinutes(event.timeEnd);
 
-      // Check if it's the same day of week and times overlap
-      const isSameDayOfWeek = eventDay.day() === weekDay;
+      // Check only for time overlap, without day of week restriction
       const hasTimeOverlap =
         (eventStartMinutes < selectedEndMinutes &&
           eventEndMinutes > selectedStartMinutes) ||
         (selectedStartMinutes < eventEndMinutes &&
           selectedEndMinutes > eventStartMinutes);
 
-      return isSameDayOfWeek && hasTimeOverlap;
+      return hasTimeOverlap;
     });
 
     if (relevantEvents.length === 0) {
@@ -380,8 +379,6 @@ router.post("/ai-suggestions", async (req, res) => {
       title: event.title,
       category: event.category,
       location: event.location,
-      timeStart: event.timeStart,
-      timeEnd: event.timeEnd,
       day: dayjs(parseInt(event.day)).format("YYYY-MM-DD"),
       dayOfWeek: dayjs(parseInt(event.day)).format("dddd"),
     }));
@@ -392,15 +389,13 @@ Selected time slot: ${timeStart} - ${timeEnd} on ${selectedDay.format(
       "dddd, MMMM D"
     )}
 
-Past events from the last 2 months that occurred on ${selectedDay.format(
-      "dddd"
-    )}s with overlapping times:
+Past events from the last 2 months that occurred during the time slot ${timeStart} - ${timeEnd}:
 ${JSON.stringify(eventsForAI, null, 2)}
 
 Categories available: Work, Education, Health & Wellness, Finance & Bills, Social & Family, Travel & Commute, Personal Tasks, Leisure & Hobbies, Other
 
 Please analyze patterns in the user's past events and suggest relevant events for this time slot. Consider:
-1. Most frequent event types for this day/time
+1. Most frequent event types for this time slot
 2. Recent events that might repeat
 3. Common locations used
 4. Typical categories for this time
@@ -422,7 +417,6 @@ Limit to 5 suggestions maximum, ordered by relevance/confidence. Keep reasons co
       messages: [{ role: "user", content: prompt }],
       model: "llama3-70b-8192",
       temperature: 0.3,
-      max_tokens: 1000,
     });
 
     let suggestions = [];
