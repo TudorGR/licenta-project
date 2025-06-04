@@ -81,6 +81,7 @@ export default function EventModal() {
     selectedEvent ? selectedEvent.reminderTime : 15
   );
   const [isReminderSelectOpen, setIsReminderSelectOpen] = useState(false);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
   useEffect(() => {
     // Trigger enter animation on mount
@@ -226,6 +227,7 @@ export default function EventModal() {
     const fetchAISuggestions = async () => {
       if (!selectedDate || !timeStart || !timeEnd) return;
 
+      setSuggestionsLoading(true);
       try {
         const response = await fetch(
           "http://localhost:5000/api/suggestions/ai-suggestions",
@@ -254,6 +256,8 @@ export default function EventModal() {
       } catch (error) {
         console.error("Error fetching AI suggestions:", error);
         setSuggestions([]);
+      } finally {
+        setSuggestionsLoading(false);
       }
     };
 
@@ -548,82 +552,63 @@ export default function EventModal() {
           </div>
         </footer>
 
-        {suggestions.length > 0 && (
-          <div className="absolute left-full top-0 max-w-xs w-50 overflow-hidden">
+        {(suggestions.length > 0 || suggestionsLoading) && (
+          <div className="absolute left-full top-0 max-w-xs w-60 overflow-hidden">
             <div className="max-h-[400px] overflow-y-auto">
-              {suggestions.map((suggestion, index) => (
-                <div
-                  key={`${suggestion.category}-${suggestion.suggestedTitle}`}
-                  className={`relative overflow-clip px-3 py-1 ml-2 shadow-xl mr-4 mt-2 ${
-                    index === suggestions.length - 1 ? "mb-10" : ""
-                  } border rounded-xl cursor-pointer transition-all ${
-                    index === currentSuggestionIndex
-                      ? "bg-black border-black"
-                      : "bg-gray-50 border-gray-200"
-                  }`}
-                  onClick={() => {
-                    setCurrentSuggestionIndex(index);
-                    setTitle(suggestion.suggestedTitle);
-                    setSelectedCategory(suggestion.category);
-                    setLocation(suggestion.suggestedLocation);
-                  }}
-                  title={suggestion.reason || "AI suggestion"} // Add tooltip here
-                >
-                  <div className="flex items-center gap-2">
-                    {categoryIcons[suggestion.category] && (
-                      <img
-                        src={categoryIcons[suggestion.category]}
-                        alt={suggestion.category}
-                        className={`w-4 h-4`}
-                      />
-                    )}
-                    <span
-                      className={`font-medium ${
+              {suggestionsLoading ? (
+                <div className="px-3 py-4 ml-2 mr-4 mt-2 mb-10 bg-gray-50 shadow-xl border border-gray-200 rounded-xl">
+                  <div className="flex items-center justify-center space-x-2">
+                    <span className="spinner-loader"></span>
+                    <span className="text-sm text-gray-500">
+                      Getting suggestions...
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                suggestions.map((suggestion, index) => (
+                  <div
+                    key={`${suggestion.category}-${suggestion.suggestedTitle}`}
+                    className={`relative overflow-clip px-3 py-1 ml-2 shadow-xl mr-4 mt-2 ${
+                      index === suggestions.length - 1 ? "mb-10" : ""
+                    } border rounded-xl cursor-pointer transition-all ${
+                      index === currentSuggestionIndex
+                        ? "bg-black border-black"
+                        : "bg-gray-50 border-gray-200"
+                    }`}
+                    onClick={() => {
+                      setCurrentSuggestionIndex(index);
+                      setTitle(suggestion.suggestedTitle);
+                      setSelectedCategory(suggestion.category);
+                      setLocation(suggestion.suggestedLocation);
+                    }}
+                    title={suggestion.reason || "AI suggestion"} // Add tooltip here
+                  >
+                    <div className="flex items-center gap-2">
+                      {categoryIcons[suggestion.category] && (
+                        <img
+                          src={categoryIcons[suggestion.category]}
+                          alt={suggestion.category}
+                          className={`w-4 h-4`}
+                        />
+                      )}
+                      <span
+                        className={`font-medium ${
+                          index === currentSuggestionIndex
+                            ? "text-white"
+                            : "text-black"
+                        } text-shadow-white`}
+                      >
+                        {suggestion.suggestedTitle}
+                      </span>
+                    </div>
+                    <div
+                      className={`text-xxs mt-1 ${
                         index === currentSuggestionIndex
                           ? "text-white"
                           : "text-black"
-                      } text-shadow-white`}
+                      }`}
                     >
-                      {suggestion.suggestedTitle}
-                    </span>
-                  </div>
-                  <div
-                    className={`text-xxs mt-1 ${
-                      index === currentSuggestionIndex
-                        ? "text-white"
-                        : "text-black"
-                    }`}
-                  >
-                    <div className={`flex items-center gap-1`}>
-                      <span
-                        className={`text-xxs ${
-                          index === currentSuggestionIndex
-                            ? "text-white"
-                            : "text-black"
-                        } text-shadow-white`}
-                      >
-                        Category:
-                      </span>
-                      <span
-                        className={`font-medium text-xxs ${
-                          index === currentSuggestionIndex
-                            ? "text-white"
-                            : "text-black"
-                        } text-shadow-white`}
-                      >
-                        {suggestion.category}
-                      </span>
-                    </div>
-                    {suggestion.suggestedLocation && (
-                      <div className={`flex items-center gap-1 mt-1`}>
-                        <img
-                          src={locationIcon}
-                          className={`w-3 h-3 ${
-                            index === currentSuggestionIndex
-                              ? "alter invert"
-                              : ""
-                          }`}
-                        />
+                      <div className={`flex items-center gap-1`}>
                         <span
                           className={`text-xxs ${
                             index === currentSuggestionIndex
@@ -631,27 +616,57 @@ export default function EventModal() {
                               : "text-black"
                           } text-shadow-white`}
                         >
-                          {suggestion.suggestedLocation}
+                          Category:
                         </span>
-                      </div>
-                    )}
-                    {/* Add reason display on hover */}
-                    {suggestion.reason && (
-                      <div className={`flex items-center gap-1 mt-1`}>
                         <span
-                          className={`text-xxxs italic ${
+                          className={`font-medium text-xxs ${
                             index === currentSuggestionIndex
-                              ? "text-gray-300"
-                              : "text-gray-600"
-                          }`}
+                              ? "text-white"
+                              : "text-black"
+                          } text-shadow-white`}
                         >
-                          {suggestion.reason}
+                          {suggestion.category}
                         </span>
                       </div>
-                    )}
+                      {suggestion.suggestedLocation && (
+                        <div className={`flex items-center gap-1 mt-1`}>
+                          <img
+                            src={locationIcon}
+                            className={`w-3 h-3 ${
+                              index === currentSuggestionIndex
+                                ? "alter invert"
+                                : ""
+                            }`}
+                          />
+                          <span
+                            className={`text-xxs ${
+                              index === currentSuggestionIndex
+                                ? "text-white"
+                                : "text-black"
+                            } text-shadow-white`}
+                          >
+                            {suggestion.suggestedLocation}
+                          </span>
+                        </div>
+                      )}
+                      {/* Add reason display on hover */}
+                      {suggestion.reason && (
+                        <div className={`flex items-center gap-1 mt-1`}>
+                          <span
+                            className={`text-xxxs italic ${
+                              index === currentSuggestionIndex
+                                ? "text-gray-300"
+                                : "text-gray-600"
+                            }`}
+                          >
+                            {suggestion.reason}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         )}

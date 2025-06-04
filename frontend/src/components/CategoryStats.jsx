@@ -125,7 +125,7 @@ const CategoryStats = ({ view = "week", onCategoryClick }) => {
           ? "Daily Stats"
           : view.charAt(0).toUpperCase() + view.slice(1) + "ly Stats"}
       </h3>
-      <div className="space-y-0">
+      <div className="space-y-0 mb-6">
         {stats.map(([category, stats]) => (
           <div
             key={category}

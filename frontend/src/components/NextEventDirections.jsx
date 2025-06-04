@@ -650,7 +650,7 @@ const NextEventDirections = () => {
     return (
       <div className="w-full rounded-sm">
         <h3 className="mb-2 mx-4">Next up:</h3>
-        <p className="text-sm mx-4 text-gray-500">
+        <p className="text-sm mx-4 mb-3 text-gray-500">
           No upcoming events with location found for today.
         </p>
       </div>
@@ -831,7 +831,7 @@ const NextEventDirections = () => {
         !error && ( // Fallback if no event, not loading, and no error explicitly handled
           <div className="w-full rounded-sm">
             <h3 className="mb-2 mx-4">Next up:</h3>
-            <p className="text-sm mx-4 text-gray-500">
+            <p className="text-sm mx-4 mb-3 text-gray-500">
               No upcoming events with location found for today.
             </p>
           </div>

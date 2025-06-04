@@ -17,7 +17,6 @@ import Week from "./components/Week";
 import DayView from "./components/DayView";
 import AIChatBox from "./components/AIChatBox";
 import AIChatBoxWrapper from "./components/AIChatBoxWrapper";
-import AnalyticsDashboard from "./components/AnalyticsDashboard";
 import { Toaster } from "react-hot-toast";
 import "./App.css";
 
@@ -31,7 +30,6 @@ const CalendarApp = () => {
   const [showSidebar, setShowSidebar] = useState(
     localStorage.getItem("showSidebar") !== "false"
   );
-  const [showAnalyticsDashboard, setShowAnalyticsDashboard] = useState(false);
 
   const {
     monthIndex,
@@ -91,23 +89,15 @@ const CalendarApp = () => {
               onOpenAIChat={() => setShowAIChatBox(true)}
               showSidebar={showSidebar}
               onOpenSidebar={() => setShowSidebar(true)}
-              onOpenAnalytics={() =>
-                setShowAnalyticsDashboard(!showAnalyticsDashboard)
-              }
-              showAnalyticsDashboard={showAnalyticsDashboard}
             />
 
-            {showAnalyticsDashboard ? (
-              <AnalyticsDashboard />
-            ) : (
-              <div className="flex flex-1 h-full">
-                {isMonthView && <Month month={calendarMonth} />}
-                {isWeekView && (
-                  <Week month={calendarMonth} weekIndex={selectedWeek} />
-                )}
-                {isDayView && <DayView />}
-              </div>
-            )}
+            <div className="flex flex-1 h-full">
+              {isMonthView && <Month month={calendarMonth} />}
+              {isWeekView && (
+                <Week month={calendarMonth} weekIndex={selectedWeek} />
+              )}
+              {isDayView && <DayView />}
+            </div>
           </div>
           <AIChatBoxWrapper
             showAIChatBox={showAIChatBox}

@@ -52,11 +52,7 @@ const Sidebar = ({ onClose }) => {
 
       {(isWeekView || isMonthView || isDayView) && (
         <>
-          <div className="rounded-sm w-full">
-            <CategoryStats
-              view={isWeekView ? "week" : isMonthView ? "month" : "day"}
-            />
-          </div>
+          <NextEventDirections />
 
           <div className="w-full rounded-sm p-0">
             <h3 className="mb-2 mx-4">Working Hours</h3>
@@ -77,8 +73,11 @@ const Sidebar = ({ onClose }) => {
             </div>
           </div>
 
-          {/* Add NextEventDirections component here */}
-          <NextEventDirections />
+          <div className="rounded-sm w-full">
+            <CategoryStats
+              view={isWeekView ? "week" : isMonthView ? "month" : "day"}
+            />
+          </div>
         </>
       )}
     </aside>

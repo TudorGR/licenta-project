@@ -30,12 +30,6 @@ const Context = React.createContext({
   setWorkingHoursStart: (time) => {},
   setWorkingHoursEnd: (time) => {},
 
-  // Add analytics-related state
-  showAnalyticsDashboard: false,
-  setShowAnalyticsDashboard: () => {},
-  analyticsTimeframe: "month",
-  setAnalyticsTimeframe: () => {},
-
   // Add new fields
   selectedDate: null,
   setSelectedDate: (date) => {},

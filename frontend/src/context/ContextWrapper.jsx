@@ -159,10 +159,6 @@ export default function ContextWrapper({ children }) {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [user, setUser] = useState(null);
 
-  // Add analytics-related state
-  const [showAnalyticsDashboard, setShowAnalyticsDashboard] = useState(false);
-  const [analyticsTimeframe, setAnalyticsTimeframe] = useState("month");
-
   // Create wrapped setter functions to persist the view mode
   const setIsMonthViewWithStorage = (value) => {
     setIsMonthView(value);
@@ -277,11 +273,6 @@ export default function ContextWrapper({ children }) {
         user,
         selectedDate,
         setSelectedDate,
-        // Add analytics-related values
-        showAnalyticsDashboard,
-        setShowAnalyticsDashboard,
-        analyticsTimeframe,
-        setAnalyticsTimeframe,
       }}
     >
       {children}
