@@ -1,4 +1,4 @@
-# SmartCalendar - AI-Powered Calendar Assistant
+# CalendarIQ - AI-Powered Calendar Assistant
 
 An intelligent calendar application that combines traditional calendar functionality with cutting-edge AI capabilities to revolutionize personal scheduling and event management.
 
@@ -7,7 +7,7 @@ _Replace this placeholder with your UI image_
 
 ## 🎯 Overview
 
-SmartCalendar is a comprehensive web application built as a university thesis project at **Universitatea „Alexandru Ioan Cuza" din Iași (UAIC)**. It features an intuitive calendar interface enhanced by an AI assistant that helps users manage their schedules more efficiently through natural language interactions.
+CalendarIQ is a comprehensive web application built as a university thesis project at **Universitatea „Alexandru Ioan Cuza" din Iași (UAIC)**. It features an intuitive calendar interface enhanced by an AI assistant that helps users manage their schedules more efficiently through natural language interactions.
 
 ## ✨ Key Features
 
@@ -43,7 +43,6 @@ SmartCalendar is a comprehensive web application built as a university thesis pr
 
 - **Event Pattern Analysis**: Understand your scheduling habits and productivity patterns
 - **Category Statistics**: Visual breakdown of how you spend your time
-- **Heat Map Visualization**: See your busiest days and times at a glance
 
 ### 🔐 Secure User Management
 
@@ -67,7 +66,7 @@ SmartCalendar is a comprehensive web application built as a university thesis pr
 
 - **Node.js**: JavaScript runtime environment
 - **Express.js**: Web application framework
-- **SQLite**: Lightweight database for development
+- **MySQL**: Popular open source database
 - **Sequelize**: ORM for database operations
 - **JWT**: JSON Web Tokens for authentication
 - **bcrypt**: Password hashing and security
@@ -238,13 +237,11 @@ When scheduling conflicts arise, the AI:
 - Detects overlapping events
 - Suggests alternative time slots
 - Provides interactive resolution options
-- Learns from your preferences
 
 ### Local Events Discovery
 
 - Real-time integration with local event sources
 - Intelligent filtering by timeframe and relevance
-- One-click addition to personal calendar
 - Location-aware suggestions
 
 ## 🔒 Privacy & Security
@@ -270,22 +267,9 @@ This project was developed as part of academic research at UAIC. All rights rese
 
 This is an academic project developed for thesis purposes. While the code is available for educational reference, please respect the academic nature of this work.
 
-## 📞 Contact
-
-For questions about this project or potential collaboration:
-
-- **University**: Universitatea „Alexandru Ioan Cuza" din Iași
-- **Faculty**: [Your Faculty Name]
-- **Author**: [Your Name]
-- **Email**: [Your University Email]
-
 ## 🙏 Acknowledgments
 
 - **UAIC Faculty** for providing guidance and resources
 - **Groq** for providing fast AI inference capabilities
 - **Google** for Generative AI services
 - **Open Source Community** for the various libraries and frameworks used
-
----
-
-_Built with ❤️ at Universitatea „Alexandru Ioan Cuza" din Iași_
