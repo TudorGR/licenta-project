@@ -1,9 +1,8 @@
-# CalendarIQ - AI-Powered Calendar Assistant
+# CalendarIQ - AI-Powered Calendar
 
 An intelligent calendar application that combines traditional calendar functionality with cutting-edge AI capabilities to revolutionize personal scheduling and event management.
 
-![SmartCalendar UI](./ui-preview.png)
-_Replace this placeholder with your UI image_
+![calendariq](https://github.com/user-attachments/assets/b91a9bf6-0ca7-4387-aad5-9a3625f3a66b)
 
 ## 🎯 Overview
 
@@ -24,8 +23,6 @@ CalendarIQ is a comprehensive web application built as a university thesis proje
 - **Multiple View Modes**: Month, week, and day views for comprehensive schedule visualization
 - **Event Categories**: Organized categorization (Work, Health, Social, Travel, Education, etc.)
 - **Smart Event Creation**: AI-powered event suggestions with location and category recommendations
-- **Recurring Events**: Support for repeating events with flexible patterns
-- **Visual Analytics**: Category-based statistics and heatmap visualizations
 
 ### 🌍 Local Events Integration
 
